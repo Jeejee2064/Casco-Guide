@@ -1,0 +1,315 @@
+{
+  "site": {
+    "name": "Casco Guide",
+    "title": "Explora Casco Viejo",
+    "subtitle": "{count}+ lugares y eventos seleccionados",
+    "searchPlaceholder": "Busca lugares, etiquetas, cocina…",
+    "footerTagline": "Hecho con 🌴 para viajeros, locales y expats.",
+    "viewGrid": "Cuadrícula",
+    "viewMap": "Mapa"
+  },
+  "nav": {
+    "spots": "Lugares",
+    "events": "Eventos",
+    "admin": "Admin"
+  },
+  "filters": {
+    "title": "Filtros",
+    "category": "Categoría",
+    "price": "Rango de precio",
+    "openNow": "Abierto ahora",
+    "sort": "Ordenar por",
+    "sortNewest": "Más recientes",
+    "sortRating": "Mejor valorados",
+    "sortAlpha": "Alfabético",
+    "sortRandom": "Sorpréndeme",
+    "reset": "Restablecer filtros",
+    "apply": "Aplicar",
+    "resultsCount": "{count, plural, =0 {Ningún lugar encontrado} one {# lugar} other {# lugares}}"
+  },
+  "category": {
+    "restaurant": "Restaurante",
+    "bar": "Bar",
+    "cafe": "Café",
+    "attraction": "Atracción",
+    "museum": "Museo",
+    "shop": "Tienda",
+    "gallery": "Galería",
+    "hotel": "Hotel"
+  },
+  "price": {
+    "$": "Económico",
+    "$$": "Moderado",
+    "$$$": "Alto",
+    "$$$$": "Lujo"
+  },
+  "hours": {
+    "openTill": "Abierto hasta las {time}",
+    "closingSoon": "Cierra pronto · {time}",
+    "closed": "Cerrado",
+    "opensAt": "Abre a las {time}",
+    "opensTomorrow": "Abre mañana a las {time}",
+    "note": "Nota",
+    "weekSchedule": "Horario semanal",
+    "days": {
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado",
+      "sunday": "Domingo"
+    }
+  },
+  "spot": {
+    "call": "Llamar",
+    "visitWebsite": "Visitar sitio web",
+    "getDirections": "Cómo llegar",
+    "share": "Compartir",
+    "copyAddress": "Copiar dirección",
+    "addressCopied": "Dirección copiada ✨",
+    "reservationRequired": "Reserva requerida",
+    "reservationNotRequired": "Sin reserva",
+    "acceptsCards": "Acepta tarjetas",
+    "cashOnly": "Solo efectivo",
+    "parking": {
+      "street": "Parqueo en la calle",
+      "paid-lot": "Parqueo pago cercano",
+      "none": "Sin parqueo"
+    },
+    "dietary": "Opciones dietéticas",
+    "tags": "Etiquetas",
+    "featured": "Destacado",
+    "verified": "Verificado ✓",
+    "close": "Cerrar",
+    "readMore": "Leer más"
+  },
+  "share": {
+    "cta": "Compartir",
+    "more": "Más opciones…",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "twitter": "X (Twitter)",
+    "telegram": "Telegram",
+    "email": "Correo",
+    "copyLink": "Copiar enlace",
+    "linkCopied": "Enlace copiado ✨"
+  },
+  "eventCategory": {
+    "cinema": "Cine",
+    "dance": "Baile",
+    "expo": "Expo",
+    "kids": "Niños",
+    "music": "Música",
+    "sports": "Deportes",
+    "theatre": "Teatro",
+    "workshop": "Taller"
+  },
+  "events": {
+    "title": "Próximos eventos",
+    "recurring": {
+      "once": "Una vez",
+      "daily": "Diario",
+      "weekly": "Semanal",
+      "monthly": "Mensual"
+    },
+    "free": "Gratis",
+    "book": "Reservar",
+    "viewDetails": "Ver detalles",
+    "capacity": "Capacidad: {count}",
+    "organizer": "Organizado por {name}"
+  },
+  "empty": {
+    "title": "Todavía no hay nada aquí",
+    "subtitle": "Intenta ajustar tus filtros o búsqueda."
+  },
+  "map": {
+    "locateMe": "Mi ubicación",
+    "locating": "Ubicando…",
+    "locateError": "No pudimos encontrar tu ubicación",
+    "youAreHere": "Estás aquí",
+    "walkTime": "{mins} min a pie"
+  },
+  "discover": {
+    "nearbySpots": "Lugares cercanos",
+    "relatedEvents": "Eventos relacionados",
+    "exploreMap": "Explora el mapa completo",
+    "exploreMapSubtitle": "Descubre todos los lugares y eventos de Casco Viejo"
+  },
+  "gallery": {
+    "viewAll": "Ver las {count} fotos",
+    "close": "Cerrar",
+    "previous": "Foto anterior",
+    "next": "Foto siguiente"
+  },
+  "spotDetail": {
+    "back": "Volver a Casco Guide",
+    "amenities": "Comodidades",
+    "gallery": "Galería"
+  },
+  "eventDetail": {
+    "back": "Volver a Casco Guide",
+    "hostedAt": "Se realiza en"
+  },
+  "admin": {
+    "nav": {
+      "dashboard": "Panel",
+      "spots": "Lugares",
+      "events": "Eventos",
+      "logout": "Cerrar sesión",
+      "viewSite": "Ver sitio"
+    },
+    "login": {
+      "title": "Bienvenido de nuevo",
+      "subtitle": "Inicia sesión para gestionar Casco Guide",
+      "email": "Correo",
+      "password": "Contraseña",
+      "submit": "Iniciar sesión",
+      "error": "No pudimos iniciar sesión. Verifica tus credenciales."
+    },
+    "dashboard": {
+      "title": "Panel",
+      "subtitle": "Esto es lo que pasa en Casco Viejo 🌴",
+      "totalSpots": "Total de lugares",
+      "totalEvents": "Total de eventos",
+      "featured": "Lugares destacados",
+      "lastUpdated": "Última actualización",
+      "addSpot": "+ Agregar lugar",
+      "addEvent": "+ Agregar evento"
+    },
+    "spots": {
+      "title": "Lugares",
+      "subtitle": "Gestiona cada lugar del mapa",
+      "add": "Agregar lugar",
+      "search": "Buscar lugares…",
+      "allCategories": "Todas las categorías",
+      "featuredOnly": "Solo destacados",
+      "columns": {
+        "name": "Nombre",
+        "category": "Categoría",
+        "coords": "Coordenadas",
+        "hours": "Horario",
+        "rating": "Calificación",
+        "verified": "Verificado",
+        "actions": "Acciones"
+      },
+      "view": "Ver",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar \"{name}\"? Esto no se puede deshacer.",
+      "deleted": "Lugar eliminado",
+      "empty": "Aún no hay lugares. ¡Agrega el primero! ✨"
+    },
+    "spotForm": {
+      "titleNew": "Agregar nuevo lugar",
+      "titleEdit": "Editar lugar",
+      "translationLabel": "Idioma del contenido",
+      "translationHint": "El nombre es obligatorio en ambos idiomas. Los demás campos son opcionales por idioma — el texto sin traducir usa el otro idioma como respaldo en el sitio.",
+      "missingName": "Ingresa el nombre en {lang} antes de guardar.",
+      "preview": "Vista previa",
+      "previewBadge": "Vista previa · {lang} · sin guardar",
+      "sections": {
+        "basics": "Datos básicos",
+        "location": "Ubicación",
+        "hours": "Horario",
+        "details": "Detalles",
+        "media": "Fotos",
+        "meta": "Etiquetas y estado"
+      },
+      "name": "Nombre",
+      "slug": "Slug",
+      "slugHint": "Se genera automáticamente, editable",
+      "description": "Descripción corta",
+      "descriptionHint": "1–2 frases, se muestra en la tarjeta",
+      "article": "Artículo completo",
+      "articleHint": "200–500 palabras — la historia de este lugar",
+      "category": "Categoría",
+      "address": "Dirección",
+      "geocode": "Ubicar en el mapa",
+      "geocoding": "Ubicando…",
+      "locateHint": "Toca el mapa o arrastra el pin — o pega las coordenadas abajo.",
+      "useLocation": "Usar esta ubicación",
+      "close": "Cerrar",
+      "latitude": "Latitud",
+      "longitude": "Longitud",
+      "neighborhood": "Barrio",
+      "phone": "Teléfono",
+      "website": "Sitio web",
+      "email": "Correo",
+      "hoursNote": "Nota de horario",
+      "hoursNoteHint": "ej. Cerrado en días festivos",
+      "addSlot": "+ Agregar horario",
+      "closedToday": "Cerrado",
+      "priceRange": "Rango de precio",
+      "cuisineType": "Tipo de cocina",
+      "dietaryOptions": "Opciones dietéticas",
+      "reservationRequired": "Reserva requerida",
+      "acceptsCards": "Acepta tarjetas",
+      "parking": "Parqueo",
+      "featuredPhoto": "Foto destacada",
+      "gallery": "Galería (hasta 5)",
+      "uploadHint": "Arrastra o haz clic para subir",
+      "tags": "Etiquetas",
+      "tagsHint": "Presiona Enter para agregar",
+      "rating": "Calificación",
+      "isFeatured": "Lugar destacado",
+      "isVerified": "Verificado — revisé esta información",
+      "cancel": "Cancelar",
+      "save": "Guardar lugar",
+      "saving": "Guardando…",
+      "saved": "✨ ¡Lugar guardado!",
+      "error": "Algo salió mal. Intenta de nuevo."
+    },
+    "events": {
+      "title": "Eventos",
+      "subtitle": "Qué está pasando en Casco Viejo",
+      "add": "Agregar evento",
+      "search": "Buscar eventos…",
+      "view": "Ver",
+      "columns": {
+        "title": "Título",
+        "category": "Categoría",
+        "date": "Fecha",
+        "recurring": "Recurrente",
+        "actions": "Acciones"
+      },
+      "empty": "Aún no hay eventos."
+    },
+    "eventForm": {
+      "titleNew": "Agregar nuevo evento",
+      "titleEdit": "Editar evento",
+      "translationLabel": "Idioma del contenido",
+      "translationHint": "El título es obligatorio en ambos idiomas. La descripción y el artículo son opcionales por idioma — el texto sin traducir usa el otro idioma como respaldo en el sitio.",
+      "missingTitle": "Ingresa el título en {lang} antes de guardar.",
+      "preview": "Vista previa",
+      "previewBadge": "Vista previa · {lang} · sin guardar",
+      "title": "Título",
+      "date": "Fecha",
+      "timeStart": "Hora de inicio",
+      "timeEnd": "Hora de fin",
+      "recurring": "Recurrente",
+      "recurringUntil": "Recurrente hasta",
+      "spot": "Lugar (opcional)",
+      "capacity": "Capacidad",
+      "price": "Precio (USD)",
+      "bookingUrl": "URL de reserva",
+      "organizer": "Organizador",
+      "organizerContact": "Contacto del organizador",
+      "photo": "Foto de portada",
+      "save": "Guardar evento",
+      "saved": "✨ ¡Evento guardado!"
+    },
+    "preview": {
+      "close": "Cerrar vista previa",
+      "viewDesktop": "Escritorio",
+      "viewCard": "Tarjeta",
+      "viewMobile": "Móvil"
+    },
+    "common": {
+      "yes": "Sí",
+      "no": "No",
+      "loading": "Cargando…",
+      "required": "Requerido"
+    }
+  }
+}

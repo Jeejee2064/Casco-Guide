@@ -1,0 +1,397 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf8f4;
+  --foreground: #201a2e;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #eae5db;
+
+  /* Sober editorial palette — muted, confident accents rather than saturated
+     tropical brights. Kept as the same variable names throughout the app so
+     every component that already reads --color-aqua/coral/lime/magenta picks
+     the new tones up automatically. */
+  --color-aqua: #146b8c;
+  --color-aqua-dark: #0f5470;
+  --color-coral: #b5573a;
+  --color-coral-dark: #8f4126;
+  --color-lime: #3f7d5c;
+  --color-lime-dark: #2f5f45;
+  --color-magenta: #6e4a63;
+  --color-magenta-dark: #55374c;
+
+  /* Premium anchor accent — warm gold, used sparingly (ratings, featured picks) */
+  --color-gold: #d4a24c;
+  --color-gold-dark: #b0812e;
+  --color-ink: #201a2e;
+
+  --shadow-color: 222deg 60% 12%;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 8px 24px -8px hsl(var(--shadow-color) / 0.18);
+  --shadow-lg: 0 24px 48px -16px hsl(var(--shadow-color) / 0.28);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+
+  --color-aqua: var(--color-aqua);
+  --color-aqua-dark: var(--color-aqua-dark);
+  --color-coral: var(--color-coral);
+  --color-coral-dark: var(--color-coral-dark);
+  --color-lime: var(--color-lime);
+  --color-lime-dark: var(--color-lime-dark);
+  --color-magenta: var(--color-magenta);
+  --color-magenta-dark: var(--color-magenta-dark);
+  --color-gold: var(--color-gold);
+  --color-gold-dark: var(--color-gold-dark);
+  --color-ink: var(--color-ink);
+
+  --font-heading: var(--font-poppins);
+  --font-sans: var(--font-inter);
+
+  --radius-card: 20px;
+  --radius-button: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #100c1a;
+    --foreground: #f4f1ea;
+    --surface: #191325;
+    --surface-raised: #211a30;
+    --border: #322a44;
+    --shadow-color: 260deg 60% 3%;
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  /* Respect the device's safe areas (notches, home indicator) so sticky
+     bars feel native rather than clipped — this is meant to be used like
+     an app, mostly on mobile. */
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Inter, Arial, sans-serif;
+  overscroll-behavior-y: none;
+}
+
+h1, h2, h3, h4, .font-heading {
+  font-family: var(--font-heading), Poppins, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--color-magenta);
+  color: white;
+}
+
+/* Hide scrollbars on horizontally-scrolling chip rows (mobile filter bars,
+   category pickers) while keeping them scrollable — an app-native touch. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* ---------------------------------------------------------------------- */
+/* Editorial decorative primitives — restrained, single-accent, no rainbow */
+/* ---------------------------------------------------------------------- */
+
+/* Solid brand fill for small marks (logo mark, active-state pills). A flat
+   deep teal reads more confident than a diagonal multi-hue gradient. */
+.brand-accent {
+  background: linear-gradient(135deg, var(--color-aqua) 0%, var(--color-aqua-dark) 100%);
+}
+
+/* Deep-ink backdrop used behind the hero — a single soft gold bloom over an
+   ink base, evoking dusk rather than a tropical sunset. */
+.mesh-hero {
+  position: relative;
+  background:
+    radial-gradient(90% 120% at 85% -10%, color-mix(in srgb, var(--color-gold) 22%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, #150f24 0%, #0d0a17 100%);
+}
+
+/* Faint film-grain layered on top of gradients for a premium, non-flat
+   texture. Pure CSS, no external asset. */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.gradient-text {
+  background: linear-gradient(100deg, #ffe8b8 0%, var(--color-gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+.card-lift {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ---------------------------------------------------------------------- */
+/* SpotMap (Leaflet) theming                                              */
+/* ---------------------------------------------------------------------- */
+
+.leaflet-container {
+  font-family: var(--font-sans), Inter, Arial, sans-serif;
+  background: var(--background);
+}
+
+.leaflet-control-zoom a {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 85%, transparent) !important;
+  color: var(--foreground) !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-aqua-dark) !important;
+}
+
+.spot-pin {
+  position: relative;
+  display: flex;
+  height: 34px;
+  width: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid white;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.35);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.spot-pin__icon {
+  transform: rotate(45deg);
+  color: white;
+  line-height: 1;
+}
+
+.spot-pin__icon svg {
+  display: block;
+}
+
+.spot-pin__star {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  transform: rotate(45deg);
+  font-size: 11px;
+  color: var(--color-coral);
+  text-shadow: 0 0 2px white;
+}
+
+.spot-pin--active {
+  transform: rotate(-45deg) scale(1.18);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.45);
+}
+
+.spot-pin-marker {
+  z-index: 500 !important;
+}
+
+.spot-pin-marker--active {
+  z-index: 1000 !important;
+}
+
+/* Event pins — full-color /public/icons badges. These are already
+   fully-drawn pin shapes (balloon body, pointer tail, shadow baked into the
+   artwork), so they're rendered as-is instead of nested inside another pin
+   shape — no background chip, no border, no CSS drop shape. */
+.event-pin {
+  position: relative;
+  display: flex;
+  height: 36px;
+  width: 36px;
+  transition: transform 200ms ease;
+}
+
+.event-pin__icon {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.event-pin__star {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 11px;
+  color: var(--color-coral);
+  text-shadow: 0 0 2px white;
+}
+
+.event-pin-marker {
+  z-index: 400 !important;
+}
+
+.event-pin-marker:hover .event-pin,
+.event-pin-marker--active .event-pin {
+  transform: scale(1.12);
+}
+
+.spot-pin-marker--me {
+  z-index: 1100 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: var(--surface);
+  color: var(--foreground);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: 250px !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--surface);
+}
+
+.leaflet-popup-close-button {
+  color: var(--foreground) !important;
+  opacity: 0.6;
+}
+
+.spot-popup__photo {
+  height: 110px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+}
+
+.spot-popup__photo--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-aqua-dark);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-aqua) 20%, transparent),
+    color-mix(in srgb, var(--color-coral) 20%, transparent)
+  );
+}
+
+.spot-popup__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 14px;
+}
+
+.spot-popup__category {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
+
+.spot-popup__title {
+  font-family: var(--font-heading), Poppins, sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.spot-popup__meta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.spot-popup__desc {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.spot-popup__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.spot-popup__btn {
+  flex: 1;
+  cursor: pointer;
+  border-radius: var(--radius-button);
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 7px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--foreground);
+  transition: background 150ms ease;
+}
+
+.spot-popup__btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.spot-popup__btn--primary {
+  border-color: transparent;
+  background: var(--color-aqua);
+  color: white;
+}
+
+.spot-popup__btn--primary:hover {
+  background: var(--color-aqua-dark);
+}

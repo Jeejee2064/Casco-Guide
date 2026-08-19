@@ -1,0 +1,267 @@
+"use client";
+
+import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  ChevronLeft,
+  CalendarDays,
+  Clock,
+  Repeat,
+  Navigation,
+  Ticket,
+  Users,
+  ExternalLink,
+  ArrowRight,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { PhotoGallery } from "./PhotoGallery";
+import { ShareMenu } from "./ShareMenu";
+import { MiniMap } from "./MiniMap";
+import { ExploreMapCard } from "./ExploreMapCard";
+import { NearbySection } from "./NearbySection";
+import { EASE_OUT } from "./motion";
+import { Button } from "@/components/ui/Button";
+import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
+import { formatTime } from "@/lib/hours";
+import { getSpotImage } from "@/lib/data/categoryImages";
+import type { EventRow, Spot } from "@/lib/types/database";
+
+/** Full public detail page for an event — gallery, story, ticketing & host venue.
+ * `onBack`, when given, replaces the default "back to home" link with a button
+ * that calls it instead — used by the admin preview, where a real navigation
+ * would exit the editor for an unsaved draft. `nearbySpots`/`nearbyEvents`
+ * feed the "keep browsing" rails at the bottom; both default to empty so the
+ * admin preview (which has nothing to recommend) can omit them. */
+export function EventDetailView({
+  event,
+  hostSpot,
+  nearbySpots = [],
+  nearbyEvents = [],
+  onBack,
+}: {
+  event: EventRow;
+  hostSpot: Spot | null;
+  nearbySpots?: Spot[];
+  nearbyEvents?: EventRow[];
+  onBack?: () => void;
+}) {
+  const t = useTranslations("events");
+  const td = useTranslations("eventDetail");
+  const tSpot = useTranslations("spot");
+  const tCat = useTranslations("eventCategory");
+  const locale = useLocale();
+  const categoryMeta = EVENT_CATEGORY_META[event.category];
+
+  const photos = event.photos.length > 0 ? event.photos : event.photo ? [{ url: event.photo }] : [];
+
+  const dateLabel = new Intl.DateTimeFormat(locale === "es" ? "es-PA" : "en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(`${event.date}T00:00:00`));
+
+  const directions = () =>
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}`,
+      "_blank",
+    );
+
+  const priceLabel = event.price && event.price > 0 ? `$${event.price}` : t("free");
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-10 sm:pb-10">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: EASE_OUT }}
+      >
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
+          >
+            <ChevronLeft size={16} /> {td("back")}
+          </button>
+        ) : (
+          <Link
+            href="/"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
+          >
+            <ChevronLeft size={16} /> {td("back")}
+          </Link>
+        )}
+
+        <PhotoGallery
+          photos={photos}
+          alt={event.title}
+          placeholder={
+            <div
+              className="flex h-full items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${categoryMeta.color}33, ${categoryMeta.color}0D)`,
+              }}
+            >
+              <Image src={categoryMeta.icon} alt={tCat(event.category)} width={64} height={64} />
+            </div>
+          }
+        />
+      </motion.div>
+
+      <div className="mt-6 grid gap-8 lg:mt-10 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-8">
+          <div className="space-y-2">
+            <span
+              className="inline-block rounded-full px-2.5 py-1 text-xs font-bold text-white"
+              style={{ backgroundColor: categoryMeta.color }}
+            >
+              {tCat(event.category)}
+            </span>
+            <h1 className="font-heading text-3xl font-extrabold sm:text-4xl">{event.title}</h1>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-foreground/70">
+              <span className="flex items-center gap-1.5">
+                <CalendarDays size={15} /> {dateLabel}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock size={15} />
+                {formatTime(event.time_start, locale)}
+                {event.time_end ? ` – ${formatTime(event.time_end, locale)}` : ""}
+              </span>
+              {event.recurring && event.recurring !== "once" && (
+                <span className="flex items-center gap-1.5">
+                  <Repeat size={14} /> {t(`recurring.${event.recurring}`)}
+                </span>
+              )}
+            </div>
+
+            {event.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {event.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-foreground/5 px-2.5 py-1 text-xs font-medium text-foreground/60"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {event.article && (
+            <p className="whitespace-pre-line text-[15px] leading-relaxed text-foreground/80">
+              {event.article}
+            </p>
+          )}
+
+          {hostSpot && (
+            <Link
+              href={{ pathname: "/spots/[slug]", params: { slug: hostSpot.slug } }}
+              className="card-lift flex items-center gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-4"
+            >
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                <Image
+                  src={getSpotImage(hostSpot)}
+                  alt={hostSpot.name}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-foreground/50">{td("hostedAt")}</p>
+                <p className="font-heading font-bold truncate">{hostSpot.name}</p>
+              </div>
+              <ArrowRight size={18} className="shrink-0 text-foreground/40" />
+            </Link>
+          )}
+
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/70">
+            <span className="flex items-center gap-1.5 font-semibold text-lime-dark dark:text-lime">
+              <Ticket size={15} /> {priceLabel}
+            </span>
+            {event.capacity != null && (
+              <span className="flex items-center gap-1.5">
+                <Users size={15} /> {t("capacity", { count: event.capacity })}
+              </span>
+            )}
+            {event.organizer && (
+              <span className="flex items-center gap-1.5">
+                <Users size={15} /> {t("organizer", { name: event.organizer })}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+          <MiniMap
+            name={event.title}
+            latitude={event.latitude}
+            longitude={event.longitude}
+            color={categoryMeta.color}
+          />
+
+          <ExploreMapCard />
+
+          <div className="hidden gap-2 sm:flex">
+            {event.booking_url && (
+              <Button
+                type="button"
+                variant="primary"
+                className="flex-1"
+                onClick={() => window.open(event.booking_url!, "_blank")}
+              >
+                <ExternalLink size={16} /> {t("book")}
+              </Button>
+            )}
+            <ShareMenu title={event.title} variant="coral" showLabel className="flex-1" />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={directions}
+              aria-label={tSpot("getDirections")}
+              title={tSpot("getDirections")}
+            >
+              <Navigation size={16} />
+            </Button>
+          </div>
+        </aside>
+      </div>
+
+      <NearbySection nearbySpots={nearbySpots} nearbyEvents={nearbyEvents} />
+
+      {/* Mobile sticky action bar */}
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-border bg-surface p-3 sm:hidden">
+        {event.booking_url && (
+          <Button
+            type="button"
+            variant="primary"
+            className="flex-1"
+            onClick={() => window.open(event.booking_url!, "_blank")}
+          >
+            <ExternalLink size={16} /> {t("book")}
+          </Button>
+        )}
+        <ShareMenu
+          title={event.title}
+          direction="up"
+          variant="coral"
+          showLabel
+          className="flex-1"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={directions}
+          aria-label={tSpot("getDirections")}
+          title={tSpot("getDirections")}
+        >
+          <Navigation size={16} />
+        </Button>
+      </div>
+    </div>
+  );
+}

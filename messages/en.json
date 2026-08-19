@@ -1,0 +1,315 @@
+{
+  "site": {
+    "name": "Casco Guide",
+    "title": "Explore Casco Viejo",
+    "subtitle": "{count}+ curated spots & events",
+    "searchPlaceholder": "Search spots, tags, cuisine…",
+    "footerTagline": "Made with 🌴 for travelers, locals & expats.",
+    "viewGrid": "Grid",
+    "viewMap": "Map"
+  },
+  "nav": {
+    "spots": "Spots",
+    "events": "Events",
+    "admin": "Admin"
+  },
+  "filters": {
+    "title": "Filters",
+    "category": "Category",
+    "price": "Price range",
+    "openNow": "Open now",
+    "sort": "Sort by",
+    "sortNewest": "Newest",
+    "sortRating": "Top rated",
+    "sortAlpha": "Alphabetical",
+    "sortRandom": "Surprise me",
+    "reset": "Reset filters",
+    "apply": "Apply",
+    "resultsCount": "{count, plural, =0 {No spots found} one {# spot} other {# spots}}"
+  },
+  "category": {
+    "restaurant": "Restaurant",
+    "bar": "Bar",
+    "cafe": "Café",
+    "attraction": "Attraction",
+    "museum": "Museum",
+    "shop": "Shop",
+    "gallery": "Gallery",
+    "hotel": "Hotel"
+  },
+  "price": {
+    "$": "Budget",
+    "$$": "Moderate",
+    "$$$": "Upscale",
+    "$$$$": "Splurge"
+  },
+  "hours": {
+    "openTill": "Open till {time}",
+    "closingSoon": "Closing soon · {time}",
+    "closed": "Closed",
+    "opensAt": "Opens at {time}",
+    "opensTomorrow": "Opens tomorrow at {time}",
+    "note": "Note",
+    "weekSchedule": "Weekly schedule",
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    }
+  },
+  "spot": {
+    "call": "Call",
+    "visitWebsite": "Visit website",
+    "getDirections": "Get directions",
+    "share": "Share",
+    "copyAddress": "Copy address",
+    "addressCopied": "Address copied ✨",
+    "reservationRequired": "Reservation required",
+    "reservationNotRequired": "Walk-ins welcome",
+    "acceptsCards": "Cards accepted",
+    "cashOnly": "Cash only",
+    "parking": {
+      "street": "Street parking",
+      "paid-lot": "Paid lot nearby",
+      "none": "No parking"
+    },
+    "dietary": "Dietary options",
+    "tags": "Tags",
+    "featured": "Featured",
+    "verified": "Verified ✓",
+    "close": "Close",
+    "readMore": "Read more"
+  },
+  "share": {
+    "cta": "Share",
+    "more": "More options…",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "twitter": "X (Twitter)",
+    "telegram": "Telegram",
+    "email": "Email",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied ✨"
+  },
+  "eventCategory": {
+    "cinema": "Cinema",
+    "dance": "Dance",
+    "expo": "Expo",
+    "kids": "Kids",
+    "music": "Music",
+    "sports": "Sports",
+    "theatre": "Theatre",
+    "workshop": "Workshop"
+  },
+  "events": {
+    "title": "Upcoming events",
+    "recurring": {
+      "once": "One-time",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "free": "Free",
+    "book": "Book now",
+    "viewDetails": "View details",
+    "capacity": "Capacity: {count}",
+    "organizer": "Organized by {name}"
+  },
+  "empty": {
+    "title": "Nothing here yet",
+    "subtitle": "Try adjusting your filters or search."
+  },
+  "map": {
+    "locateMe": "My location",
+    "locating": "Locating…",
+    "locateError": "Couldn't find your location",
+    "youAreHere": "You are here",
+    "walkTime": "{mins} min walk"
+  },
+  "discover": {
+    "nearbySpots": "Nearby spots",
+    "relatedEvents": "Related events",
+    "exploreMap": "Explore the full map",
+    "exploreMapSubtitle": "See every spot & event around Casco Viejo"
+  },
+  "gallery": {
+    "viewAll": "View all {count} photos",
+    "close": "Close",
+    "previous": "Previous photo",
+    "next": "Next photo"
+  },
+  "spotDetail": {
+    "back": "Back to Casco Guide",
+    "amenities": "Amenities",
+    "gallery": "Gallery"
+  },
+  "eventDetail": {
+    "back": "Back to Casco Guide",
+    "hostedAt": "Hosted at"
+  },
+  "admin": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "spots": "Spots",
+      "events": "Events",
+      "logout": "Log out",
+      "viewSite": "View site"
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to manage Casco Guide",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "error": "Couldn't sign you in. Check your credentials."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Here's what's happening in Casco Viejo 🌴",
+      "totalSpots": "Total spots",
+      "totalEvents": "Total events",
+      "featured": "Featured spots",
+      "lastUpdated": "Last updated",
+      "addSpot": "+ Add spot",
+      "addEvent": "+ Add event"
+    },
+    "spots": {
+      "title": "Spots",
+      "subtitle": "Manage every place on the map",
+      "add": "Add spot",
+      "search": "Search spots…",
+      "allCategories": "All categories",
+      "featuredOnly": "Featured only",
+      "columns": {
+        "name": "Name",
+        "category": "Category",
+        "coords": "Coordinates",
+        "hours": "Hours",
+        "rating": "Rating",
+        "verified": "Verified",
+        "actions": "Actions"
+      },
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete \"{name}\"? This can't be undone.",
+      "deleted": "Spot deleted",
+      "empty": "No spots yet. Add your first one! ✨"
+    },
+    "spotForm": {
+      "titleNew": "Add a new spot",
+      "titleEdit": "Edit spot",
+      "translationLabel": "Content language",
+      "translationHint": "Name is required in both languages. Other fields are optional per language — untranslated text falls back to the other language on the site.",
+      "missingName": "Please enter the name in {lang} before saving.",
+      "preview": "Preview",
+      "previewBadge": "Preview · {lang} · not saved yet",
+      "sections": {
+        "basics": "Basics",
+        "location": "Location",
+        "hours": "Hours",
+        "details": "Details",
+        "media": "Photos",
+        "meta": "Tags & status"
+      },
+      "name": "Name",
+      "slug": "Slug",
+      "slugHint": "Auto-generated from name, editable",
+      "description": "Short description",
+      "descriptionHint": "1–2 sentences, shown on the card",
+      "article": "Full article",
+      "articleHint": "200–500 words — the story of this place",
+      "category": "Category",
+      "address": "Address",
+      "geocode": "Locate on map",
+      "geocoding": "Locating…",
+      "locateHint": "Tap the map or drag the pin — or paste coordinates below.",
+      "useLocation": "Use this location",
+      "close": "Close",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "neighborhood": "Neighborhood",
+      "phone": "Phone",
+      "website": "Website",
+      "email": "Email",
+      "hoursNote": "Hours note",
+      "hoursNoteHint": "e.g. Closed during holidays",
+      "addSlot": "+ Add time slot",
+      "closedToday": "Closed",
+      "priceRange": "Price range",
+      "cuisineType": "Cuisine type",
+      "dietaryOptions": "Dietary options",
+      "reservationRequired": "Reservation required",
+      "acceptsCards": "Accepts cards",
+      "parking": "Parking",
+      "featuredPhoto": "Featured photo",
+      "gallery": "Gallery (up to 5)",
+      "uploadHint": "Drag & drop or click to upload",
+      "tags": "Tags",
+      "tagsHint": "Press Enter to add",
+      "rating": "Rating",
+      "isFeatured": "Featured spot",
+      "isVerified": "Verified — I've checked this info",
+      "cancel": "Cancel",
+      "save": "Save spot",
+      "saving": "Saving…",
+      "saved": "✨ Spot saved!",
+      "error": "Something went wrong. Try again."
+    },
+    "events": {
+      "title": "Events",
+      "subtitle": "What's on in Casco Viejo",
+      "add": "Add event",
+      "search": "Search events…",
+      "view": "View",
+      "columns": {
+        "title": "Title",
+        "category": "Category",
+        "date": "Date",
+        "recurring": "Recurring",
+        "actions": "Actions"
+      },
+      "empty": "No events yet."
+    },
+    "eventForm": {
+      "titleNew": "Add a new event",
+      "titleEdit": "Edit event",
+      "translationLabel": "Content language",
+      "translationHint": "Title is required in both languages. Description and article are optional per language — untranslated text falls back to the other language on the site.",
+      "missingTitle": "Please enter the title in {lang} before saving.",
+      "preview": "Preview",
+      "previewBadge": "Preview · {lang} · not saved yet",
+      "title": "Title",
+      "date": "Date",
+      "timeStart": "Start time",
+      "timeEnd": "End time",
+      "recurring": "Recurring",
+      "recurringUntil": "Recurring until",
+      "spot": "Venue (optional)",
+      "capacity": "Capacity",
+      "price": "Price (USD)",
+      "bookingUrl": "Booking URL",
+      "organizer": "Organizer",
+      "organizerContact": "Organizer contact",
+      "photo": "Cover photo",
+      "save": "Save event",
+      "saved": "✨ Event saved!"
+    },
+    "preview": {
+      "close": "Close preview",
+      "viewDesktop": "Desktop",
+      "viewCard": "Card",
+      "viewMobile": "Mobile"
+    },
+    "common": {
+      "yes": "Yes",
+      "no": "No",
+      "loading": "Loading…",
+      "required": "Required"
+    }
+  }
+}
