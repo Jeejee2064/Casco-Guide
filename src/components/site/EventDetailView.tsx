@@ -160,9 +160,10 @@ export function EventDetailView({
           </div>
 
           {event.article && (
-            <p className="whitespace-pre-line text-[15px] leading-relaxed text-foreground/80">
-              {event.article}
-            </p>
+            <div
+              className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground/80 dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
+              dangerouslySetInnerHTML={{ __html: event.article }}
+            />
           )}
 
           {hostSpot && (

@@ -212,6 +212,12 @@
       "deleted": "Spot deleted",
       "empty": "No spots yet. Add your first one! ✨"
     },
+    "articleEditor": {
+      "styleLabel": "Text style",
+      "paragraph": "Paragraph",
+      "title1": "Title 1",
+      "title2": "Title 2"
+    },
     "spotForm": {
       "titleNew": "Add a new spot",
       "titleEdit": "Edit spot",

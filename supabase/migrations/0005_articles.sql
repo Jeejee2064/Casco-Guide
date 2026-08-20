@@ -30,8 +30,8 @@ create table if not exists articles (
   slug text not null unique,
   excerpt_es text,
   excerpt_en text,
-  -- HTML produced by the admin's rich-text editor (unlike
-  -- spots.article_es/en, which is plain text). Optional intro copy above
+  -- HTML produced by the admin's rich-text editor, same as
+  -- spots.article_es/en and events.article_es/en. Optional intro copy above
   -- `blocks` for the "list"/"photo-story" layouts; the whole article body
   -- for "standard".
   body_es text,

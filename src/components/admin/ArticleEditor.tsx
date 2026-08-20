@@ -2,8 +2,9 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Italic, List, ListOrdered, Heading2, Undo, Redo } from "lucide-react";
+import { Bold, Italic, List, ListOrdered, Undo, Redo } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HEADING_LEVELS, StyleSelect } from "@/components/admin/ArticleStyleControls";
 
 export function ArticleEditor({
   value,
@@ -11,12 +12,12 @@ export function ArticleEditor({
   placeholder,
 }: {
   value: string;
-  onChange: (markdown: string) => void;
+  onChange: (html: string) => void;
   placeholder?: string;
 }) {
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [StarterKit],
+    extensions: [StarterKit.configure({ heading: { levels: HEADING_LEVELS } })],
     content: value,
     editorProps: {
       attributes: {
@@ -24,7 +25,7 @@ export function ArticleEditor({
           "prose prose-sm max-w-none min-h-[220px] px-3.5 py-3 outline-none dark:prose-invert",
       },
     },
-    onUpdate: ({ editor }) => onChange(editor.getText()),
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
 
   if (!editor) return null;
@@ -38,6 +39,8 @@ export function ArticleEditor({
   return (
     <div className="overflow-hidden rounded-[var(--radius-button)] border border-border bg-surface">
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 border-b border-border bg-surface p-1.5">
+        <StyleSelect editor={editor} />
+        <span className="mx-1 h-5 w-px bg-border" />
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -51,13 +54,6 @@ export function ArticleEditor({
           className={btn(editor.isActive("italic"))}
         >
           <Italic size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={btn(editor.isActive("heading", { level: 2 }))}
-        >
-          <Heading2 size={15} />
         </button>
         <button
           type="button"

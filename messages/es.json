@@ -212,6 +212,12 @@
       "deleted": "Lugar eliminado",
       "empty": "Aún no hay lugares. ¡Agrega el primero! ✨"
     },
+    "articleEditor": {
+      "styleLabel": "Estilo de texto",
+      "paragraph": "Párrafo",
+      "title1": "Título 1",
+      "title2": "Título 2"
+    },
     "spotForm": {
       "titleNew": "Agregar nuevo lugar",
       "titleEdit": "Editar lugar",

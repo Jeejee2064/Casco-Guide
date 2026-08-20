@@ -10,7 +10,6 @@ import {
   Italic,
   List,
   ListOrdered,
-  Heading2,
   Undo,
   Redo,
   Link2,
@@ -22,6 +21,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { uploadFile } from "@/components/admin/PhotoUploader";
 import { PlaceLinkPicker, type LinkablePlace, type PlaceLinkLabels } from "@/components/admin/PlaceLinkPicker";
+import { HEADING_LEVELS, StyleSelect } from "@/components/admin/ArticleStyleControls";
 import type { Locale } from "@/i18n/routing";
 
 // Carries the referenced spot/event id+type through to the stored HTML, so
@@ -60,7 +60,7 @@ export function ArticleBodyEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({ heading: { levels: HEADING_LEVELS } }),
       TiptapImage.configure({ HTMLAttributes: { class: "rounded-[var(--radius-button)]" } }),
       ReferenceLink.configure({ openOnClick: false, autolink: false }),
     ],
@@ -120,6 +120,8 @@ export function ArticleBodyEditor({
   return (
     <div className="overflow-hidden rounded-[var(--radius-button)] border border-border bg-surface">
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 border-b border-border bg-surface p-1.5">
+        <StyleSelect editor={editor} />
+        <span className="mx-1 h-5 w-px bg-border" />
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -133,13 +135,6 @@ export function ArticleBodyEditor({
           className={btn(editor.isActive("italic"))}
         >
           <Italic size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={btn(editor.isActive("heading", { level: 2 }))}
-        >
-          <Heading2 size={15} />
         </button>
         <button
           type="button"

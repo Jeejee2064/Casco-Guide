@@ -177,9 +177,9 @@ export interface Article {
   title: string;
   slug: string;
   excerpt: string | null;
-  // HTML produced by the admin's rich-text editor (unlike
-  // Spot.article/EventRow.article, which are plain text). The whole body
-  // for "standard"; optional intro copy above `blocks` otherwise.
+  // HTML produced by the admin's rich-text editor, same as
+  // Spot.article/EventRow.article. The whole body for "standard"; optional
+  // intro copy above `blocks` otherwise.
   body: string | null;
   layout: ArticleLayout;
   blocks: ArticleBlock[];
