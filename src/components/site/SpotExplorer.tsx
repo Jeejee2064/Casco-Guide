@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SpotCard } from "./SpotCard";
 import { Stagger, StaggerItem, TAP_SPRING, EASE_OUT } from "./motion";
@@ -14,6 +14,11 @@ import { cn } from "@/lib/utils";
 
 type SortKey = "newest" | "rating" | "alpha" | "random";
 const PRICE_LEVELS: PriceRange[] = ["$", "$$", "$$$", "$$$$"];
+// How many spots show before the "show more" toggle — keeps the home page
+// from dumping the entire (potentially huge) list at once. Only applies
+// with no active search/filter, since a filtered result set is already the
+// thing the visitor asked to see in full.
+const INITIAL_VISIBLE = 8;
 
 /** Deterministic Fisher-Yates shuffle, seeded — `Math.random` can't be called
  * during render (React flags it as an impure side effect there), so the seed
@@ -44,6 +49,7 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
   const [sort, setSort] = useState<SortKey>("newest");
   const [shuffleSeed, setShuffleSeed] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const toggle = <T,>(list: T[], value: T, setter: (v: T[]) => void) =>
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -54,6 +60,7 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
     setPrices([]);
     setOpenNow(false);
     setSort("newest");
+    setExpanded(false);
   };
 
   const filtered = useMemo(() => {
@@ -100,6 +107,11 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
     query.trim().length > 0 || categories.length > 0 || prices.length > 0 || openNow;
   const activeFilterCount =
     categories.length + prices.length + (openNow ? 1 : 0) + (query.trim() ? 1 : 0);
+
+  // Truncate only the unfiltered, default list — once someone searches or
+  // filters, show every match, since that's the result set they asked for.
+  const canCollapse = !hasActiveFilters && filtered.length > INITIAL_VISIBLE;
+  const visibleSpots = !hasActiveFilters && !expanded ? filtered.slice(0, INITIAL_VISIBLE) : filtered;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -247,23 +259,47 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
       </AnimatePresence>
 
       {filtered.length > 0 ? (
-        <Stagger
-          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          amount={0.05}
-        >
-          <AnimatePresence mode="popLayout" initial={false}>
-            {filtered.map((spot) => (
-              <StaggerItem key={spot.id} layout>
-                <SpotCard
-                  spot={spot}
-                  onClick={() =>
-                    router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
-                  }
-                />
-              </StaggerItem>
-            ))}
-          </AnimatePresence>
-        </Stagger>
+        <>
+          <Stagger
+            className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            amount={0.05}
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              {visibleSpots.map((spot) => (
+                <StaggerItem key={spot.id} layout>
+                  <SpotCard
+                    spot={spot}
+                    onClick={() =>
+                      router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
+                    }
+                  />
+                </StaggerItem>
+              ))}
+            </AnimatePresence>
+          </Stagger>
+
+          {canCollapse && (
+            <div className="mt-6 flex justify-center">
+              <motion.button
+                onClick={() => setExpanded((v) => !v)}
+                whileTap={{ scale: 0.96 }}
+                transition={TAP_SPRING}
+                className="flex items-center gap-1.5 rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground/70 transition-colors hover:border-aqua hover:text-aqua"
+              >
+                {expanded ? (
+                  <>
+                    {t("showLess")} <ChevronUp size={15} />
+                  </>
+                ) : (
+                  <>
+                    {t("showMore", { count: filtered.length - INITIAL_VISIBLE })}{" "}
+                    <ChevronDown size={15} />
+                  </>
+                )}
+              </motion.button>
+            </div>
+          )}
+        </>
       ) : (
         <EmptyState />
       )}

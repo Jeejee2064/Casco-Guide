@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -68,6 +69,15 @@ export function EventDetailView({
     );
 
   const priceLabel = event.price && event.price > 0 ? `$${event.price}` : t("free");
+
+  // Next.js only scrolls to top on navigation when the new page isn't
+  // already visible in the viewport — from a scrolled-down card in the
+  // list, the detail page counts as "visible", so it opens at the same
+  // scroll offset instead of the top. Force it explicitly, re-running
+  // whenever the viewed event changes (not just on first mount).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [event.id]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-10 sm:pb-10">

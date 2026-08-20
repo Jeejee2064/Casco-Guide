@@ -2,7 +2,7 @@
   "site": {
     "name": "Casco Guide",
     "title": "Explore Casco Viejo",
-    "subtitle": "{count}+ curated spots & events",
+    "subtitle": "Handpicked restaurants, bars and sights, upcoming events, and local guides — everything you need to explore Casco Viejo like you live here.",
     "searchPlaceholder": "Search spots, tags, cuisine…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Grid",
@@ -11,7 +11,8 @@
   "nav": {
     "spots": "Spots",
     "events": "Events",
-    "admin": "Admin"
+    "admin": "Admin",
+    "articles": "Guides"
   },
   "filters": {
     "title": "Filters",
@@ -25,7 +26,13 @@
     "sortRandom": "Surprise me",
     "reset": "Reset filters",
     "apply": "Apply",
-    "resultsCount": "{count, plural, =0 {No spots found} one {# spot} other {# spots}}"
+    "resultsCount": "{count, plural, =0 {No spots found} one {# spot} other {# spots}}",
+    "showMore": "{count, plural, one {Show # more spot} other {Show # more spots}}",
+    "showLess": "Show less",
+    "date": "Date",
+    "dateToday": "Today",
+    "dateWeek": "This week",
+    "dateWeekend": "This weekend"
   },
   "category": {
     "restaurant": "Restaurant",
@@ -117,7 +124,9 @@
     "book": "Book now",
     "viewDetails": "View details",
     "capacity": "Capacity: {count}",
-    "organizer": "Organized by {name}"
+    "organizer": "Organized by {name}",
+    "paid": "Paid",
+    "searchPlaceholder": "Search events, categories…"
   },
   "empty": {
     "title": "Nothing here yet",
@@ -128,7 +137,8 @@
     "locating": "Locating…",
     "locateError": "Couldn't find your location",
     "youAreHere": "You are here",
-    "walkTime": "{mins} min walk"
+    "walkTime": "{mins} min walk",
+    "backToList": "Back to list"
   },
   "discover": {
     "nearbySpots": "Nearby spots",
@@ -145,7 +155,8 @@
   "spotDetail": {
     "back": "Back to Casco Guide",
     "amenities": "Amenities",
-    "gallery": "Gallery"
+    "gallery": "Gallery",
+    "featuredIn": "Featured in"
   },
   "eventDetail": {
     "back": "Back to Casco Guide",
@@ -157,7 +168,8 @@
       "spots": "Spots",
       "events": "Events",
       "logout": "Log out",
-      "viewSite": "View site"
+      "viewSite": "View site",
+      "articles": "Articles"
     },
     "login": {
       "title": "Welcome back",
@@ -172,7 +184,7 @@
       "subtitle": "Here's what's happening in Casco Viejo 🌴",
       "totalSpots": "Total spots",
       "totalEvents": "Total events",
-      "featured": "Featured spots",
+      "totalArticles": "Total articles",
       "lastUpdated": "Last updated",
       "addSpot": "+ Add spot",
       "addEvent": "+ Add event"
@@ -310,6 +322,122 @@
       "no": "No",
       "loading": "Loading…",
       "required": "Required"
+    },
+    "articles": {
+      "title": "Articles",
+      "subtitle": "Manage the site's guides and stories",
+      "add": "Add article",
+      "search": "Search articles…",
+      "columns": {
+        "title": "Title",
+        "layout": "Layout",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+      "deleted": "Article deleted",
+      "empty": "No articles yet. Add the first one! ✨",
+      "published": "Published",
+      "draft": "Draft",
+      "layout": {
+        "standard": "Standard",
+        "list": "Ranked list",
+        "photo-story": "Photo story"
+      }
+    },
+    "articleForm": {
+      "titleNew": "New article",
+      "titleEdit": "Edit article",
+      "translationLabel": "Content language",
+      "translationHint": "Title is required in both languages. Every other field is optional per language — untranslated text falls back to the other language on the site.",
+      "missingTitle": "Enter the title in {lang} before saving.",
+      "preview": "Preview",
+      "previewBadge": "Preview · {lang} · unsaved",
+      "sections": {
+        "layout": "Layout",
+        "basics": "Basics",
+        "body": "Content",
+        "media": "Cover photo",
+        "meta": "Tags & status"
+      },
+      "layouts": {
+        "standard": {
+          "name": "Standard article",
+          "hint": "Cover + title + freeform text with links and photos."
+        },
+        "list": {
+          "name": "Ranked list",
+          "hint": "Numbered items — great for a \"Top 5\"."
+        },
+        "photo-story": {
+          "name": "Photo story",
+          "hint": "Big photos with a short caption."
+        }
+      },
+      "title": "Title",
+      "slug": "Slug",
+      "slugHint": "Auto-generated, editable",
+      "excerpt": "Short excerpt",
+      "excerptHint": "1–2 sentences, shown on the card",
+      "author": "Author",
+      "body": "Article body",
+      "intro": "Intro (optional)",
+      "bodyHint": "Select text and use the link button to cite an existing spot, event, or article.",
+      "introHint": "Optional text above the list/gallery below.",
+      "linkPlace": "Link a spot, event, or article",
+      "searchPlaceholder": "Search by name…",
+      "noResults": "No results",
+      "close": "Close",
+      "linkTypes": {
+        "all": "All",
+        "spot": "Spots",
+        "event": "Events",
+        "article": "Articles"
+      },
+      "coverPhoto": "Cover photo",
+      "tags": "Tags",
+      "isPublished": "Published",
+      "isFeatured": "Featured article",
+      "publishedHint": "Unpublished drafts aren't visible on the public site, only here.",
+      "cancel": "Cancel",
+      "save": "Save article",
+      "saving": "Saving…",
+      "saved": "✨ Article saved!",
+      "error": "Something went wrong. Try again.",
+      "blocks": {
+        "rank": "Rank #{n}",
+        "item": "Item #{n}",
+        "titlePlaceholder": "Title",
+        "textPlaceholder": "Short text…",
+        "linkPlace": "Link a spot/event",
+        "addRank": "+ Add rank",
+        "addItem": "+ Add item",
+        "searchPlaceholder": "Search by name…",
+        "noResults": "No results",
+        "close": "Close",
+        "linkTypes": {
+          "all": "All",
+          "spot": "Spots",
+          "event": "Events"
+        }
+      }
     }
+  },
+  "articles": {
+    "title": "Guides",
+    "subtitle": "Guides, recommendations, and stories from Casco Viejo",
+    "empty": "No published guides yet.",
+    "latestTitle": "Latest guides",
+    "seeAll": "See all guides"
+  },
+  "articleDetail": {
+    "back": "Back to guides",
+    "placesMentioned": "Places mentioned",
+    "viewSpot": "View spot",
+    "viewEvent": "View event",
+    "draft": "Draft"
   }
 }

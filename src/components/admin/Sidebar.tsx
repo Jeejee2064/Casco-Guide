@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, MapPin, CalendarDays, LogOut, ExternalLink } from "lucide-react";
+import { LayoutDashboard, MapPin, CalendarDays, Newspaper, LogOut, ExternalLink } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { signOut } from "@/lib/actions/auth";
@@ -16,6 +16,7 @@ export function Sidebar() {
     { href: "/admin" as const, label: t("dashboard"), icon: LayoutDashboard },
     { href: "/admin/spots" as const, label: t("spots"), icon: MapPin },
     { href: "/admin/events" as const, label: t("events"), icon: CalendarDays },
+    { href: "/admin/articles" as const, label: t("articles"), icon: Newspaper },
   ];
 
   return (

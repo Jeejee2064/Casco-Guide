@@ -1,30 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { LayoutGrid, MapIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SpotExplorer } from "./SpotExplorer";
 import { SpotMap } from "./SpotMap";
 import { EASE_OUT, TAP_SPRING } from "./motion";
+import { useExploreView } from "./ExploreViewContext";
 import type { EventRow, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
-type View = "grid" | "map";
-
 export function ExploreSection({ spots, events = [] }: { spots: Spot[]; events?: EventRow[] }) {
   const tSite = useTranslations("site");
-  // The home page is statically prerendered, so a `?view=map` query string
-  // never reaches this component through server props — it's only visible
-  // client-side. Reading it here (instead of via a server-passed prop) is
-  // what makes the "explore the full map" CTA actually land on the map.
-  const searchParams = useSearchParams();
-  const [view, setView] = useState<View>(() => (searchParams.get("view") === "map" ? "map" : "grid"));
+  // Shared with Header (see ExploreViewContext) — plain client state, not the
+  // URL. This route is dynamic (fetches spots/events/articles fresh from
+  // Supabase), so routing this through the URL via `router.push`/`replace`
+  // turned a should-be-instant tab switch into a ~1s+ server round-trip —
+  // long enough that the old grid was the only thing on screen the whole
+  // time, visible right through the header's glass background above it.
+  const { isMapView, setIsMapView } = useExploreView();
+  const view = isMapView ? "map" : "grid";
 
   return (
     <div className={view === "grid" ? "pb-20" : undefined}>
-      <AnimatePresence mode="wait">
+      {/* No `mode="wait"` — with switching now instant, waiting out the
+          grid's exit fade before even starting to mount the map would just
+          reintroduce a needless quarter-second of nothing happening. The map
+          is `position: fixed` and paints an opaque background from its first
+          frame (see SpotMap), so mounting it immediately alongside the
+          exiting grid is enough for it to cover the grid right away instead. */}
+      <AnimatePresence>
         {view === "grid" ? (
           <motion.div
             key="grid"
@@ -63,7 +68,7 @@ export function ExploreSection({ spots, events = [] }: { spots: Spot[]; events?:
           ).map(({ key, label, icon: Icon }) => (
             <motion.button
               key={key}
-              onClick={() => setView(key)}
+              onClick={() => setIsMapView(key === "map")}
               whileTap={{ scale: 0.94 }}
               transition={TAP_SPRING}
               className={cn(

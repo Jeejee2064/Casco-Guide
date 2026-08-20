@@ -9,7 +9,10 @@ import { createClient } from "@/lib/supabase/client";
 import type { Photo } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
-async function uploadFile(file: File): Promise<string> {
+/** Uploads to the shared `spot-photos` bucket and returns its public URL.
+ * Exported for reuse outside this file (e.g. inline images inserted from
+ * ArticleBodyEditor) — the bucket isn't spot-specific despite its name. */
+export async function uploadFile(file: File): Promise<string> {
   const supabase = createClient();
   const ext = file.name.split(".").pop();
   const path = `${crypto.randomUUID()}.${ext}`;

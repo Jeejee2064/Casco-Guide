@@ -42,6 +42,26 @@ export async function getEventBySlug(slug: string, locale: Locale): Promise<Even
   return data ? localizeEvent(data as EventRecord, locale) : null;
 }
 
+/** Looks up several events by id at once, in no particular order — used to
+ * resolve an article's `event_refs` into full records for its "places
+ * mentioned" map. Unknown ids are silently dropped. */
+export async function getEventsByIds(ids: string[], locale: Locale): Promise<EventRow[]> {
+  if (ids.length === 0) return [];
+
+  if (!isSupabaseConfigured) {
+    return MOCK_EVENTS.filter((e) => ids.includes(e.id)).map((e) => localizeEvent(e, locale));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").select("*").in("id", ids);
+
+  if (error) {
+    console.error("getEventsByIds error:", error.message);
+    return [];
+  }
+  return (data as EventRecord[]).map((e) => localizeEvent(e, locale));
+}
+
 /** Upcoming events closest to a coordinate, nearest first — powers the
  * "related events" rail on spot/event detail pages. Events hosted right at
  * that coordinate (same venue) naturally sort to the top. */

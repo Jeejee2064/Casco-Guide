@@ -37,7 +37,7 @@ export function ArticleEditor({
 
   return (
     <div className="overflow-hidden rounded-[var(--radius-button)] border border-border bg-surface">
-      <div className="flex flex-wrap items-center gap-1 border-b border-border p-1.5">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 border-b border-border bg-surface p-1.5">
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}

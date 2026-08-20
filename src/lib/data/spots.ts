@@ -66,6 +66,26 @@ export async function getSpotById(id: string, locale: Locale): Promise<Spot | nu
   return data ? localizeSpot(data as SpotRecord, locale) : null;
 }
 
+/** Looks up several spots by id at once, in no particular order — used to
+ * resolve an article's `spot_refs` into full records for its "places
+ * mentioned" map. Unknown ids are silently dropped. */
+export async function getSpotsByIds(ids: string[], locale: Locale): Promise<Spot[]> {
+  if (ids.length === 0) return [];
+
+  if (!isSupabaseConfigured) {
+    return MOCK_SPOTS.filter((s) => ids.includes(s.id)).map((s) => localizeSpot(s, locale));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("spots").select("*").in("id", ids);
+
+  if (error) {
+    console.error("getSpotsByIds error:", error.message);
+    return [];
+  }
+  return (data as SpotRecord[]).map((s) => localizeSpot(s, locale));
+}
+
 /** Spots closest to a coordinate, nearest first — powers the "nearby spots"
  * rail on spot/event detail pages. `excludeId` keeps the page currently
  * being viewed out of its own recommendations. */

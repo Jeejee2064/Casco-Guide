@@ -2,7 +2,7 @@
   "site": {
     "name": "Casco Guide",
     "title": "Explora Casco Viejo",
-    "subtitle": "{count}+ lugares y eventos seleccionados",
+    "subtitle": "Restaurantes, bares y sitios seleccionados, próximos eventos y guías locales — todo lo que necesitas para explorar Casco Viejo como si vivieras aquí.",
     "searchPlaceholder": "Busca lugares, etiquetas, cocina…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Cuadrícula",
@@ -11,7 +11,8 @@
   "nav": {
     "spots": "Lugares",
     "events": "Eventos",
-    "admin": "Admin"
+    "admin": "Admin",
+    "articles": "Guías"
   },
   "filters": {
     "title": "Filtros",
@@ -25,7 +26,13 @@
     "sortRandom": "Sorpréndeme",
     "reset": "Restablecer filtros",
     "apply": "Aplicar",
-    "resultsCount": "{count, plural, =0 {Ningún lugar encontrado} one {# lugar} other {# lugares}}"
+    "resultsCount": "{count, plural, =0 {Ningún lugar encontrado} one {# lugar} other {# lugares}}",
+    "showMore": "{count, plural, one {Ver # lugar más} other {Ver # lugares más}}",
+    "showLess": "Ver menos",
+    "date": "Fecha",
+    "dateToday": "Hoy",
+    "dateWeek": "Esta semana",
+    "dateWeekend": "Este fin de semana"
   },
   "category": {
     "restaurant": "Restaurante",
@@ -117,7 +124,9 @@
     "book": "Reservar",
     "viewDetails": "Ver detalles",
     "capacity": "Capacidad: {count}",
-    "organizer": "Organizado por {name}"
+    "organizer": "Organizado por {name}",
+    "paid": "De pago",
+    "searchPlaceholder": "Buscar eventos, categorías…"
   },
   "empty": {
     "title": "Todavía no hay nada aquí",
@@ -128,7 +137,8 @@
     "locating": "Ubicando…",
     "locateError": "No pudimos encontrar tu ubicación",
     "youAreHere": "Estás aquí",
-    "walkTime": "{mins} min a pie"
+    "walkTime": "{mins} min a pie",
+    "backToList": "Volver a la lista"
   },
   "discover": {
     "nearbySpots": "Lugares cercanos",
@@ -145,7 +155,8 @@
   "spotDetail": {
     "back": "Volver a Casco Guide",
     "amenities": "Comodidades",
-    "gallery": "Galería"
+    "gallery": "Galería",
+    "featuredIn": "Aparece en"
   },
   "eventDetail": {
     "back": "Volver a Casco Guide",
@@ -157,7 +168,8 @@
       "spots": "Lugares",
       "events": "Eventos",
       "logout": "Cerrar sesión",
-      "viewSite": "Ver sitio"
+      "viewSite": "Ver sitio",
+      "articles": "Artículos"
     },
     "login": {
       "title": "Bienvenido de nuevo",
@@ -172,7 +184,7 @@
       "subtitle": "Esto es lo que pasa en Casco Viejo 🌴",
       "totalSpots": "Total de lugares",
       "totalEvents": "Total de eventos",
-      "featured": "Lugares destacados",
+      "totalArticles": "Total de artículos",
       "lastUpdated": "Última actualización",
       "addSpot": "+ Agregar lugar",
       "addEvent": "+ Agregar evento"
@@ -310,6 +322,122 @@
       "no": "No",
       "loading": "Cargando…",
       "required": "Requerido"
+    },
+    "articles": {
+      "title": "Artículos",
+      "subtitle": "Gestiona las guías y crónicas del sitio",
+      "add": "Agregar artículo",
+      "search": "Buscar artículos…",
+      "columns": {
+        "title": "Título",
+        "layout": "Formato",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "view": "Ver",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar \"{name}\"? Esto no se puede deshacer.",
+      "deleted": "Artículo eliminado",
+      "empty": "Aún no hay artículos. ¡Agrega el primero! ✨",
+      "published": "Publicado",
+      "draft": "Borrador",
+      "layout": {
+        "standard": "Estándar",
+        "list": "Lista clasificada",
+        "photo-story": "Crónica fotográfica"
+      }
+    },
+    "articleForm": {
+      "titleNew": "Nuevo artículo",
+      "titleEdit": "Editar artículo",
+      "translationLabel": "Idioma del contenido",
+      "translationHint": "El título es obligatorio en ambos idiomas. Los demás campos son opcionales por idioma — el texto sin traducir usa el otro idioma como respaldo en el sitio.",
+      "missingTitle": "Ingresa el título en {lang} antes de guardar.",
+      "preview": "Vista previa",
+      "previewBadge": "Vista previa · {lang} · sin guardar",
+      "sections": {
+        "layout": "Formato",
+        "basics": "Datos básicos",
+        "body": "Contenido",
+        "media": "Foto de portada",
+        "meta": "Etiquetas y estado"
+      },
+      "layouts": {
+        "standard": {
+          "name": "Artículo estándar",
+          "hint": "Portada + título + texto libre con enlaces y fotos."
+        },
+        "list": {
+          "name": "Lista clasificada",
+          "hint": "Items numerados — ideal para \"Top 5\"."
+        },
+        "photo-story": {
+          "name": "Crónica fotográfica",
+          "hint": "Grandes fotos con leyenda corta."
+        }
+      },
+      "title": "Título",
+      "slug": "Slug",
+      "slugHint": "Se genera automáticamente, editable",
+      "excerpt": "Resumen corto",
+      "excerptHint": "1–2 frases, se muestra en la tarjeta",
+      "author": "Autor",
+      "body": "Cuerpo del artículo",
+      "intro": "Introducción (opcional)",
+      "bodyHint": "Selecciona texto y usa el botón de enlace para citar un lugar, evento o artículo ya existente.",
+      "introHint": "Texto opcional antes de la lista/galería de abajo.",
+      "linkPlace": "Enlazar lugar, evento o artículo",
+      "searchPlaceholder": "Buscar por nombre…",
+      "noResults": "Sin resultados",
+      "close": "Cerrar",
+      "linkTypes": {
+        "all": "Todos",
+        "spot": "Lugares",
+        "event": "Eventos",
+        "article": "Artículos"
+      },
+      "coverPhoto": "Foto de portada",
+      "tags": "Etiquetas",
+      "isPublished": "Publicado",
+      "isFeatured": "Artículo destacado",
+      "publishedHint": "Los borradores no publicados no son visibles en el sitio público, solo en este panel.",
+      "cancel": "Cancelar",
+      "save": "Guardar artículo",
+      "saving": "Guardando…",
+      "saved": "✨ ¡Artículo guardado!",
+      "error": "Algo salió mal. Intenta de nuevo.",
+      "blocks": {
+        "rank": "Puesto #{n}",
+        "item": "Elemento #{n}",
+        "titlePlaceholder": "Título",
+        "textPlaceholder": "Texto corto…",
+        "linkPlace": "Enlazar lugar/evento",
+        "addRank": "+ Agregar puesto",
+        "addItem": "+ Agregar elemento",
+        "searchPlaceholder": "Buscar por nombre…",
+        "noResults": "Sin resultados",
+        "close": "Cerrar",
+        "linkTypes": {
+          "all": "Todos",
+          "spot": "Lugares",
+          "event": "Eventos"
+        }
+      }
     }
+  },
+  "articles": {
+    "title": "Guías",
+    "subtitle": "Guías, recomendaciones y crónicas de Casco Viejo",
+    "empty": "Aún no hay guías publicadas.",
+    "latestTitle": "Últimas guías",
+    "seeAll": "Ver todas las guías"
+  },
+  "articleDetail": {
+    "back": "Volver a guías",
+    "placesMentioned": "Lugares mencionados",
+    "viewSpot": "Ver lugar",
+    "viewEvent": "Ver evento",
+    "draft": "Borrador"
   }
 }

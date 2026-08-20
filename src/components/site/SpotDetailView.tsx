@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   Star,
@@ -15,7 +15,7 @@ import {
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { PhotoGallery } from "./PhotoGallery";
@@ -24,11 +24,12 @@ import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { ExploreMapCard } from "./ExploreMapCard";
 import { NearbySection } from "./NearbySection";
+import { ArticleCard } from "./ArticleCard";
 import { EASE_OUT } from "./motion";
 import { Button } from "@/components/ui/Button";
 import { CATEGORY_META } from "@/lib/categories";
 import { DAY_KEYS } from "@/lib/types/database";
-import type { EventRow, Spot } from "@/lib/types/database";
+import type { Article, EventRow, Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
 import { getSpotImage } from "@/lib/data/categoryImages";
 
@@ -37,27 +38,42 @@ import { getSpotImage } from "@/lib/data/categoryImages";
  * that calls it instead — used by the admin preview, where a real navigation
  * would exit the editor for an unsaved draft. `nearbySpots`/`nearbyEvents`
  * feed the "keep browsing" rails at the bottom; both default to empty so the
- * admin preview (which has nothing to recommend) can omit them. */
+ * admin preview (which has nothing to recommend) can omit them. `articles`
+ * are the published articles whose body links to this spot (its `spot_refs`,
+ * see getArticlesForSpot) — the inverse of the "places mentioned" map on the
+ * article page; defaults to empty for the same reason as the rails above. */
 export function SpotDetailView({
   spot,
   nearbySpots = [],
   nearbyEvents = [],
+  articles = [],
   onBack,
 }: {
   spot: Spot;
   nearbySpots?: Spot[];
   nearbyEvents?: EventRow[];
+  articles?: Article[];
   onBack?: () => void;
 }) {
   const t = useTranslations("spot");
   const td = useTranslations("spotDetail");
   const th = useTranslations("hours");
   const locale = useLocale();
+  const router = useRouter();
 
   const photos =
     spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
   const [hero, ...rest] = photos;
   const [heroLightboxOpen, setHeroLightboxOpen] = useState(false);
+
+  // Next.js only scrolls to top on navigation when the new page isn't
+  // already visible in the viewport — from a scrolled-down card in the
+  // list, the detail page counts as "visible", so it opens at the same
+  // scroll offset instead of the top. Force it explicitly, re-running
+  // whenever the viewed spot changes (not just on first mount).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [spot.id]);
 
   const directions = () =>
     window.open(
@@ -277,6 +293,23 @@ export function SpotDetailView({
         <div className="mt-10 lg:mt-14">
           <h2 className="font-heading mb-3 text-xl font-bold">{td("gallery")}</h2>
           <PhotoGallery photos={rest} alt={spot.name} />
+        </div>
+      )}
+
+      {articles.length > 0 && (
+        <div className="mt-10 lg:mt-14">
+          <h2 className="font-heading mb-3 text-xl font-bold">{td("featuredIn")}</h2>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article) => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                onClick={() =>
+                  router.push({ pathname: "/articles/[slug]", params: { slug: article.slug } })
+                }
+              />
+            ))}
+          </div>
         </div>
       )}
 

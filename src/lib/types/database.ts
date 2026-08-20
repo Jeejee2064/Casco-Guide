@@ -148,6 +148,70 @@ export interface EventRecord extends Omit<EventRow, "title" | "description" | "a
   article_en: string | null;
 }
 
+// Three proven presentation formats — deliberately not an open-ended
+// template system. "standard" is a freeform write-up; "list" and
+// "photo-story" additionally render `blocks` as, respectively, a numbered
+// ranking (e.g. "Top 5 vegan spots") or a full-bleed photo sequence.
+export type ArticleLayout = "standard" | "list" | "photo-story";
+
+/** One structured item inside a "list"/"photo-story" article — locale-resolved. */
+export interface ArticleBlock {
+  id: string;
+  photo: string | null;
+  title: string | null;
+  text: string | null;
+  ref_type: "spot" | "event" | null;
+  ref_id: string | null;
+  ref_slug: string | null;
+}
+
+export interface ArticleBlockRecord extends Omit<ArticleBlock, "title" | "text"> {
+  title_es: string | null;
+  title_en: string | null;
+  text_es: string | null;
+  text_en: string | null;
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  // HTML produced by the admin's rich-text editor (unlike
+  // Spot.article/EventRow.article, which are plain text). The whole body
+  // for "standard"; optional intro copy above `blocks` otherwise.
+  body: string | null;
+  layout: ArticleLayout;
+  blocks: ArticleBlock[];
+
+  cover_photo: string | null;
+
+  tags: string[];
+  // Distinct spot/event ids referenced by links inside `body` or `blocks`,
+  // recomputed on every save — see src/lib/actions/articles.ts.
+  spot_refs: string[];
+  event_refs: string[];
+
+  author: string | null;
+  is_published: boolean;
+  is_featured: boolean;
+  published_at: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArticleRecord
+  extends Omit<Article, "title" | "excerpt" | "body" | "blocks"> {
+  title_es: string;
+  title_en: string;
+  excerpt_es: string | null;
+  excerpt_en: string | null;
+  body_es: string | null;
+  body_en: string | null;
+  blocks: ArticleBlockRecord[];
+}
+
 export interface Category {
   id: string;
   name: string;

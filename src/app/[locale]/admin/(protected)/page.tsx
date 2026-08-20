@@ -1,16 +1,20 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { MapPin, CalendarDays, Star, Clock } from "lucide-react";
+import { MapPin, CalendarDays, Newspaper, Clock } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
 import { getSpots } from "@/lib/data/spots";
 import { getEvents } from "@/lib/data/events";
+import { getAllArticles } from "@/lib/data/articles";
 import type { Locale } from "@/i18n/routing";
 
 export default async function AdminDashboardPage() {
   const t = await getTranslations("admin.dashboard");
   const locale = (await getLocale()) as Locale;
-  const [spots, events] = await Promise.all([getSpots(locale), getEvents(locale)]);
-  const featured = spots.filter((s) => s.is_featured).length;
+  const [spots, events, articles] = await Promise.all([
+    getSpots(locale),
+    getEvents(locale),
+    getAllArticles(locale),
+  ]);
   const lastUpdated = spots[0]?.updated_at
     ? new Date(spots[0].updated_at).toLocaleDateString()
     : "—";
@@ -31,12 +35,11 @@ export default async function AdminDashboardPage() {
       href: "/admin/events" as const,
     },
     {
-      label: t("featured"),
-      value: featured,
-      icon: Star,
+      label: t("totalArticles"),
+      value: articles.length,
+      icon: Newspaper,
       className: "bg-magenta/15 text-magenta-dark dark:text-magenta",
-      // Deep-links into the spots list pre-filtered to featured-only.
-      href: { pathname: "/admin/spots" as const, query: { featured: "1" } },
+      href: "/admin/articles" as const,
     },
     {
       label: t("lastUpdated"),

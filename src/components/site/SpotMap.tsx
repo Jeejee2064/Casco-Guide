@@ -11,22 +11,58 @@ import type {
 } from "leaflet";
 import { useLocale, useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, LocateFixed, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import Image from "next/image";
+import {
+  CalendarDays,
+  Loader2,
+  LocateFixed,
+  MapPin,
+  Search,
+  SearchX,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META, SPOT_CATEGORIES } from "@/lib/categories";
-import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
+import { EVENT_CATEGORIES, EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { isOpenNow, formatTime } from "@/lib/hours";
-import type { EventRow, PriceRange, Spot, SpotCategory } from "@/lib/types/database";
+import type { EventCategory, EventRow, PriceRange, Spot, SpotCategory } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
+type MapMode = "spots" | "events";
+
 const PRICE_LEVELS: PriceRange[] = ["$", "$$", "$$$", "$$$$"];
+type EventPriceFilter = "free" | "paid";
+const EVENT_PRICE_FILTERS: EventPriceFilter[] = ["free", "paid"];
+type EventDateFilter = "all" | "today" | "week" | "weekend";
 
 // Casco Viejo, Panama City — used when there's nothing to fit bounds to.
 const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
 const DEFAULT_ZOOM = 15;
+const PANAMA_TZ = "America/Panama"; // UTC-5, no DST — same convention as lib/hours.ts
+
+/** "YYYY-MM-DD" for `date`, evaluated in Panama's timezone — matches the
+ * plain date strings events are stored with, so it's safe to compare directly. */
+function panamaDateKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: PANAMA_TZ }).format(date);
+}
+
+function matchesEventDateFilter(event: EventRow, filter: EventDateFilter): boolean {
+  if (filter === "all") return true;
+  const today = new Date(`${panamaDateKey(new Date())}T00:00:00`);
+  const eventDate = new Date(`${event.date}T00:00:00`);
+  const diffDays = Math.round((eventDate.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return false;
+
+  if (filter === "today") return diffDays === 0;
+  if (filter === "week") return diffDays <= 6;
+  // weekend: the coming Saturday/Sunday, within the next week
+  const dow = eventDate.getDay(); // 0=Sun..6=Sat
+  return diffDays <= 7 && (dow === 0 || dow === 6);
+}
 
 const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -287,13 +323,27 @@ export function SpotMap({
   const tEvents = useTranslations("events");
   const tEmpty = useTranslations("empty");
   const tMap = useTranslations("map");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const router = useRouter();
+
+  // Spots and events render as two mutually-exclusive layers rather than
+  // overlaid at once — with both on screen at the same density the pins
+  // crowded each other out and the filters below couldn't tell which layer
+  // they applied to. Plain local state, not the URL — this page is dynamic
+  // (fetches spots/events fresh from Supabase), so routing a same-page
+  // toggle through the URL costs a real server round-trip instead of the
+  // instant switch it should feel like.
+  const [mode, setMode] = useState<MapMode>("spots");
+  const hasEvents = events.length > 0;
 
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [prices, setPrices] = useState<PriceRange[]>([]);
   const [openNow, setOpenNow] = useState(false);
+  const [eventCategories, setEventCategories] = useState<EventCategory[]>([]);
+  const [eventPrices, setEventPrices] = useState<EventPriceFilter[]>([]);
+  const [eventDate, setEventDate] = useState<EventDateFilter>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -326,9 +376,15 @@ export function SpotMap({
 
   const resetFilters = () => {
     setQuery("");
-    setCategories([]);
-    setPrices([]);
-    setOpenNow(false);
+    if (mode === "spots") {
+      setCategories([]);
+      setPrices([]);
+      setOpenNow(false);
+    } else {
+      setEventCategories([]);
+      setEventPrices([]);
+      setEventDate("all");
+    }
   };
 
   // Fullscreen mode covers the whole viewport — lock the page behind it so
@@ -342,7 +398,7 @@ export function SpotMap({
     };
   }, [fullScreen]);
 
-  const filtered = useMemo(() => {
+  const filteredSpots = useMemo(() => {
     const q = query.trim().toLowerCase();
     return spots.filter((spot) => {
       if (spot.latitude == null || spot.longitude == null) return false;
@@ -361,10 +417,40 @@ export function SpotMap({
     });
   }, [spots, query, categories, prices, openNow]);
 
+  const filteredEvents = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return events.filter((event) => {
+      if (event.latitude == null || event.longitude == null) return false;
+      if (eventCategories.length && !eventCategories.includes(event.category)) return false;
+      if (eventPrices.length) {
+        const isFree = !event.price || event.price <= 0;
+        if (!eventPrices.includes(isFree ? "free" : "paid")) return false;
+      }
+      if (!matchesEventDateFilter(event, eventDate)) return false;
+      if (q) {
+        const haystack = [event.title, event.description, event.organizer, ...(event.tags ?? [])]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [events, query, eventCategories, eventPrices, eventDate]);
+
+  const hasQuery = query.trim().length > 0;
   const hasActiveFilters =
-    query.trim().length > 0 || categories.length > 0 || prices.length > 0 || openNow;
+    mode === "spots"
+      ? hasQuery || categories.length > 0 || prices.length > 0 || openNow
+      : hasQuery || eventCategories.length > 0 || eventPrices.length > 0 || eventDate !== "all";
   const activeFilterCount =
-    categories.length + prices.length + (openNow ? 1 : 0) + (query.trim() ? 1 : 0);
+    mode === "spots"
+      ? categories.length + prices.length + (openNow ? 1 : 0) + (hasQuery ? 1 : 0)
+      : eventCategories.length +
+        eventPrices.length +
+        (eventDate !== "all" ? 1 : 0) +
+        (hasQuery ? 1 : 0);
+  const visibleCount = mode === "spots" ? filteredSpots.length : filteredEvents.length;
 
   // Init the map once, client-side only.
   useEffect(() => {
@@ -390,8 +476,10 @@ export function SpotMap({
       }).addTo(map);
       tileLayerRef.current = tileLayer;
 
-      markerLayerRef.current = L.layerGroup().addTo(map);
-      eventLayerRef.current = L.layerGroup().addTo(map);
+      // Not added to the map yet — the mode-sync effect below adds whichever
+      // one is active, so spots and events never render at the same time.
+      markerLayerRef.current = L.layerGroup();
+      eventLayerRef.current = L.layerGroup();
       mapRef.current = map;
       setReady(true);
     })();
@@ -414,6 +502,24 @@ export function SpotMap({
     };
   }, []);
 
+  // Swap which layer is actually attached to the map when the mode toggle
+  // flips — this (not visibility CSS) is what keeps spots and events from
+  // ever showing at once.
+  useEffect(() => {
+    const map = mapRef.current;
+    const spotLayer = markerLayerRef.current;
+    const eventLayer = eventLayerRef.current;
+    if (!ready || !map || !spotLayer || !eventLayer) return;
+
+    if (mode === "spots") {
+      if (map.hasLayer(eventLayer)) map.removeLayer(eventLayer);
+      if (!map.hasLayer(spotLayer)) map.addLayer(spotLayer);
+    } else {
+      if (map.hasLayer(spotLayer)) map.removeLayer(spotLayer);
+      if (!map.hasLayer(eventLayer)) map.addLayer(eventLayer);
+    }
+  }, [ready, mode]);
+
   // Re-render markers whenever the filtered set (or locale, for popup labels) changes.
   useEffect(() => {
     if (!ready || !mapRef.current || !markerLayerRef.current) return;
@@ -429,7 +535,7 @@ export function SpotMap({
 
       const bounds: [number, number][] = [];
 
-      filtered.forEach((spot) => {
+      filteredSpots.forEach((spot) => {
         const meta = CATEGORY_META[spot.category];
         const icon = L.divIcon({
           className: "spot-pin-marker",
@@ -470,7 +576,9 @@ export function SpotMap({
         bounds.push([spot.latitude, spot.longitude]);
       });
 
-      if (bounds.length > 0) {
+      // Only steer the viewport if spots are the layer actually on screen —
+      // otherwise switching filters in events mode would yank the map back.
+      if (bounds.length > 0 && mode === "spots") {
         mapRef.current?.fitBounds(bounds, { padding: [48, 48], maxZoom: 16 });
       }
     })();
@@ -478,7 +586,7 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [ready, filtered, locale, tCategory, tSpot]);
+  }, [ready, filteredSpots, mode, locale, tCategory, tSpot]);
 
   // Render event pins on their own layer, using the /public/icons badges.
   useEffect(() => {
@@ -492,46 +600,70 @@ export function SpotMap({
       if (!layer) return;
       layer.clearLayers();
 
-      events
-        .filter((event) => event.latitude != null && event.longitude != null)
-        .forEach((event) => {
-          const meta = EVENT_CATEGORY_META[event.category];
-          const icon = L.divIcon({
-            className: "event-pin-marker",
-            html: eventPinHtml(meta.icon, event.is_featured),
-            iconSize: [36, 36],
-            iconAnchor: [18, 36],
-            popupAnchor: [0, -32],
-          });
+      const bounds: [number, number][] = [];
 
-          const marker = L.marker([event.latitude, event.longitude], { icon });
-          const dateLabel = new Intl.DateTimeFormat(locale === "es" ? "es-PA" : "en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-          }).format(new Date(`${event.date}T00:00:00`));
-
-          const popupEl = buildEventPopupElement(
-            event,
-            {
-              categoryLabel: tEventCategory(event.category),
-              dateLabel,
-              free: tEvents("free"),
-              book: tEvents("book"),
-              viewDetails: tEvents("viewDetails"),
-            },
-            locale,
-            () => openEventRef.current(event),
-          );
-          marker.bindPopup(popupEl, { minWidth: 250, maxWidth: 260, autoPanPadding: [24, 24] });
-          marker.addTo(layer);
+      filteredEvents.forEach((event) => {
+        const meta = EVENT_CATEGORY_META[event.category];
+        const icon = L.divIcon({
+          className: "event-pin-marker",
+          html: eventPinHtml(meta.icon, event.is_featured),
+          iconSize: [36, 36],
+          iconAnchor: [18, 36],
+          popupAnchor: [0, -32],
         });
+
+        const marker = L.marker([event.latitude, event.longitude], { icon });
+        const dateLabel = new Intl.DateTimeFormat(locale === "es" ? "es-PA" : "en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }).format(new Date(`${event.date}T00:00:00`));
+
+        const popupEl = buildEventPopupElement(
+          event,
+          {
+            categoryLabel: tEventCategory(event.category),
+            dateLabel,
+            free: tEvents("free"),
+            book: tEvents("book"),
+            viewDetails: tEvents("viewDetails"),
+          },
+          locale,
+          () => openEventRef.current(event),
+        );
+        marker.bindPopup(popupEl, { minWidth: 250, maxWidth: 260, autoPanPadding: [24, 24] });
+        marker.addTo(layer);
+        bounds.push([event.latitude, event.longitude]);
+      });
+
+      // Mirror the spot layer's behavior: only refit while events are the
+      // visible layer, so filtering spots elsewhere can't move this view.
+      if (bounds.length > 0 && mode === "events") {
+        mapRef.current?.fitBounds(bounds, { padding: [48, 48], maxZoom: 16 });
+      }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [ready, events, locale, tEventCategory, tEvents]);
+  }, [ready, filteredEvents, mode, locale, tEventCategory, tEvents]);
+
+  // The fixed site header's real rendered height (it grows with safe-area
+  // insets on notched devices) — a hardcoded `top-14` left a gap the map's
+  // tiles could show through, blurred, behind the header's glass background.
+  // Measured instead of assumed so it can't drift out of sync.
+  const [headerHeight, setHeaderHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!fullScreen) return;
+    const header = document.querySelector("header");
+    if (!header) return;
+    const update = () => setHeaderHeight(header.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, [fullScreen]);
 
   const locateMe = useCallback(() => {
     if (!mapRef.current) return;
@@ -570,24 +702,78 @@ export function SpotMap({
   }, [tMap]);
 
   return (
-    <div className={cn(fullScreen ? "fixed inset-x-0 top-14 bottom-0 z-10" : "space-y-4", className)}>
+    <div
+      className={cn(fullScreen ? "fixed inset-x-0 bottom-0 z-10" : "space-y-4", className)}
+      style={fullScreen ? { top: headerHeight ?? 56 } : undefined}
+    >
       <div
         className={cn(
           "relative w-full overflow-hidden border-border",
-          fullScreen ? "h-full border-t" : cn("rounded-[var(--radius-card)] border", heightClassName),
+          // `bg-background`: solid from the very first frame — while
+          // fullscreen, this box sits over the rest of the page's normal
+          // document flow (the page below it collapses out from under a
+          // `position: fixed` element), and Leaflet doesn't paint its own
+          // opaque background until it finishes loading. Without this, that
+          // gap between mount and Leaflet-ready let whatever page content
+          // was now sitting behind it (e.g. the events grid further down
+          // the home page) show through.
+          fullScreen ? "h-full border-t bg-background" : cn("rounded-[var(--radius-card)] border", heightClassName),
         )}
       >
         <div ref={containerRef} className="h-full w-full" />
 
         {!ready && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-aqua/10 to-coral/10">
+          <div className="absolute inset-0 z-[1200] flex items-center justify-center bg-gradient-to-br from-aqua/10 to-coral/10">
             <Loader2 className="animate-spin text-aqua" size={28} />
           </div>
         )}
 
-        {/* Floating search — top-left, clear of the header and the zoom control (top-right). */}
-        <div className="safe-top absolute left-4 right-16 top-4 z-10 sm:right-auto sm:w-72">
-          <div className="relative">
+        {/* Floating toolbar — top-left, clear of the header (which drops its
+            own spots/events nav while the map's open) and the zoom control
+            (top-right). Labelled, not icon-only — a bare icon pair read as
+            ambiguous, the text is what actually says which layer is showing.
+            z-[1200]: Leaflet's own panes/controls climb as high as z-index
+            1000 internally, so anything at or below that can end up
+            rendering behind the map instead of on top of it. */}
+        <div className="safe-top absolute left-4 right-16 top-4 z-[1200] flex flex-col items-start gap-2 sm:right-auto sm:w-72">
+          {hasEvents && (
+            <div className="glass relative inline-flex rounded-full border border-border p-1 shadow-lg">
+              {(
+                [
+                  { key: "spots" as const, icon: MapPin },
+                  { key: "events" as const, icon: CalendarDays },
+                ] satisfies { key: MapMode; icon: typeof MapPin }[]
+              ).map(({ key, icon: Icon }) => {
+                const active = mode === key;
+                return (
+                  <motion.button
+                    key={key}
+                    type="button"
+                    onClick={() => setMode(key)}
+                    aria-pressed={active}
+                    whileTap={{ scale: 0.94 }}
+                    transition={TAP_SPRING}
+                    className={cn(
+                      "relative z-10 flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors",
+                      active ? "text-white" : "text-foreground/60 hover:text-foreground",
+                    )}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="map-mode-pill"
+                        transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                        className="brand-accent absolute inset-0 -z-10 rounded-full"
+                      />
+                    )}
+                    <Icon size={13} />
+                    {tNav(key)}
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="relative w-full">
             <Search
               size={17}
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40"
@@ -595,7 +781,7 @@ export function SpotMap({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={tSite("searchPlaceholder")}
+              placeholder={mode === "spots" ? tSite("searchPlaceholder") : tEvents("searchPlaceholder")}
               className="glass h-11 w-full rounded-full border border-border pl-10 pr-4 text-sm shadow-lg outline-none focus:ring-2 focus:ring-aqua"
             />
           </div>
@@ -607,13 +793,13 @@ export function SpotMap({
           disabled={!ready || locating}
           aria-label={tMap("locateMe")}
           title={tMap("locateMe")}
-          className="absolute bottom-4 left-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-foreground shadow-lg disabled:opacity-50"
+          className="absolute bottom-4 left-4 z-[1200] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-foreground shadow-lg disabled:opacity-50"
         >
           {locating ? <Loader2 size={18} className="animate-spin" /> : <LocateFixed size={18} />}
         </button>
 
-        {ready && filtered.length === 0 && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
+        {ready && visibleCount === 0 && (
+          <div className="pointer-events-none absolute inset-0 z-[1200] flex items-center justify-center p-4">
             <div className="pointer-events-auto rounded-[var(--radius-card)] border border-dashed border-border bg-surface/95 px-6 py-4 text-center backdrop-blur">
               <SearchX size={26} className="mx-auto text-foreground/25" />
               <p className="mt-1 font-heading text-sm font-bold">{tEmpty("title")}</p>
@@ -624,7 +810,7 @@ export function SpotMap({
       </div>
 
       {/* Floating, always-reachable filters trigger — bottom-right thumb zone, survives scroll. */}
-      <div className="safe-bottom fixed bottom-4 right-4 z-40">
+      <div className="safe-bottom fixed bottom-4 right-4 z-[1200]">
         <motion.button
           onClick={() => setFiltersOpen((v) => !v)}
           whileTap={{ scale: 0.94 }}
@@ -652,83 +838,186 @@ export function SpotMap({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setFiltersOpen(false)}
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[1300] bg-black/30 backdrop-blur-[2px]"
             />
             <motion.div
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.22, ease: EASE_OUT }}
-              className="safe-bottom fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md space-y-4 rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-2xl sm:p-5"
+              className="safe-bottom fixed inset-x-4 bottom-20 z-[1300] mx-auto max-w-md space-y-4 rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-2xl sm:p-5"
             >
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                  {t("category")}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {SPOT_CATEGORIES.map((cat) => {
-                    const meta = CATEGORY_META[cat];
-                    const Icon = meta.icon;
-                    const isActive = categories.includes(cat);
-                    return (
+              {/* The mode toggle up on the map gets covered by this sheet's own
+                  backdrop, so restate scope here — otherwise it's ambiguous
+                  which layer these chips are about to filter. */}
+              {hasEvents && (
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/50">
+                  {mode === "spots" ? <MapPin size={13} /> : <CalendarDays size={13} />}
+                  {tNav(mode)}
+                </div>
+              )}
+
+              {mode === "spots" ? (
+                <>
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                      {t("category")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {SPOT_CATEGORIES.map((cat) => {
+                        const meta = CATEGORY_META[cat];
+                        const Icon = meta.icon;
+                        const isActive = categories.includes(cat);
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => toggle(categories, cat, setCategories)}
+                            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
+                            style={{
+                              backgroundColor: isActive ? meta.color : `${meta.color}1A`,
+                              color: isActive ? "white" : meta.color,
+                            }}
+                          >
+                            <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                      {t("price")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {PRICE_LEVELS.map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => toggle(prices, p, setPrices)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs font-bold",
+                            prices.includes(p)
+                              ? "border-aqua bg-aqua text-white"
+                              : "border-border bg-transparent",
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <label className="flex items-center gap-2 text-sm font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={openNow}
+                        onChange={(e) => setOpenNow(e.target.checked)}
+                        className="h-4 w-4 accent-lime"
+                      />
+                      {t("openNow")}
+                    </label>
+
+                    {hasActiveFilters && (
                       <button
-                        key={cat}
-                        onClick={() => toggle(categories, cat, setCategories)}
-                        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
-                        style={{
-                          backgroundColor: isActive ? meta.color : `${meta.color}1A`,
-                          color: isActive ? "white" : meta.color,
-                        }}
+                        onClick={resetFilters}
+                        className="flex items-center gap-1 text-xs font-semibold text-coral"
                       >
-                        <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
+                        <X size={13} /> {t("reset")}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                      {t("category")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {EVENT_CATEGORIES.map((cat) => {
+                        const meta = EVENT_CATEGORY_META[cat];
+                        const isActive = eventCategories.includes(cat);
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => toggle(eventCategories, cat, setEventCategories)}
+                            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
+                            style={{
+                              backgroundColor: isActive ? meta.color : `${meta.color}1A`,
+                              color: isActive ? "white" : meta.color,
+                            }}
+                          >
+                            <Image src={meta.icon} alt="" width={14} height={14} />
+                            {tEventCategory(cat)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                  {t("price")}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PRICE_LEVELS.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => toggle(prices, p, setPrices)}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-bold",
-                        prices.includes(p)
-                          ? "border-aqua bg-aqua text-white"
-                          : "border-border bg-transparent",
-                      )}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                      {t("price")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {EVENT_PRICE_FILTERS.map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => toggle(eventPrices, p, setEventPrices)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs font-bold",
+                            eventPrices.includes(p)
+                              ? "border-aqua bg-aqua text-white"
+                              : "border-border bg-transparent",
+                          )}
+                        >
+                          {p === "free" ? tEvents("free") : tEvents("paid")}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <label className="flex items-center gap-2 text-sm font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={openNow}
-                    onChange={(e) => setOpenNow(e.target.checked)}
-                    className="h-4 w-4 accent-lime"
-                  />
-                  {t("openNow")}
-                </label>
+                  <div>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
+                      {t("date")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        [
+                          ["today", t("dateToday")],
+                          ["week", t("dateWeek")],
+                          ["weekend", t("dateWeekend")],
+                        ] satisfies [EventDateFilter, string][]
+                      ).map(([value, label]) => (
+                        <button
+                          key={value}
+                          onClick={() => setEventDate((current) => (current === value ? "all" : value))}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs font-bold",
+                            eventDate === value
+                              ? "border-aqua bg-aqua text-white"
+                              : "border-border bg-transparent",
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                {hasActiveFilters && (
-                  <button
-                    onClick={resetFilters}
-                    className="flex items-center gap-1 text-xs font-semibold text-coral"
-                  >
-                    <X size={13} /> {t("reset")}
-                  </button>
-                )}
-              </div>
+                  {hasActiveFilters && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={resetFilters}
+                        className="flex items-center gap-1 text-xs font-semibold text-coral"
+                      >
+                        <X size={13} /> {t("reset")}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </motion.div>
           </>
         )}
