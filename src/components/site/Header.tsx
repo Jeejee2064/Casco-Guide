@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Compass } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { EASE_OUT } from "./motion";
@@ -23,7 +24,13 @@ export function Header() {
       initial={{ y: -16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: EASE_OUT }}
-      className="glass safe-top sticky top-0 z-30 border-b border-border"
+      // Solid, not `.glass`: this bar sits directly over the scrolling grid
+      // and backdrop-filter support/compositing is inconsistent enough
+      // (disabled GPU, some mobile browsers) that the fallback — a merely
+      // translucent bar with no blur — let card content show through
+      // fully legible. `.bar-surface` is solid too, just with a whisper of
+      // gradient so it doesn't read as a flat cutout (see globals.css).
+      className="bar-surface safe-top sticky top-0 z-30 border-b border-border shadow-[var(--shadow-sm)]"
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
         <div className="flex min-w-0 items-center gap-2">
@@ -33,7 +40,7 @@ export function Header() {
               onClick={() => setIsMapView(false)}
               aria-label={tMap("backToList")}
               title={tMap("backToList")}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+              className="pill-lift flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/70 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
             >
               <ArrowLeft size={18} />
             </button>
@@ -48,10 +55,10 @@ export function Header() {
                 setIsMapView(false);
               }
             }}
-            className="flex shrink-0 items-center gap-2.5 font-heading text-lg font-extrabold tracking-tight"
+            className="group flex shrink-0 items-center gap-2.5 font-heading text-lg font-extrabold tracking-tight"
           >
-            <span className="brand-accent flex h-9 w-9 items-center justify-center rounded-2xl text-white shadow-md">
-              <Compass size={18} strokeWidth={2.25} />
+            <span className="relative flex h-9 w-9 shrink-0 overflow-hidden rounded-2xl shadow-md transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110">
+              <Image src="/cascoviejo.png" alt="" fill sizes="36px" className="object-cover" />
             </span>
             <span className="hidden sm:inline">{t("name")}</span>
           </Link>
@@ -61,7 +68,7 @@ export function Header() {
           <nav className="flex items-center gap-1 text-sm font-semibold text-foreground/60">
             <Link
               href={{ pathname: "/", hash: "explore" }}
-              className="rounded-full px-3 py-1.5 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+              className="pill-lift rounded-full px-3 py-1.5 hover:bg-gradient-to-r hover:from-aqua/10 hover:to-coral/10 hover:text-foreground"
             >
               {tNav("spots")}
             </Link>
@@ -69,13 +76,13 @@ export function Header() {
                 PR/commit. Uncomment to bring the nav link back. */}
             {/* <Link
               href={{ pathname: "/", hash: "events" }}
-              className="rounded-full px-3 py-1.5 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+              className="pill-lift rounded-full px-3 py-1.5 hover:bg-gradient-to-r hover:from-aqua/10 hover:to-coral/10 hover:text-foreground"
             >
               {tNav("events")}
             </Link> */}
             <Link
               href="/articles"
-              className="rounded-full px-3 py-1.5 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+              className="pill-lift rounded-full px-3 py-1.5 hover:bg-gradient-to-r hover:from-aqua/10 hover:to-coral/10 hover:text-foreground"
             >
               {tNav("articles")}
             </Link>

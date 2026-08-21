@@ -42,7 +42,15 @@ export function HoursBadge({ spot, className }: { spot: Spot; className?: string
 
   return (
     <Badge className={cn(styles[status.state], className)}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", dot[status.state])} />
+      <span
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          dot[status.state],
+          // Only "open" breathes — a live/time-based cue, not decoration
+          // (see .status-dot--live in globals.css).
+          status.state === "open" && "status-dot--live",
+        )}
+      />
       {label}
     </Badge>
   );

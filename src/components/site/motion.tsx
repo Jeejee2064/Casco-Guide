@@ -24,27 +24,40 @@ export const fadeUp: Variants = {
  * Reveals its children with a subtle upward fade and a light stagger, once
  * they scroll into view. Wrap a grid/list in `Stagger` and each direct
  * visual child in `StaggerItem`.
+ *
+ * Pass `show` to switch it from scroll-triggered to controlled mode — the
+ * stagger plays once `show` turns true instead of on viewport entry. Use
+ * this to gate a reveal on an external event (e.g. a hero image finishing
+ * `onLoad`) rather than scroll position. `delay` adds to the container's
+ * `delayChildren`, e.g. to let a controlled reveal start just after
+ * whatever it's chained from (the hero photo's own fade-in) has begun.
  */
 export function Stagger({
   children,
   className,
   amount = 0.15,
   as: Component = motion.div,
+  show,
+  delay = 0,
 }: {
   children: ReactNode;
   className?: string;
   amount?: number;
   as?: typeof motion.div;
+  show?: boolean;
+  delay?: number;
 }) {
   const As = Component;
+  const variants: Variants = delay
+    ? { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 + delay } } }
+    : staggerContainer;
+  const trigger =
+    show === undefined
+      ? { whileInView: "show", viewport: { once: true, amount } }
+      : { animate: show ? "show" : "hidden" };
+
   return (
-    <As
-      className={className}
-      variants={staggerContainer}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount }}
-    >
+    <As className={className} variants={variants} initial="hidden" {...trigger}>
       {children}
     </As>
   );

@@ -4,6 +4,8 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ArticlesGrid } from "@/components/site/ArticlesGrid";
 import { getArticles } from "@/lib/data/articles";
+import { buildAlternates } from "@/lib/seo/alternates";
+import { SITE_NAME, ogLocaleOf } from "@/lib/seo/site";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -12,8 +14,22 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = (await params) as { locale: Locale };
-  const t = await getTranslations({ locale, namespace: "articles" });
-  return { title: `${t("title")} — Casco Guide` };
+  const t = await getTranslations({ locale, namespace: "seo.articles" });
+  const alternates = buildAlternates("/articles", locale);
+  return {
+    title: t("title"),
+    description: t("description"),
+    alternates,
+    openGraph: {
+      title: t("title"),
+      description: t("description"),
+      url: alternates?.canonical as string,
+      siteName: SITE_NAME,
+      locale: ogLocaleOf(locale),
+      type: "website",
+    },
+    twitter: { card: "summary_large_image", title: t("title"), description: t("description") },
+  };
 }
 
 export default async function ArticlesPage({ params }: { params: Promise<{ locale: string }> }) {

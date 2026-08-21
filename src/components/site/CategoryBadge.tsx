@@ -11,7 +11,11 @@ export function CategoryBadge({ category }: { category: SpotCategory }) {
   return (
     <Badge
       className="text-white shadow-sm"
-      style={{ backgroundColor: meta.color }}
+      style={{
+        // Diagonal gradient instead of a flat fill — same category color,
+        // a touch more depth to match the filter bar chips' active state.
+        background: `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`,
+      }}
     >
       <Icon size={13} strokeWidth={2.5} />
       {t(category)}

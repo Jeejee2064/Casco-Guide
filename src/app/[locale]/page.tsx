@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/site/Header";
@@ -8,17 +9,31 @@ import { ExploreFilterProvider } from "@/components/site/ExploreFilterContext";
 // Events temporarily hidden site-wide — see the commented block below.
 // import { EventCard } from "@/components/site/EventCard";
 import { ArticlesGrid } from "@/components/site/ArticlesGrid";
+import { AboutCascoViejo } from "@/components/site/AboutCascoViejo";
 import { Hero } from "@/components/site/Hero";
 // import { Stagger, StaggerItem } from "@/components/site/motion";
 import { Link } from "@/i18n/navigation";
 import { getSpots } from "@/lib/data/spots";
 // import { getEvents } from "@/lib/data/events";
 import { getArticles } from "@/lib/data/articles";
+import { buildAlternates } from "@/lib/seo/alternates";
 import type { Locale } from "@/i18n/routing";
 
 // How many of the latest published articles to feature on the home page —
 // the rest are one click away via the "see all articles" link to /articles.
 const HOME_ARTICLES_COUNT = 3;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = (await params) as { locale: Locale };
+  // Title/description/OG already come from the root layout's
+  // generateMetadata (same "seo.home" copy) — the home page only needs to
+  // add its own canonical + hreflang alternates on top of that.
+  return { alternates: buildAlternates("/", locale) };
+}
 
 export default async function HomePage({
   params,
@@ -87,6 +102,10 @@ export default async function HomePage({
               <ArticlesGrid articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
             </div>
           )}
+
+          <div className="border-t border-border">
+            <AboutCascoViejo />
+          </div>
         </main>
         <Footer />
       </ExploreViewProvider>

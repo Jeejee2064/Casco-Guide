@@ -37,7 +37,7 @@ export function SpotCard({ spot, onClick }: { spot: Spot; onClick: () => void })
           <CategoryBadge category={spot.category} />
         </div>
         {spot.is_featured && (
-          <div className="absolute top-3 right-3 rounded-full bg-white/90 dark:bg-black/60 px-2.5 py-1 text-xs font-semibold text-gold-dark dark:text-gold">
+          <div className="absolute top-3 right-3 rounded-full bg-gradient-to-br from-white/95 to-white/80 px-2.5 py-1 text-xs font-semibold text-gold-dark shadow-sm dark:from-black/70 dark:to-black/50 dark:text-gold">
             {t("featured")}
           </div>
         )}
@@ -49,7 +49,7 @@ export function SpotCard({ spot, onClick }: { spot: Spot; onClick: () => void })
             {spot.name}
           </h3>
           {spot.rating && (
-            <span className="flex shrink-0 items-center gap-1 text-sm font-semibold">
+            <span className="flex shrink-0 items-center gap-1 text-sm font-semibold transition-transform duration-300 group-hover:scale-110">
               <Star size={14} className="fill-gold-dark text-gold-dark dark:fill-gold dark:text-gold" />
               {spot.rating.toFixed(1)}
             </span>

@@ -69,6 +69,100 @@
   }
 }
 
+/* ---------------------------------------------------------------------- */
+/* Night Mode — a deliberate, manually-toggled "going out tonight" theme, */
+/* separate from the OS-level prefers-color-scheme dark mode above. That  */
+/* one is a quiet tonal shift for readability; this is a saturated neon   */
+/* mood the user opts into via NightModeToggle, which stamps `night` on   */
+/* <html> (see NightModeContext). `html.night` has specificity (0,1,1),   */
+/* just above bare `:root`'s (0,1,0), so it wins over both the light      */
+/* defaults and the dark media query above regardless of the visitor's OS */
+/* setting or source order.                                               */
+/* ---------------------------------------------------------------------- */
+
+html.night {
+  --background: #0a0818;
+  --foreground: #f5f1ff;
+  --surface: #140f28;
+  --surface-raised: #1c1538;
+  --border: #362a5c;
+  --shadow-color: 265deg 85% 3%;
+
+  --night-cyan: #35e6e0;
+  --night-pink: #ff4fa3;
+  --night-purple: #b768ff;
+  --night-gold: #ffcf6b;
+}
+
+html.night body {
+  background:
+    radial-gradient(55% 45% at 12% -5%, color-mix(in srgb, var(--night-purple) 20%, transparent) 0%, transparent 70%),
+    radial-gradient(45% 35% at 92% 5%, color-mix(in srgb, var(--night-cyan) 14%, transparent) 0%, transparent 70%),
+    var(--background);
+}
+
+html.night .glass {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+/* Map tiles — dim and cool the CARTO tiles down rather than swap tilesets,
+   so the glow on pins/popups (below) has something moody to sit on top of. */
+html.night .leaflet-container {
+  background: var(--background);
+}
+
+html.night .leaflet-tile-pane {
+  filter: brightness(0.72) saturate(1.35) hue-rotate(-8deg);
+}
+
+/* Pins — pinHtml() (SpotMap.tsx) stamps both `background` and `color`
+   inline to the category color, so `currentColor` here always matches
+   whichever category a pin belongs to without a rule per category. */
+html.night .spot-pin {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, currentColor 40%, white 60%),
+    0 0 4px 1px white inset,
+    0 0 18px 3px currentColor;
+}
+
+html.night .spot-pin--active {
+  box-shadow:
+    0 0 0 2px white,
+    0 0 4px 1px white inset,
+    0 0 28px 6px currentColor;
+}
+
+html.night .event-pin__icon {
+  filter: drop-shadow(0 0 8px var(--night-cyan)) brightness(1.1);
+}
+
+html.night .me-marker {
+  filter: drop-shadow(0 0 3px white) drop-shadow(0 0 10px var(--night-cyan));
+}
+
+/* Map detail panel (side panel on desktop, bottom sheet on mobile) — see
+   MapDetailPanel.tsx. Same cyan glow the pins get, purple instead for a
+   featured spot (`--featured`, matching CATEGORY_META/is_featured). */
+html.night .map-detail-panel {
+  border-color: color-mix(in srgb, var(--night-cyan) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--night-cyan) 25%, transparent),
+    0 0 32px -6px color-mix(in srgb, var(--night-cyan) 80%, transparent),
+    var(--shadow-lg);
+}
+
+html.night .map-detail-panel--featured {
+  border-color: color-mix(in srgb, var(--night-purple) 60%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--night-purple) 30%, transparent),
+    0 0 36px -6px color-mix(in srgb, var(--night-purple) 85%, transparent),
+    var(--shadow-lg);
+}
+
+html.night .map-detail-panel__featured-badge {
+  box-shadow: 0 0 12px -2px var(--night-purple);
+}
+
 * {
   border-color: var(--border);
 }
@@ -156,18 +250,105 @@ h1, h2, h3, h4, .font-heading {
 }
 
 .glass {
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  /* High opacity by design: this sits under full-width sticky bars
+     (Header, ExploreFilterBar) as well as small floating pills, and
+     backdrop-filter support/strength varies enough across browsers that
+     the fallback state (plain translucent color, no blur) has to look
+     clean on its own — grid cards scrolling underneath must not read as
+     legible text through the bar, just a soft tint. */
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
 .card-lift {
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease;
+  transition:
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms ease,
+    border-color 300ms ease;
 }
 
 .card-lift:hover {
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.008);
   box-shadow: var(--shadow-lg);
+  border-color: color-mix(in srgb, var(--color-aqua) 35%, var(--border));
+}
+
+/* ---------------------------------------------------------------------- */
+/* Micro-interactions & polish — small, repeatable motifs reused across    */
+/* the explore UI rather than one-off styles per component, so the same   */
+/* "feel" (timing, easing, glow color) shows up everywhere it applies.    */
+/* ---------------------------------------------------------------------- */
+
+/* Header / ExploreFilterBar background. Solid, not `.glass` (see
+   Header.tsx for why) — but a whisper of top-to-bottom gradient plus the
+   existing border-b keeps it from reading as a flat cutout pasted over
+   the page. Barely perceptible on its own; the point is depth, not color. */
+.bar-surface {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 100%, white 5%) 0%,
+    var(--surface) 100%
+  );
+}
+
+html.night .bar-surface {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 100%, white 3%) 0%,
+    var(--surface) 100%
+  );
+}
+
+/* Soft focus glow for search/text inputs — a gradient-tinted halo instead
+   of a flat ring, in the aqua accent already used for focus elsewhere. */
+.input-glow {
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.input-glow:focus {
+  border-color: color-mix(in srgb, var(--color-aqua) 55%, var(--border));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--color-aqua) 12%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-aqua) 40%, transparent);
+}
+
+/* Hover lift shared by pill/chip controls (category & vibe chips, the
+   locale switcher, "show more"). A couple px of rise plus a matching soft
+   shadow reads as liftable without the heavier card-lift treatment. */
+.pill-lift {
+  transition:
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms ease,
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+.pill-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.pill-lift:active {
+  transform: translateY(0);
+}
+
+/* Breathing dot for the "open now" status — a slow pulse rather than a
+   static dot: a small cue that the state is live/time-based. Only the
+   "open" state uses it (see HoursBadge) so the motion reads as a signal,
+   not decoration. */
+@keyframes status-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-lime) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-lime) 0%, transparent);
+  }
+}
+
+.status-dot--live {
+  animation: status-pulse 2.4s ease-in-out infinite;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -281,118 +462,3 @@ h1, h2, h3, h4, .font-heading {
   z-index: 1100 !important;
 }
 
-.leaflet-popup-content-wrapper {
-  background: var(--surface);
-  color: var(--foreground);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-lg);
-  padding: 0;
-}
-
-.leaflet-popup-content {
-  margin: 0;
-  width: 250px !important;
-}
-
-.leaflet-popup-tip {
-  background: var(--surface);
-}
-
-.leaflet-popup-close-button {
-  color: var(--foreground) !important;
-  opacity: 0.6;
-}
-
-.spot-popup__photo {
-  height: 110px;
-  width: 100%;
-  background-size: cover;
-  background-position: center;
-  border-radius: var(--radius-card) var(--radius-card) 0 0;
-}
-
-.spot-popup__photo--empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-aqua-dark);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-aqua) 20%, transparent),
-    color-mix(in srgb, var(--color-coral) 20%, transparent)
-  );
-}
-
-.spot-popup__body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px 14px;
-}
-
-.spot-popup__category {
-  align-self: flex-start;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-}
-
-.spot-popup__title {
-  font-family: var(--font-heading), Poppins, sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.spot-popup__meta {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  opacity: 0.75;
-}
-
-.spot-popup__desc {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 1.4;
-  opacity: 0.75;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.spot-popup__actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.spot-popup__btn {
-  flex: 1;
-  cursor: pointer;
-  border-radius: var(--radius-button);
-  border: 1px solid var(--border);
-  background: transparent;
-  padding: 7px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--foreground);
-  transition: background 150ms ease;
-}
-
-.spot-popup__btn:hover {
-  background: color-mix(in srgb, var(--foreground) 6%, transparent);
-}
-
-.spot-popup__btn--primary {
-  border-color: transparent;
-  background: var(--color-aqua);
-  color: white;
-}
-
-.spot-popup__btn--primary:hover {
-  background: var(--color-aqua-dark);
-}

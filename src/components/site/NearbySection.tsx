@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { SpotCard } from "./SpotCard";
 import { EventCard } from "./EventCard";
+import { Stagger, StaggerItem } from "./motion";
 import type { EventRow, Spot } from "@/lib/types/database";
 
 /**
@@ -30,31 +31,31 @@ export function NearbySection({
       {nearbyEvents.length > 0 && (
         <section>
           <h2 className="font-heading mb-4 text-xl font-extrabold">{t("relatedEvents")}</h2>
-          <div className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+          <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
             {nearbyEvents.map((event) => (
-              <div key={event.id} className="w-[320px] shrink-0 sm:w-[360px]">
+              <StaggerItem key={event.id} className="w-[320px] shrink-0 sm:w-[360px]">
                 <EventCard event={event} />
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </section>
       )}
 
       {nearbySpots.length > 0 && (
         <section>
           <h2 className="font-heading mb-4 text-xl font-extrabold">{t("nearbySpots")}</h2>
-          <div className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+          <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
             {nearbySpots.map((spot) => (
-              <div key={spot.id} className="w-[240px] shrink-0 sm:w-[260px]">
+              <StaggerItem key={spot.id} className="w-[240px] shrink-0 sm:w-[260px]">
                 <SpotCard
                   spot={spot}
                   onClick={() =>
                     router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
                   }
                 />
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </section>
       )}
     </div>

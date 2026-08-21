@@ -1,6 +1,6 @@
 {
   "site": {
-    "name": "Casco Guide",
+    "name": "Casco Viejo Guide",
     "title": "Explore Casco Viejo",
     "subtitle": "Handpicked restaurants, bars and sights, upcoming events, and local guides — everything you need to explore Casco Viejo like you live here.",
     "searchPlaceholder": "Search spots, tags, cuisine…",
@@ -13,6 +13,14 @@
     "events": "Events",
     "admin": "Admin",
     "articles": "Guides"
+  },
+  "night": {
+    "toggle": "Day / Night mode",
+    "dayMode": "Day",
+    "nightMode": "Night",
+    "bannerTitle": "Night mode on",
+    "bannerSubtitle": "The best spots to go out right now!",
+    "featuredBadge": "Featured · Exclusive"
   },
   "filters": {
     "title": "Filters",
@@ -493,5 +501,60 @@
     "viewSpot": "View spot",
     "viewEvent": "View event",
     "draft": "Draft"
+  },
+  "seo": {
+    "home": {
+      "title": "Casco Viejo Guide — Best Restaurants, Bars, Hotels & Things To Do",
+      "description": "The complete Casco Viejo travel guide: handpicked restaurants, rooftop bars, boutique hotels, museums and walking routes in Panama City's UNESCO-listed old town — curated and kept up to date by locals.",
+      "keywords": "Casco Viejo, Casco Viejo Panama, Casco Antiguo, San Felipe Panama, things to do in Casco Viejo, restaurants in Casco Viejo, bars in Casco Viejo, hotels in Casco Viejo, Casco Viejo guide, Panama City old town"
+    },
+    "articles": {
+      "title": "Casco Viejo Guides & Recommendations",
+      "description": "In-depth guides, top picks and stories about the best restaurants, bars, sights and hidden corners of Casco Viejo, Panama City."
+    },
+    "spotTitle": "{name} — {category} in Casco Viejo",
+    "spotDescriptionFallback": "{name} — {category} in Casco Viejo, Panama City. See hours, address, photos and everything you need to visit.",
+    "articleDescriptionFallback": "A Casco Viejo Guide story: {title}."
+  },
+  "about": {
+    "title": "The Casco Viejo travel guide, made by locals",
+    "intro": "Casco Viejo — also called Casco Antiguo or San Felipe — is Panama City's restored colonial old town, and a UNESCO World Heritage Site since 1997. Cobblestone streets connect restored 17th- and 18th-century buildings, rooftop bars with skyline views, family-run restaurants, boutique hotels and some of the best nightlife in Panama. Casco Guide is built and kept current by people who actually live and work in the neighborhood.",
+    "sections": {
+      "eat": {
+        "title": "Where to eat & drink in Casco Viejo",
+        "body": "From ceviche stalls near Plaza de la Independencia to fine dining inside restored mansions and rooftop bars overlooking Panama Bay, Casco Viejo's food and drink scene punches well above its size. Filter by vibe — chill café, romantic sunset, rooftop party, local heritage — to find exactly what you're after."
+      },
+      "see": {
+        "title": "What to see in Casco Viejo",
+        "body": "Plaza de la Independencia, the Metropolitan Cathedral, Iglesia de San José and its Golden Altar, the ruins of Iglesia de la Compañía de Jesús, and the Paseo Esteban Huertas along the old sea wall are all walkable in a single afternoon — though Casco Viejo rewards slowing down and getting lost in its side streets."
+      },
+      "stay": {
+        "title": "Where to stay in Casco Viejo",
+        "body": "Boutique hotels inside converted colonial buildings put you steps from the plazas, restaurants and waterfront — with none of the sprawl of Panama City's financial district across the bay."
+      }
+    },
+    "faqTitle": "Casco Viejo — frequently asked questions",
+    "faq": {
+      "q1": {
+        "q": "What is Casco Viejo?",
+        "a": "Casco Viejo (also called Casco Antiguo or San Felipe) is Panama City's historic old town, founded in 1673 after the original city was destroyed by pirates. It has been a UNESCO World Heritage Site since 1997 and is now the city's main hub for restaurants, bars, boutique hotels and nightlife."
+      },
+      "q2": {
+        "q": "Is Casco Viejo safe to visit?",
+        "a": "The core tourist area — around Plaza de la Independencia, Paseo Esteban Huertas and the main restaurant streets — is well patrolled and busy with visitors day and night. As anywhere, stick to well-lit, populated streets after dark and keep an eye on your belongings, especially toward the edges of the neighborhood."
+      },
+      "q3": {
+        "q": "How do I get to Casco Viejo?",
+        "a": "Casco Viejo sits at the southern tip of Panama City, roughly a 30–40 minute taxi or rideshare ride from Tocumen International Airport and a shorter ride from the financial district (Punta Pacífica, Bella Vista). Uber and taxis are the easiest way in — the neighborhood itself is entirely walkable once you arrive."
+      },
+      "q4": {
+        "q": "How much time should I spend in Casco Viejo?",
+        "a": "Half a day covers the main plazas and churches. A full day lets you add a museum, a sit-down lunch and a rooftop sunset. Many visitors end up staying into the evening, too — the bar and restaurant scene really comes alive after dark."
+      },
+      "q5": {
+        "q": "What's the best time to visit Casco Viejo?",
+        "a": "Panama's dry season, mid-December through April, brings the least rain. Within a day, late afternoon into the evening is the best window — the heat eases, the light is great for photos, and rooftop bars fill up for sunset over Panama Bay."
+      }
+    }
   }
 }

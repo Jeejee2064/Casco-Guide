@@ -102,8 +102,10 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
           whileTap={{ scale: 0.94 }}
           transition={TAP_SPRING}
           className={cn(
-            "flex h-12 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold shadow-lg transition-colors",
-            hasActiveFilters ? "border-transparent bg-aqua text-white" : "glass border-border",
+            "pill-lift flex h-12 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold shadow-lg",
+            hasActiveFilters
+              ? "border-transparent bg-gradient-to-br from-aqua to-aqua-dark text-white"
+              : "glass border-border",
           )}
         >
           <SlidersHorizontal size={16} />
@@ -223,17 +225,19 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
               <motion.button
                 onClick={() => setExpanded((v) => !v)}
                 whileTap={{ scale: 0.96 }}
+                whileHover={{ y: -1 }}
                 transition={TAP_SPRING}
-                className="flex items-center gap-1.5 rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground/70 transition-colors hover:border-aqua hover:text-aqua"
+                className="group flex items-center gap-1.5 rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground/70 transition-colors hover:border-aqua/50 hover:bg-gradient-to-r hover:from-aqua/5 hover:to-coral/5 hover:text-aqua"
               >
                 {expanded ? (
                   <>
-                    {t("showLess")} <ChevronUp size={15} />
+                    {t("showLess")}{" "}
+                    <ChevronUp size={15} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
                   </>
                 ) : (
                   <>
                     {t("showMore", { count: filtered.length - INITIAL_VISIBLE })}{" "}
-                    <ChevronDown size={15} />
+                    <ChevronDown size={15} className="transition-transform duration-200 group-hover:translate-y-0.5" />
                   </>
                 )}
               </motion.button>

@@ -24,7 +24,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EASE_OUT, TAP_SPRING } from "./motion";
+import { MapDetailPanel, type DetailPanelContent } from "./MapDetailPanel";
 import { useHeaderHeight } from "./useHeaderHeight";
+import { useNightMode } from "./NightModeContext";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META } from "@/lib/categories";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_META } from "@/lib/eventCategories";
@@ -69,15 +71,6 @@ const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.
 const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
-
-function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 /** Shape data for a Lucide glyph, minimal enough to stamp into an HTML
  * string — Leaflet's marker/popup APIs take raw HTML, not React nodes. */
@@ -139,20 +132,6 @@ const CATEGORY_ICON_SHAPES: Record<SpotCategory, IconShape[]> = {
   hotel: [{ d: "M2 4v16" }, { d: "M2 8h18a2 2 0 0 1 2 2v10" }, { d: "M2 17h20" }, { d: "M6 8v9" }],
 };
 
-/** Lucide's calendar-days glyph — used as a generic "event, no photo" mark. */
-const CALENDAR_ICON_SHAPES: IconShape[] = [
-  { d: "M8 2v3" },
-  { d: "M16 2v3" },
-  { x: "3", y: "3", width: "18", height: "18", rx: "2" },
-  { d: "M3 9h18" },
-  { d: "M8 13h.01" },
-  { d: "M12 13h.01" },
-  { d: "M16 13h.01" },
-  { d: "M8 17h.01" },
-  { d: "M12 17h.01" },
-  { d: "M16 17h.01" },
-];
-
 /** Renders 24x24 stroke-based Lucide shape data to an inline SVG string, for
  * use inside Leaflet's HTML-string marker/popup APIs. */
 function iconSvg(shapes: IconShape[], size = 15): string {
@@ -167,8 +146,11 @@ function iconSvg(shapes: IconShape[], size = 15): string {
 }
 
 function pinHtml(color: string, category: SpotCategory, featured: boolean): string {
+  // `color` (not just `background`) is set here so Night Mode's glow rule
+  // (globals.css) can pick it up via `currentColor` — one box-shadow rule
+  // then matches whichever category a pin belongs to, no per-category CSS.
   return `
-    <span class="spot-pin" style="background:${color}">
+    <span class="spot-pin" style="background:${color};color:${color}">
       <span class="spot-pin__icon">${iconSvg(CATEGORY_ICON_SHAPES[category])}</span>
       ${featured ? '<span class="spot-pin__star">★</span>' : ""}
     </span>
@@ -185,113 +167,6 @@ function eventPinHtml(iconSrc: string, featured: boolean): string {
       ${featured ? '<span class="event-pin__star">★</span>' : ""}
     </span>
   `;
-}
-
-/** Builds the popup DOM for an event. */
-function buildEventPopupElement(
-  event: EventRow,
-  labels: {
-    categoryLabel: string;
-    dateLabel: string;
-    free: string;
-    book: string;
-    viewDetails: string;
-  },
-  locale: string,
-  onViewDetails: () => void,
-): HTMLElement {
-  const root = document.createElement("div");
-  root.className = "spot-popup";
-  const meta = EVENT_CATEGORY_META[event.category];
-  const priceLabel = event.price && event.price > 0 ? `$${event.price}` : labels.free;
-
-  root.innerHTML = `
-    ${
-      event.photo
-        ? `<div class="spot-popup__photo" style="background-image:url('${event.photo}')"></div>`
-        : `<div class="spot-popup__photo spot-popup__photo--empty">${iconSvg(CALENDAR_ICON_SHAPES, 26)}</div>`
-    }
-    <div class="spot-popup__body">
-      <span class="spot-popup__category" style="background:${meta.color}">
-        ${escapeHtml(labels.categoryLabel)}
-      </span>
-      <h3 class="spot-popup__title">${escapeHtml(event.title)}</h3>
-      <div class="spot-popup__meta">
-        <span>${escapeHtml(labels.dateLabel)} · ${escapeHtml(formatTime(event.time_start, locale))}</span>
-        <span>${escapeHtml(priceLabel)}</span>
-      </div>
-      ${
-        event.description
-          ? `<p class="spot-popup__desc">${escapeHtml(event.description)}</p>`
-          : ""
-      }
-      <div class="spot-popup__actions">
-        <button type="button" data-action="details" class="spot-popup__btn spot-popup__btn--primary">
-          ${escapeHtml(labels.viewDetails)}
-        </button>
-        ${
-          event.booking_url
-            ? `<button type="button" data-action="book" class="spot-popup__btn">${escapeHtml(labels.book)}</button>`
-            : ""
-        }
-      </div>
-    </div>
-  `;
-
-  root.querySelector('[data-action="details"]')?.addEventListener("click", onViewDetails);
-
-  if (event.booking_url) {
-    root.querySelector('[data-action="book"]')?.addEventListener("click", () => {
-      window.open(event.booking_url!, "_blank", "noopener,noreferrer");
-    });
-  }
-
-  return root;
-}
-
-/** Builds the popup DOM for a spot. Listeners are attached once, at creation. */
-function buildPopupElement(
-  spot: Spot,
-  labels: { categoryLabel: string; readMore: string },
-  onArticle: () => void,
-): HTMLElement {
-  const root = document.createElement("div");
-  root.className = "spot-popup";
-
-  const meta = CATEGORY_META[spot.category];
-  const ratingHtml = spot.rating
-    ? `<span>★ ${spot.rating.toFixed(1)}</span>`
-    : "";
-  const priceHtml = spot.price_range ? `<span>${spot.price_range}</span>` : "";
-
-  root.innerHTML = `
-    <div class="spot-popup__photo" style="background-image:url('${getSpotImage(spot)}')"></div>
-    <div class="spot-popup__body">
-      <span class="spot-popup__category" style="background:${meta.color}">
-        ${escapeHtml(labels.categoryLabel)}
-      </span>
-      <h3 class="spot-popup__title">${escapeHtml(spot.name)}</h3>
-      ${
-        ratingHtml || priceHtml
-          ? `<div class="spot-popup__meta">${ratingHtml}${priceHtml}</div>`
-          : ""
-      }
-      ${
-        spot.description
-          ? `<p class="spot-popup__desc">${escapeHtml(spot.description)}</p>`
-          : ""
-      }
-      <div class="spot-popup__actions">
-        <button type="button" data-action="article" class="spot-popup__btn spot-popup__btn--primary">
-          ${escapeHtml(labels.readMore)}
-        </button>
-      </div>
-    </div>
-  `;
-
-  root.querySelector('[data-action="article"]')?.addEventListener("click", onArticle);
-
-  return root;
 }
 
 export function SpotMap({
@@ -324,8 +199,10 @@ export function SpotMap({
   const tEmpty = useTranslations("empty");
   const tMap = useTranslations("map");
   const tNav = useTranslations("nav");
+  const tNight = useTranslations("night");
   const locale = useLocale();
   const router = useRouter();
+  const { isNight } = useNightMode();
 
   // Spots and events render as two mutually-exclusive layers rather than
   // overlaid at once — with both on screen at the same density the pins
@@ -354,25 +231,77 @@ export function SpotMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const tileLayerRef = useRef<TileLayer | null>(null);
+  // Mirrors `isNight` for the scheme-change listener below, which is
+  // attached once (empty-deps effect) and would otherwise close over a
+  // stale value if Night Mode is toggled after mount.
+  const isNightRef = useRef(isNight);
+  useEffect(() => {
+    isNightRef.current = isNight;
+  }, [isNight]);
   const markerLayerRef = useRef<LayerGroup | null>(null);
   const eventLayerRef = useRef<LayerGroup | null>(null);
   const meMarkerRef = useRef<CircleMarker | null>(null);
-  const selectedMarkerRef = useRef<LeafletMarker | null>(null);
-  // Always-fresh callback for popup buttons built outside React's render cycle.
-  const openSpotRef = useRef<(spot: Spot) => void>(() => {});
-  const openEventRef = useRef<(event: EventRow) => void>(() => {});
+  // Keyed by id so the active-pin-highlight effect (below) can find a
+  // marker again after the filtered-set effects rebuild the layer.
+  const spotMarkersRef = useRef<Map<string, LeafletMarker>>(new Map());
+  const eventMarkersRef = useRef<Map<string, LeafletMarker>>(new Map());
 
-  useEffect(() => {
-    openSpotRef.current =
-      onOpenSpot ??
-      ((spot) => router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } }));
-  }, [onOpenSpot, router]);
+  // The pin currently shown in the detail panel — spot and event are
+  // mutually exclusive, same as the spots/events layers themselves.
+  const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<EventRow | null>(null);
+  const closePanel = useCallback(() => {
+    setSelectedSpot(null);
+    setSelectedEvent(null);
+  }, []);
 
+  // Tracked in a ref (not state) — only read at click-time to decide how
+  // much room to leave for the side panel vs. the bottom sheet, so it
+  // doesn't need to trigger a render on its own.
+  const isDesktopRef = useRef(false);
   useEffect(() => {
-    openEventRef.current =
-      onOpenEvent ??
-      ((event) => router.push({ pathname: "/events/[slug]", params: { slug: event.slug } }));
-  }, [onOpenEvent, router]);
+    const mq = window.matchMedia("(min-width: 768px)");
+    const sync = () => {
+      isDesktopRef.current = mq.matches;
+    };
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  // Nudges the map so a newly-selected pin doesn't end up hidden behind the
+  // panel/sheet that's about to cover it — mirrors panInside's own padding
+  // idea, just reserving space for our own chrome instead of map controls.
+  const revealSelection = useCallback((lat: number, lng: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (isDesktopRef.current) {
+      // Panel is 380px wide, offset 16px from the left edge.
+      map.panInside([lat, lng], { paddingTopLeft: [412, 24], paddingBottomRight: [24, 24], animate: true });
+    } else {
+      // Sheet height varies with content; 320px comfortably covers it.
+      map.panInside([lat, lng], { paddingTopLeft: [24, 24], paddingBottomRight: [24, 320], animate: true });
+    }
+  }, []);
+
+  // The detail panel's primary action — called from a real onClick, not a
+  // vanilla-DOM listener, so a plain memoized callback is enough (no need
+  // for the always-fresh-ref indirection the old Leaflet-HTML popups needed).
+  const handleOpenSpot = useCallback(
+    (spot: Spot) => {
+      if (onOpenSpot) onOpenSpot(spot);
+      else router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } });
+    },
+    [onOpenSpot, router],
+  );
+
+  const handleOpenEvent = useCallback(
+    (event: EventRow) => {
+      if (onOpenEvent) onOpenEvent(event);
+      else router.push({ pathname: "/events/[slug]", params: { slug: event.slug } });
+    },
+    [onOpenEvent, router],
+  );
 
   const toggle = <T,>(list: T[], value: T, setter: (v: T[]) => void) =>
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -465,7 +394,7 @@ export function SpotMap({
       L.control.zoom({ position: "topright" }).addTo(map);
 
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      const tileLayer = L.tileLayer(prefersDark ? DARK_TILES : LIGHT_TILES, {
+      const tileLayer = L.tileLayer(isNightRef.current || prefersDark ? DARK_TILES : LIGHT_TILES, {
         attribution: TILE_ATTRIBUTION,
         maxZoom: 20,
       }).addTo(map);
@@ -479,12 +408,16 @@ export function SpotMap({
       setReady(true);
     })();
 
+    // Night Mode always wins: once it's on, OS scheme changes shouldn't pull
+    // the tiles back to light.
     const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
     const onSchemeChange = (e: MediaQueryListEvent) => {
-      tileLayerRef.current?.setUrl(e.matches ? DARK_TILES : LIGHT_TILES);
+      tileLayerRef.current?.setUrl(isNightRef.current || e.matches ? DARK_TILES : LIGHT_TILES);
     };
     mq?.addEventListener("change", onSchemeChange);
 
+    const spotMarkers = spotMarkersRef.current;
+    const eventMarkers = eventMarkersRef.current;
     return () => {
       cancelled = true;
       mq?.removeEventListener("change", onSchemeChange);
@@ -493,9 +426,49 @@ export function SpotMap({
       tileLayerRef.current = null;
       markerLayerRef.current = null;
       eventLayerRef.current = null;
-      selectedMarkerRef.current = null;
+      spotMarkers.clear();
+      eventMarkers.clear();
     };
   }, []);
+
+  // Clicking empty map (not a pin) dismisses the open panel/sheet, same as
+  // clicking its own backdrop/close button.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    map.on("click", closePanel);
+    return () => {
+      map.off("click", closePanel);
+    };
+  }, [ready, closePanel]);
+
+  // Deselect whenever the mode toggle flips, or the active pin drops out of
+  // the currently-filtered set (e.g. a filter now excludes it). Adjusted
+  // during render, not in an effect — see "Adjusting state when a prop
+  // changes" in the React docs: each branch is guarded so it only fires on
+  // the actual transition, not every render.
+  const [selectionResetMode, setSelectionResetMode] = useState(mode);
+  if (mode !== selectionResetMode) {
+    setSelectionResetMode(mode);
+    setSelectedSpot(null);
+    setSelectedEvent(null);
+  }
+  if (selectedSpot && !filteredSpots.some((s) => s.id === selectedSpot.id)) {
+    setSelectedSpot(null);
+  }
+  if (selectedEvent && !filteredEvents.some((e) => e.id === selectedEvent.id)) {
+    setSelectedEvent(null);
+  }
+
+  // Flip the base tiles to the dark set the instant Night Mode is toggled
+  // (not just on the next OS scheme-change event) — re-checks the OS
+  // preference too, so turning Night Mode back off doesn't fight a system
+  // that's independently in dark mode.
+  useEffect(() => {
+    if (!ready) return;
+    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    tileLayerRef.current?.setUrl(isNight || prefersDark ? DARK_TILES : LIGHT_TILES);
+  }, [ready, isNight]);
 
   // Swap which layer is actually attached to the map when the mode toggle
   // flips — this (not visibility CSS) is what keeps spots and events from
@@ -515,7 +488,9 @@ export function SpotMap({
     }
   }, [ready, mode]);
 
-  // Re-render markers whenever the filtered set (or locale, for popup labels) changes.
+  // Re-render markers whenever the filtered set changes. Pins carry no
+  // text, so unlike before this no longer needs to depend on locale/labels —
+  // those only apply to the detail panel now, built separately on selection.
   useEffect(() => {
     if (!ready || !mapRef.current || !markerLayerRef.current) return;
     let cancelled = false;
@@ -526,7 +501,7 @@ export function SpotMap({
       const layer = markerLayerRef.current;
       if (!layer) return;
       layer.clearLayers();
-      selectedMarkerRef.current = null;
+      spotMarkersRef.current.clear();
 
       const bounds: [number, number][] = [];
 
@@ -541,33 +516,14 @@ export function SpotMap({
         });
 
         const marker = L.marker([spot.latitude, spot.longitude], { icon });
-        const popupEl = buildPopupElement(
-          spot,
-          {
-            categoryLabel: tCategory(spot.category),
-            readMore: tSpot("readMore"),
-          },
-          () => openSpotRef.current(spot),
-        );
-        marker.bindPopup(popupEl, { minWidth: 250, maxWidth: 260, autoPanPadding: [24, 24] });
-
-        marker.on("popupopen", () => {
-          const prevEl = selectedMarkerRef.current?.getElement();
-          prevEl?.classList.remove("spot-pin-marker--active");
-          prevEl?.querySelector(".spot-pin")?.classList.remove("spot-pin--active");
-
-          const el = marker.getElement();
-          el?.classList.add("spot-pin-marker--active");
-          el?.querySelector(".spot-pin")?.classList.add("spot-pin--active");
-          selectedMarkerRef.current = marker;
-        });
-        marker.on("popupclose", () => {
-          const el = marker.getElement();
-          el?.classList.remove("spot-pin-marker--active");
-          el?.querySelector(".spot-pin")?.classList.remove("spot-pin--active");
+        marker.on("click", () => {
+          setSelectedEvent(null);
+          setSelectedSpot(spot);
+          revealSelection(spot.latitude, spot.longitude);
         });
 
         marker.addTo(layer);
+        spotMarkersRef.current.set(spot.id, marker);
         bounds.push([spot.latitude, spot.longitude]);
       });
 
@@ -581,7 +537,7 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [ready, filteredSpots, mode, locale, tCategory, tSpot]);
+  }, [ready, filteredSpots, mode, revealSelection]);
 
   // Render event pins on their own layer, using the /public/icons badges.
   useEffect(() => {
@@ -594,6 +550,7 @@ export function SpotMap({
       const layer = eventLayerRef.current;
       if (!layer) return;
       layer.clearLayers();
+      eventMarkersRef.current.clear();
 
       const bounds: [number, number][] = [];
 
@@ -608,26 +565,14 @@ export function SpotMap({
         });
 
         const marker = L.marker([event.latitude, event.longitude], { icon });
-        const dateLabel = new Intl.DateTimeFormat(locale === "es" ? "es-PA" : "en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        }).format(new Date(`${event.date}T00:00:00`));
+        marker.on("click", () => {
+          setSelectedSpot(null);
+          setSelectedEvent(event);
+          revealSelection(event.latitude, event.longitude);
+        });
 
-        const popupEl = buildEventPopupElement(
-          event,
-          {
-            categoryLabel: tEventCategory(event.category),
-            dateLabel,
-            free: tEvents("free"),
-            book: tEvents("book"),
-            viewDetails: tEvents("viewDetails"),
-          },
-          locale,
-          () => openEventRef.current(event),
-        );
-        marker.bindPopup(popupEl, { minWidth: 250, maxWidth: 260, autoPanPadding: [24, 24] });
         marker.addTo(layer);
+        eventMarkersRef.current.set(event.id, marker);
         bounds.push([event.latitude, event.longitude]);
       });
 
@@ -641,7 +586,22 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [ready, filteredEvents, mode, locale, tEventCategory, tEvents]);
+  }, [ready, filteredEvents, mode, revealSelection]);
+
+  // Reflects the selected pin onto the markers themselves — runs after the
+  // two effects above (declaration order), so it always sees freshly-built
+  // markers rather than ones about to be torn down.
+  useEffect(() => {
+    spotMarkersRef.current.forEach((marker, id) => {
+      const active = selectedSpot?.id === id;
+      const el = marker.getElement();
+      el?.classList.toggle("spot-pin-marker--active", active);
+      el?.querySelector(".spot-pin")?.classList.toggle("spot-pin--active", active);
+    });
+    eventMarkersRef.current.forEach((marker, id) => {
+      marker.getElement()?.classList.toggle("event-pin-marker--active", selectedEvent?.id === id);
+    });
+  }, [selectedSpot, selectedEvent, filteredSpots, filteredEvents]);
 
   // The fixed site header's real rendered height (it grows with safe-area
   // insets on notched devices) — a hardcoded `top-14` left a gap the map's
@@ -649,6 +609,34 @@ export function SpotMap({
   // Measured instead of assumed so it can't drift out of sync. Shared with
   // ExploreFilterBar, which needs the same measurement.
   const headerHeight = useHeaderHeight(fullScreen);
+
+  // In fullScreen mode (the explore page's map view, the only place
+  // `fullScreen` is used) ExploreFilterBar floats fixed over this same top
+  // strip at a higher z-index than anything in here — so the desktop detail
+  // panel, which would otherwise also start flush with the map's top edge,
+  // needs to start below it instead or its close button ends up
+  // unreachable underneath that bar. Measured (not assumed) since the bar's
+  // height varies with its content (e.g. the vibes chip row wrapping).
+  const [panelTopOffset, setPanelTopOffset] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!fullScreen) return;
+    const bar = document.querySelector<HTMLElement>("[data-explore-filter-bar]");
+    const mapBox = containerRef.current;
+    if (!bar || !mapBox) return;
+    const update = () => {
+      const barBottom = bar.getBoundingClientRect().bottom;
+      const mapTop = mapBox.getBoundingClientRect().top;
+      setPanelTopOffset(Math.max(16, barBottom - mapTop + 8));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(bar);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [fullScreen]);
 
   const locateMe = useCallback(() => {
     if (!mapRef.current) return;
@@ -671,6 +659,7 @@ export function SpotMap({
             weight: 3,
             fillColor: "#1f6f6b",
             fillOpacity: 1,
+            className: "me-marker",
           })
             .addTo(mapRef.current)
             .bindTooltip(tMap("youAreHere"));
@@ -685,6 +674,82 @@ export function SpotMap({
       { enableHighAccuracy: true, timeout: 8000 },
     );
   }, [tMap]);
+
+  // Normalizes whichever pin is selected (spot xor event) into the shape
+  // MapDetailPanel renders — keeps that component ignorant of both domain
+  // types, and keeps this file the only place that has to know their fields.
+  const panelContent: DetailPanelContent | null = useMemo(() => {
+    if (selectedSpot) {
+      const meta = CATEGORY_META[selectedSpot.category];
+      const Icon = meta.icon;
+      const metaItems: string[] = [];
+      if (selectedSpot.rating) metaItems.push(`★ ${selectedSpot.rating.toFixed(1)}`);
+      if (selectedSpot.price_range) metaItems.push(selectedSpot.price_range);
+
+      return {
+        photoUrl: getSpotImage(selectedSpot),
+        photoFallback: <Icon size={30} />,
+        featuredLabel: selectedSpot.is_featured ? tNight("featuredBadge") : undefined,
+        categoryLabel: tCategory(selectedSpot.category),
+        categoryColor: meta.color,
+        categoryIcon: <Icon size={13} />,
+        title: selectedSpot.name,
+        subtitle: selectedSpot.address,
+        metaItems,
+        description: selectedSpot.description,
+        actions: [
+          { label: tSpot("readMore"), primary: true, onClick: () => handleOpenSpot(selectedSpot) },
+        ],
+      };
+    }
+
+    if (selectedEvent) {
+      const meta = EVENT_CATEGORY_META[selectedEvent.category];
+      const dateLabel = new Intl.DateTimeFormat(locale === "es" ? "es-PA" : "en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(new Date(`${selectedEvent.date}T00:00:00`));
+      const priceLabel =
+        selectedEvent.price && selectedEvent.price > 0 ? `$${selectedEvent.price}` : tEvents("free");
+
+      const actions: DetailPanelContent["actions"] = [
+        { label: tEvents("viewDetails"), primary: true, onClick: () => handleOpenEvent(selectedEvent) },
+      ];
+      if (selectedEvent.booking_url) {
+        const bookingUrl = selectedEvent.booking_url;
+        actions.push({ label: tEvents("book"), onClick: () => window.open(bookingUrl, "_blank", "noopener,noreferrer") });
+      }
+
+      return {
+        photoUrl: selectedEvent.photo,
+        photoFallback: <CalendarDays size={30} />,
+        categoryLabel: tEventCategory(selectedEvent.category),
+        categoryColor: meta.color,
+        categoryIcon: <Image src={meta.icon} alt="" width={13} height={13} />,
+        title: selectedEvent.title,
+        subtitle: `${dateLabel} · ${formatTime(selectedEvent.time_start, locale)}`,
+        metaItems: [priceLabel],
+        description: selectedEvent.description,
+        actions,
+      };
+    }
+
+    return null;
+  }, [
+    selectedSpot,
+    selectedEvent,
+    locale,
+    tCategory,
+    tEventCategory,
+    tSpot,
+    tEvents,
+    tNight,
+    handleOpenSpot,
+    handleOpenEvent,
+  ]);
+
+  const hasSelection = panelContent !== null;
 
   return (
     <div
@@ -720,7 +785,15 @@ export function SpotMap({
             z-[1200]: Leaflet's own panes/controls climb as high as z-index
             1000 internally, so anything at or below that can end up
             rendering behind the map instead of on top of it. */}
-        <div className="safe-top absolute left-4 right-16 top-4 z-[1200] flex flex-col items-start gap-2 sm:right-auto sm:w-72">
+        <div
+          className={cn(
+            "safe-top absolute left-4 right-16 top-4 z-[1200] flex flex-col items-start gap-2 sm:right-auto sm:w-72",
+            // The desktop side panel occupies this same top-left corner —
+            // step aside for it there. Mobile's sheet comes from the bottom
+            // instead, so this stays put and reachable behind it.
+            hasSelection && "md:hidden",
+          )}
+        >
           {/* TODO: ExploreFilterBar (rendered by ExploreSection, above this
               component) now also occupies this top strip — reconsider this
               pill's position together with that bar when events are
@@ -787,10 +860,22 @@ export function SpotMap({
           disabled={!ready || locating}
           aria-label={tMap("locateMe")}
           title={tMap("locateMe")}
-          className="absolute bottom-4 left-4 z-[1200] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-foreground shadow-lg disabled:opacity-50"
+          className={cn(
+            "absolute bottom-4 left-4 z-[1200] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-surface text-foreground shadow-lg disabled:opacity-50",
+            // Sits under the desktop panel's footprint — hidden there, still
+            // reachable on mobile since the sheet comes from the bottom.
+            hasSelection && "md:hidden",
+          )}
         >
           {locating ? <Loader2 size={18} className="animate-spin" /> : <LocateFixed size={18} />}
         </button>
+
+        <MapDetailPanel
+          content={panelContent}
+          closeLabel={tSpot("close")}
+          onClose={closePanel}
+          desktopTopOffsetPx={panelTopOffset}
+        />
 
         {ready && visibleCount === 0 && (
           <div className="pointer-events-none absolute inset-0 z-[1200] flex items-center justify-center p-4">

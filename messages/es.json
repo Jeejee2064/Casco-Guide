@@ -1,6 +1,6 @@
 {
   "site": {
-    "name": "Casco Guide",
+    "name": "Casco Viejo Guide",
     "title": "Explora Casco Viejo",
     "subtitle": "Restaurantes, bares y sitios seleccionados, próximos eventos y guías locales — todo lo que necesitas para explorar Casco Viejo como si vivieras aquí.",
     "searchPlaceholder": "Busca lugares, etiquetas, cocina…",
@@ -13,6 +13,14 @@
     "events": "Eventos",
     "admin": "Admin",
     "articles": "Guías"
+  },
+  "night": {
+    "toggle": "Modo día / noche",
+    "dayMode": "Día",
+    "nightMode": "Noche",
+    "bannerTitle": "Modo nocturno activado",
+    "bannerSubtitle": "¡Los mejores lugares para salir ahora!",
+    "featuredBadge": "Destacado · Exclusive"
   },
   "filters": {
     "title": "Filtros",
@@ -493,5 +501,60 @@
     "viewSpot": "Ver lugar",
     "viewEvent": "Ver evento",
     "draft": "Borrador"
+  },
+  "seo": {
+    "home": {
+      "title": "Guía de Casco Viejo — Mejores Restaurantes, Bares, Hoteles y Qué Hacer",
+      "description": "La guía completa de Casco Viejo: restaurantes, bares con azotea, hoteles boutique, museos y rutas a pie por el casco antiguo de la Ciudad de Panamá, Patrimonio de la Humanidad por la UNESCO — seleccionado y actualizado por locales.",
+      "keywords": "Casco Viejo, Casco Viejo Panamá, Casco Antiguo, San Felipe Panamá, qué hacer en Casco Viejo, restaurantes en Casco Viejo, bares en Casco Viejo, hoteles en Casco Viejo, guía de Casco Viejo, centro histórico Ciudad de Panamá"
+    },
+    "articles": {
+      "title": "Guías y Recomendaciones de Casco Viejo",
+      "description": "Guías a fondo, selecciones y crónicas sobre los mejores restaurantes, bares, sitios y rincones escondidos de Casco Viejo, Ciudad de Panamá."
+    },
+    "spotTitle": "{name} — {category} en Casco Viejo",
+    "spotDescriptionFallback": "{name} — {category} en Casco Viejo, Ciudad de Panamá. Consulta horario, dirección, fotos y todo lo que necesitas para visitarlo.",
+    "articleDescriptionFallback": "Una historia de Casco Viejo Guide: {title}."
+  },
+  "about": {
+    "title": "La guía de Casco Viejo, hecha por locales",
+    "intro": "Casco Viejo — también llamado Casco Antiguo o San Felipe — es el centro histórico y colonial restaurado de la Ciudad de Panamá, Patrimonio de la Humanidad por la UNESCO desde 1997. Sus calles de adoquines conectan edificios restaurados de los siglos XVII y XVIII, bares en azoteas con vista al skyline, restaurantes familiares, hoteles boutique y parte de la mejor vida nocturna de Panamá. Casco Guide está hecho y se mantiene actualizado por personas que realmente viven y trabajan en el barrio.",
+    "sections": {
+      "eat": {
+        "title": "Dónde comer y beber en Casco Viejo",
+        "body": "Desde puestos de ceviche cerca de la Plaza de la Independencia hasta alta cocina en mansiones restauradas y bares en azotea con vista a la Bahía de Panamá, la oferta gastronómica de Casco Viejo supera con creces su tamaño. Filtra por vibe — café tranquilo, atardecer romántico, fiesta en azotea, patrimonio local — para encontrar justo lo que buscas."
+      },
+      "see": {
+        "title": "Qué ver en Casco Viejo",
+        "body": "La Plaza de la Independencia, la Catedral Metropolitana, la Iglesia de San José con su Altar de Oro, las ruinas de la Iglesia de la Compañía de Jesús y el Paseo Esteban Huertas junto a la antigua muralla se recorren en una sola tarde — aunque Casco Viejo premia a quien se toma su tiempo y se pierde por sus callecitas."
+      },
+      "stay": {
+        "title": "Dónde hospedarse en Casco Viejo",
+        "body": "Los hoteles boutique dentro de edificios coloniales reconvertidos te dejan a pasos de las plazas, los restaurantes y el malecón — sin la dispersión del distrito financiero de la Ciudad de Panamá al otro lado de la bahía."
+      }
+    },
+    "faqTitle": "Casco Viejo — preguntas frecuentes",
+    "faq": {
+      "q1": {
+        "q": "¿Qué es Casco Viejo?",
+        "a": "Casco Viejo (también llamado Casco Antiguo o San Felipe) es el centro histórico de la Ciudad de Panamá, fundado en 1673 tras la destrucción de la ciudad original por piratas. Es Patrimonio de la Humanidad por la UNESCO desde 1997 y hoy es el principal polo de restaurantes, bares, hoteles boutique y vida nocturna de la ciudad."
+      },
+      "q2": {
+        "q": "¿Es seguro visitar Casco Viejo?",
+        "a": "La zona turística principal — alrededor de la Plaza de la Independencia, el Paseo Esteban Huertas y las calles con más restaurantes — está bien vigilada y llena de visitantes de día y de noche. Como en cualquier lugar, conviene circular por calles iluminadas y con gente después del anochecer y cuidar tus pertenencias, sobre todo hacia los bordes del barrio."
+      },
+      "q3": {
+        "q": "¿Cómo llegar a Casco Viejo?",
+        "a": "Casco Viejo está en el extremo sur de la Ciudad de Panamá, a unos 30–40 minutos en taxi o Uber desde el Aeropuerto Internacional de Tocumen, y más cerca todavía del distrito financiero (Punta Pacífica, Bella Vista). Uber y los taxis son la forma más fácil de llegar — una vez ahí, el barrio se recorre por completo a pie."
+      },
+      "q4": {
+        "q": "¿Cuánto tiempo hay que dedicarle a Casco Viejo?",
+        "a": "Medio día alcanza para las plazas y templos principales. Un día completo permite sumar un museo, un almuerzo con calma y un atardecer desde una azotea. Muchos visitantes terminan quedándose hasta la noche — la vida de bares y restaurantes realmente arranca después de que oscurece."
+      },
+      "q5": {
+        "q": "¿Cuál es la mejor época para visitar Casco Viejo?",
+        "a": "La temporada seca de Panamá, de mediados de diciembre a abril, trae menos lluvia. Dentro de un mismo día, la mejor franja es la tarde-noche — baja el calor, la luz es ideal para fotos y los bares en azotea se llenan para el atardecer sobre la Bahía de Panamá."
+      }
+    }
   }
 }
