@@ -13,14 +13,19 @@ import { FeaturedPhotoUploader, GalleryUploader } from "./PhotoUploader";
 import { ArticleEditor } from "./ArticleEditor";
 import { LangTabs } from "./LangTabs";
 import { LocationPickerModal } from "./LocationPickerModal";
+import { TranslationSyncModal } from "./TranslationSyncModal";
+import { useTranslationSyncGuard } from "./useTranslationSyncGuard";
+import { ImportFromScreenshot } from "./ImportFromScreenshot";
 import { PreviewModeTabs, type PreviewMode } from "./PreviewModeTabs";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
 import { SpotCard } from "@/components/site/SpotCard";
 import { SPOT_CATEGORIES } from "@/lib/categories";
+import { SPOT_VIBES, VIBE_META } from "@/lib/vibes";
 import { slugify } from "@/lib/utils";
 import { upsertSpot, type SpotFormValues } from "@/lib/actions/spots";
+import type { ExtractedSpot } from "@/lib/actions/importSpot";
 import type { Locale } from "@/i18n/routing";
-import type { Spot, SpotRecord } from "@/lib/types/database";
+import { DAY_KEYS, type Spot, type SpotRecord } from "@/lib/types/database";
 
 type Lang = "es" | "en";
 type LocalizedField = "name" | "description" | "article" | "cuisine_type" | "hours_note";
@@ -41,6 +46,7 @@ function toPreviewSpot(values: SpotFormValues, lang: Lang, existing?: SpotRecord
     description: pickNullable(values.description_es, values.description_en),
     article: pickNullable(values.article_es, values.article_en),
     category: values.category,
+    vibes: values.vibes,
     latitude: values.latitude,
     longitude: values.longitude,
     address: values.address || null,
@@ -84,6 +90,7 @@ const emptyValues = (): SpotFormValues => ({
   article_es: "",
   article_en: "",
   category: "restaurant",
+  vibes: [],
   latitude: 8.9528,
   longitude: -79.5347,
   address: "",
@@ -125,6 +132,7 @@ const fromSpot = (spot: SpotRecord): SpotFormValues => ({
   article_es: spot.article_es ?? "",
   article_en: spot.article_en ?? "",
   category: spot.category,
+  vibes: spot.vibes,
   latitude: spot.latitude,
   longitude: spot.longitude,
   address: spot.address ?? "",
@@ -161,12 +169,15 @@ const DIETARY_OPTIONS = ["vegan", "vegetarian", "gluten-free", "halal", "dairy-f
 export function SpotForm({ spot }: { spot?: SpotRecord }) {
   const t = useTranslations("admin.spotForm");
   const tPreview = useTranslations("admin.preview");
+  const tSync = useTranslations("admin.translationSync");
   const tCat = useTranslations("category");
+  const tVibe = useTranslations("vibe");
   const locale = useLocale() as Locale;
   const [values, setValues] = useState<SpotFormValues>(spot ? fromSpot(spot) : emptyValues());
   const [slugTouched, setSlugTouched] = useState(Boolean(spot));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
+  const syncGuard = useTranslationSyncGuard(spot ? fromSpot(spot) : emptyValues());
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [pending, startTransition] = useTransition();
@@ -209,6 +220,42 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
   const setLocalized = (field: LocalizedField, val: string) =>
     setValues((v) => ({ ...v, [`${field}_${lang}`]: val }));
 
+  // Merges what the screenshot importer could read into the draft. Business
+  // names are proper nouns, so the same string seeds both languages —
+  // everything else non-null overwrites its field; anything the model
+  // couldn't read (null, or an omitted hours day) leaves the current value
+  // alone rather than blanking it out. Coordinates only come through when
+  // the screenshot shows an explicit decimal pair (e.g. right-click "What's
+  // here?" on the pin) — the import prompt is told never to infer them from
+  // the pin's pixel position, so this can't silently drop the spot at the
+  // wrong address.
+  const handleExtract = (data: ExtractedSpot) => {
+    if (data.name) {
+      set("name_es", data.name);
+      set("name_en", data.name);
+      if (!slugTouched) set("slug", slugify(data.name));
+    }
+    if (data.category) set("category", data.category);
+    if (data.address) set("address", data.address);
+    if (data.neighborhood) set("neighborhood", data.neighborhood);
+    if (data.phone) set("phone", data.phone);
+    if (data.website) set("website", data.website);
+    if (data.price_range) set("price_range", data.price_range);
+    if (data.rating !== null) set("rating", data.rating);
+    if (data.latitude !== null) set("latitude", data.latitude);
+    if (data.longitude !== null) set("longitude", data.longitude);
+    if (data.cuisine_type) {
+      set("cuisine_type_es", data.cuisine_type);
+      set("cuisine_type_en", data.cuisine_type);
+    }
+    if (data.hours) {
+      for (const day of DAY_KEYS) {
+        const slots = data.hours[day];
+        if (slots !== undefined) set(`hours_${day}` as keyof SpotFormValues, slots as never);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!values.name_es.trim()) {
@@ -221,10 +268,18 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
       setLang("en");
       return;
     }
+    if (syncGuard.check(values)) return;
+    saveNow();
+  };
+
+  const saveNow = () => {
     startTransition(async () => {
       const res = await upsertSpot(locale, { ...values, id: spot?.id });
       if (res?.error) toast.error(res.error);
-      else toast.success(t("saved"));
+      else {
+        toast.success(t("saved"));
+        syncGuard.markSaved(values);
+      }
     });
   };
 
@@ -240,6 +295,14 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
   return (
     <>
     <form onSubmit={handleSubmit} className="space-y-8 pb-24">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-dashed border-aqua/40 bg-aqua/5 p-4">
+        <div>
+          <p className="text-sm font-semibold">{t("import.title")}</p>
+          <p className="text-xs text-foreground/50">{t("import.description")}</p>
+        </div>
+        <ImportFromScreenshot onExtract={handleExtract} />
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4">
         <div>
           <p className="text-sm font-semibold">{t("translationLabel")}</p>
@@ -318,6 +381,36 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
               </option>
             ))}
           </Select>
+        </div>
+
+        <div>
+          <Label>{t("vibes")}</Label>
+          <div className="flex flex-wrap gap-2">
+            {SPOT_VIBES.map((v) => {
+              const meta = VIBE_META[v];
+              const Icon = meta.icon;
+              const isActive = values.vibes.includes(v);
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() =>
+                    set(
+                      "vibes",
+                      isActive ? values.vibes.filter((x) => x !== v) : [...values.vibes, v],
+                    )
+                  }
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+                  style={{
+                    backgroundColor: isActive ? meta.color : `${meta.color}1A`,
+                    color: isActive ? "white" : meta.color,
+                  }}
+                >
+                  <Icon size={13} strokeWidth={2.5} /> {tVibe(v)}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </Section>
 
@@ -646,6 +739,29 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
               setPickerOpen(false);
             }}
             onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {syncGuard.unmodifiedLang && (
+          <TranslationSyncModal
+            labels={{
+              title: tSync("title", { modified: (syncGuard.unmodifiedLang === "en" ? "es" : "en").toUpperCase() }),
+              message: tSync("message", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              switchTo: tSync("switchTo", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              saveAnyway: tSync("saveAnyway", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              close: tSync("close"),
+            }}
+            onSwitch={() => {
+              setLang(syncGuard.unmodifiedLang!);
+              syncGuard.dismiss();
+            }}
+            onSaveAnyway={() => {
+              syncGuard.dismiss();
+              saveNow();
+            }}
+            onClose={syncGuard.dismiss}
           />
         )}
       </AnimatePresence>

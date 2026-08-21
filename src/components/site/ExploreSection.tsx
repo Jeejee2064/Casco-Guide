@@ -1,12 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LayoutGrid, MapIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SpotExplorer } from "./SpotExplorer";
 import { SpotMap } from "./SpotMap";
+import { ExploreFilterBar } from "./ExploreFilterBar";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { useExploreView } from "./ExploreViewContext";
+import { useExploreFilter } from "./ExploreFilterContext";
 import type { EventRow, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +24,31 @@ export function ExploreSection({ spots, events = [] }: { spots: Spot[]; events?:
   const { isMapView, setIsMapView } = useExploreView();
   const view = isMapView ? "map" : "grid";
 
+  // Search + category/vibe selection also lives above this AnimatePresence
+  // switch (see ExploreFilterContext) for the same unmount reason — computed
+  // once, centrally, so both SpotExplorer and SpotMap just receive an
+  // already-filtered `spots` list and stay unaware of category/vibe/search.
+  const { mode, query, category, vibe } = useExploreFilter();
+  const filteredSpots = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return spots.filter((spot) => {
+      if (mode === "classic" && category && spot.category !== category) return false;
+      if (mode === "vibes" && vibe && !spot.vibes.includes(vibe)) return false;
+      if (q) {
+        const haystack = [spot.name, spot.description, spot.cuisine_type, ...(spot.tags ?? [])]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [spots, mode, category, vibe, query]);
+
   return (
     <div className={view === "grid" ? "pb-20" : undefined}>
+      <ExploreFilterBar />
+
       {/* No `mode="wait"` — with switching now instant, waiting out the
           grid's exit fade before even starting to mount the map would just
           reintroduce a needless quarter-second of nothing happening. The map
@@ -37,8 +63,9 @@ export function ExploreSection({ spots, events = [] }: { spots: Spot[]; events?:
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.25, ease: EASE_OUT }}
+            className="mx-auto max-w-6xl px-4 py-8 sm:px-6"
           >
-            <SpotExplorer spots={spots} />
+            <SpotExplorer spots={filteredSpots} />
           </motion.div>
         ) : (
           // Opacity-only (no y/scale) — SpotMap's fullScreen mode relies on
@@ -52,7 +79,7 @@ export function ExploreSection({ spots, events = [] }: { spots: Spot[]; events?:
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: EASE_OUT }}
           >
-            <SpotMap spots={spots} events={events} fullScreen />
+            <SpotMap spots={filteredSpots} events={events} fullScreen />
           </motion.div>
         )}
       </AnimatePresence>

@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowRight, BookOpen, CalendarDays, MapIcon, MapPin } from "lucide-react";
+import { ArrowRight, BookOpen, MapIcon, MapPin } from "lucide-react";
+// CalendarDays: only used by the events pill below, currently commented out.
 import { useTranslations } from "next-intl";
 import { HERO_IMAGE } from "@/lib/data/categoryImages";
 import { Link } from "@/i18n/navigation";
@@ -19,7 +20,10 @@ import { staggerContainer, fadeUp } from "./motion";
  */
 export function Hero({
   spotsCount,
-  eventsCount,
+  // eventsCount kept in the props type for call-site compatibility while
+  // events are hidden site-wide — unused here since the pill below is
+  // commented out.
+  eventsCount: _eventsCount,
   articlesCount,
 }: {
   spotsCount: number;
@@ -43,13 +47,14 @@ export function Hero({
       label: tNav("spots"),
       count: spotsCount,
     },
-    {
-      key: "events",
-      href: { pathname: "/", hash: "events" } as const,
-      icon: CalendarDays,
-      label: tNav("events"),
-      count: eventsCount,
-    },
+    // Events temporarily hidden site-wide — uncomment to restore the pill.
+    // {
+    //   key: "events",
+    //   href: { pathname: "/", hash: "events" } as const,
+    //   icon: CalendarDays,
+    //   label: tNav("events"),
+    //   count: eventsCount,
+    // },
     {
       key: "articles",
       href: "/articles" as const,

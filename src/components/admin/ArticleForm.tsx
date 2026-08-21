@@ -12,6 +12,8 @@ import { FeaturedPhotoUploader } from "./PhotoUploader";
 import { ArticleBodyEditor } from "./ArticleBodyEditor";
 import { ArticleBlocksEditor } from "./ArticleBlocksEditor";
 import { LangTabs } from "./LangTabs";
+import { TranslationSyncModal } from "./TranslationSyncModal";
+import { useTranslationSyncGuard } from "./useTranslationSyncGuard";
 import { PreviewModeTabs, type PreviewMode } from "./PreviewModeTabs";
 import type { LinkablePlace } from "./PlaceLinkPicker";
 import { ArticleDetailView } from "@/components/site/ArticleDetailView";
@@ -115,10 +117,12 @@ export function ArticleForm({
 }) {
   const t = useTranslations("admin.articleForm");
   const tPreview = useTranslations("admin.preview");
+  const tSync = useTranslations("admin.translationSync");
   const locale = useLocale() as Locale;
   const [values, setValues] = useState<ArticleFormValues>(article ? fromArticle(article) : emptyValues());
   const [slugTouched, setSlugTouched] = useState(Boolean(article));
   const [lang, setLang] = useState<Lang>("es");
+  const syncGuard = useTranslationSyncGuard(article ? fromArticle(article) : emptyValues());
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [pending, startTransition] = useTransition();
@@ -193,10 +197,18 @@ export function ArticleForm({
       setLang("en");
       return;
     }
+    if (syncGuard.check(values)) return;
+    saveNow();
+  };
+
+  const saveNow = () => {
     startTransition(async () => {
       const res = await upsertArticle(locale, { ...values, id: article?.id });
       if (res?.error) toast.error(res.error);
-      else toast.success(t("saved"));
+      else {
+        toast.success(t("saved"));
+        syncGuard.markSaved(values);
+      }
     });
   };
 
@@ -403,6 +415,29 @@ export function ArticleForm({
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {syncGuard.unmodifiedLang && (
+          <TranslationSyncModal
+            labels={{
+              title: tSync("title", { modified: (syncGuard.unmodifiedLang === "en" ? "es" : "en").toUpperCase() }),
+              message: tSync("message", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              switchTo: tSync("switchTo", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              saveAnyway: tSync("saveAnyway", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              close: tSync("close"),
+            }}
+            onSwitch={() => {
+              setLang(syncGuard.unmodifiedLang!);
+              syncGuard.dismiss();
+            }}
+            onSaveAnyway={() => {
+              syncGuard.dismiss();
+              saveNow();
+            }}
+            onClose={syncGuard.dismiss}
+          />
         )}
       </AnimatePresence>
     </>

@@ -16,6 +16,9 @@
   },
   "filters": {
     "title": "Filtros",
+    "all": "Todos",
+    "classic": "Clásico",
+    "vibes": "Vibes",
     "category": "Categoría",
     "price": "Rango de precio",
     "openNow": "Abierto ahora",
@@ -43,6 +46,14 @@
     "shop": "Tienda",
     "gallery": "Galería",
     "hotel": "Hotel"
+  },
+  "vibe": {
+    "rooftop_party": "Azoteas y Fiesta",
+    "nomad_work": "Trabajo y Café",
+    "romantic_sunset": "Romántico / Atardecer",
+    "local_heritage": "Local y Patrimonio",
+    "gastro_trendy": "Gastro y Trendy",
+    "chill_coffee": "Chill y Café"
   },
   "price": {
     "$": "Económico",
@@ -219,6 +230,35 @@
       "title2": "Título 2"
     },
     "spotForm": {
+      "import": {
+        "title": "Importar desde captura de Google Maps",
+        "description": "Sube hasta 5 capturas de la ficha del lugar en Google Maps (si no cabe todo en una) y Claude combina lo que pueda leer en cada una — revisa todo antes de guardar. Truco: haz clic derecho sobre el punto exacto en el mapa (\"¿Qué hay aquí?\") para que las coordenadas aparezcan en la captura y se importen también.",
+        "button": "Importar captura",
+        "modalTitle": "Importar desde captura",
+        "hint": "Hasta 5 capturas de la misma ficha (nombre, dirección, horario, coordenadas…). Pega con Ctrl+V, arrastra, o haz clic para subirlas.",
+        "dropHint": "Pega (Ctrl+V), arrastra o haz clic para subir capturas",
+        "addAnother": "Agregar otra",
+        "analyzing": "Analizando…",
+        "apply": "Analizar y rellenar",
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "success": "✨ Datos importados — revisa cada campo antes de guardar.",
+        "reviewNotice": "Esto solo rellena el formulario, no guarda nada todavía. Revisa y corrige lo que haga falta.",
+        "errors": {
+          "unauthorized": "Tu sesión expiró. Vuelve a iniciar sesión.",
+          "missing_api_key": "Falta configurar ANTHROPIC_API_KEY en el servidor.",
+          "no_image": "No se recibió ninguna imagen.",
+          "image_too_large": "La imagen pesa demasiado (máx. 5 MB).",
+          "unsupported_type": "Formato de imagen no compatible. Usa PNG, JPG, WEBP o GIF.",
+          "network": "No se pudo contactar el servicio de IA. Revisa tu conexión.",
+          "api": "El servicio de IA respondió con un error. Intenta de nuevo.",
+          "empty_response": "El servicio de IA no devolvió ningún dato.",
+          "parse_failed": "No se pudo interpretar la respuesta de la IA.",
+          "invalid_shape": "La respuesta de la IA no tenía el formato esperado.",
+          "unknown": "Algo salió mal al importar. Intenta de nuevo.",
+          "too_many_images": "Máximo 5 capturas a la vez."
+        }
+      },
       "titleNew": "Agregar nuevo lugar",
       "titleEdit": "Editar lugar",
       "translationLabel": "Idioma del contenido",
@@ -242,6 +282,7 @@
       "article": "Artículo completo",
       "articleHint": "200–500 palabras — la historia de este lugar",
       "category": "Categoría",
+      "vibes": "Vibes",
       "address": "Dirección",
       "geocode": "Ubicar en el mapa",
       "geocoding": "Ubicando…",
@@ -328,6 +369,13 @@
       "no": "No",
       "loading": "Cargando…",
       "required": "Requerido"
+    },
+    "translationSync": {
+      "title": "Solo se modificó {modified}",
+      "message": "El texto en {target} no se tocó. ¿Quieres actualizarlo también antes de guardar?",
+      "switchTo": "Cambiar a {target}",
+      "saveAnyway": "Guardar sin editar {target}",
+      "close": "Cerrar"
     },
     "articles": {
       "title": "Artículos",

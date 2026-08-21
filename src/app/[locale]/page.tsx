@@ -4,13 +4,15 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ExploreSection } from "@/components/site/ExploreSection";
 import { ExploreViewProvider } from "@/components/site/ExploreViewContext";
-import { EventCard } from "@/components/site/EventCard";
+import { ExploreFilterProvider } from "@/components/site/ExploreFilterContext";
+// Events temporarily hidden site-wide — see the commented block below.
+// import { EventCard } from "@/components/site/EventCard";
 import { ArticlesGrid } from "@/components/site/ArticlesGrid";
 import { Hero } from "@/components/site/Hero";
-import { Stagger, StaggerItem } from "@/components/site/motion";
+// import { Stagger, StaggerItem } from "@/components/site/motion";
 import { Link } from "@/i18n/navigation";
 import { getSpots } from "@/lib/data/spots";
-import { getEvents } from "@/lib/data/events";
+// import { getEvents } from "@/lib/data/events";
 import { getArticles } from "@/lib/data/articles";
 import type { Locale } from "@/i18n/routing";
 
@@ -26,12 +28,12 @@ export default async function HomePage({
   const { locale } = (await params) as { locale: Locale };
   setRequestLocale(locale);
 
-  const [spots, events, articles] = await Promise.all([
+  const [spots, articles] = await Promise.all([
     getSpots(locale),
-    getEvents(locale),
+    // getEvents(locale),
     getArticles(locale),
   ]);
-  const tEvents = await getTranslations("events");
+  // const tEvents = await getTranslations("events");
   const tArticles = await getTranslations("articles");
 
   return (
@@ -47,14 +49,19 @@ export default async function HomePage({
         <main className="flex-1">
           <Hero
             spotsCount={spots.length}
-            eventsCount={events.length}
+            eventsCount={0}
             articlesCount={articles.length}
           />
 
-          <div id="explore" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-8 sm:px-6">
-            <ExploreSection spots={spots} events={events} />
+          <div id="explore" className="scroll-mt-20">
+            {/* events prop intentionally omitted — events hidden site-wide, see AGENTS note */}
+            <ExploreFilterProvider>
+              <ExploreSection spots={spots} />
+            </ExploreFilterProvider>
           </div>
 
+          {/* Events section hidden site-wide — keep in sync with the fetch above
+              and with Header/Hero's events links when re-enabling.
           {events.length > 0 && (
             <div id="events" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6">
               <h2 className="font-heading mb-4 text-2xl font-extrabold">{tEvents("title")}</h2>
@@ -67,6 +74,7 @@ export default async function HomePage({
               </Stagger>
             </div>
           )}
+          */}
 
           {articles.length > 0 && (
             <div id="articles" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6">

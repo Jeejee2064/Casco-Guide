@@ -22,8 +22,8 @@ export const CATEGORY_IMAGES: Record<SpotCategory, string> = {
   hotel: "https://images.unsplash.com/photo-1566073771259-6a8506099945",
 };
 
-/** Real Casco Viejo skyline at dusk — used for the homepage hero banner. */
-export const HERO_IMAGE = "https://images.unsplash.com/photo-1587759301533-ae42d7065a80";
+/** Homepage hero banner photo, served locally from /public. */
+export const HERO_IMAGE = "/hero.webp";
 
 /** Best available image for a spot card: its own photo, else a category placeholder. */
 export function getSpotImage(spot: Pick<Spot, "featured_photo" | "category">): string {

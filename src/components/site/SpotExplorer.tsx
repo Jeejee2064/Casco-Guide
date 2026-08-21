@@ -2,12 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronUp, Search, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, ChevronUp, SearchX, SlidersHorizontal, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SpotCard } from "./SpotCard";
 import { Stagger, StaggerItem, TAP_SPRING, EASE_OUT } from "./motion";
 import { useRouter } from "@/i18n/navigation";
-import { CATEGORY_META, SPOT_CATEGORIES } from "@/lib/categories";
 import { isOpenNow } from "@/lib/hours";
 import type { PriceRange, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
@@ -39,11 +38,7 @@ function seededShuffle<T>(items: T[], seed: number): T[] {
 
 export function SpotExplorer({ spots }: { spots: Spot[] }) {
   const t = useTranslations("filters");
-  const tCategory = useTranslations("category");
-  const tSite = useTranslations("site");
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
   const [prices, setPrices] = useState<PriceRange[]>([]);
   const [openNow, setOpenNow] = useState(false);
   const [sort, setSort] = useState<SortKey>("newest");
@@ -55,33 +50,19 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   const resetFilters = () => {
-    setQuery("");
-    setCategories([]);
     setPrices([]);
     setOpenNow(false);
     setSort("newest");
     setExpanded(false);
   };
 
+  // `spots` is already filtered by search/category/vibe (see ExploreSection)
+  // — this only layers price/openNow/sort on top of that.
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     let result = spots.filter((spot) => {
-      if (categories.length && !categories.includes(spot.category)) return false;
       if (prices.length && (!spot.price_range || !prices.includes(spot.price_range)))
         return false;
       if (openNow && !isOpenNow(spot)) return false;
-      if (q) {
-        const haystack = [
-          spot.name,
-          spot.description,
-          spot.cuisine_type,
-          ...(spot.tags ?? []),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
       return true;
     });
 
@@ -101,12 +82,10 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
         );
     }
     return result;
-  }, [spots, query, categories, prices, openNow, sort, shuffleSeed]);
+  }, [spots, prices, openNow, sort, shuffleSeed]);
 
-  const hasActiveFilters =
-    query.trim().length > 0 || categories.length > 0 || prices.length > 0 || openNow;
-  const activeFilterCount =
-    categories.length + prices.length + (openNow ? 1 : 0) + (query.trim() ? 1 : 0);
+  const hasActiveFilters = prices.length > 0 || openNow;
+  const activeFilterCount = prices.length + (openNow ? 1 : 0);
 
   // Truncate only the unfiltered, default list — once someone searches or
   // filters, show every match, since that's the result set they asked for.
@@ -154,45 +133,6 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
               transition={{ duration: 0.22, ease: EASE_OUT }}
               className="safe-bottom fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md space-y-4 rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-2xl sm:p-5"
             >
-              <div className="relative">
-                <Search
-                  size={17}
-                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40"
-                />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={tSite("searchPlaceholder")}
-                  className="h-11 w-full rounded-[var(--radius-button)] border border-border bg-background pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-aqua"
-                />
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                  {t("category")}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {SPOT_CATEGORIES.map((cat) => {
-                    const meta = CATEGORY_META[cat];
-                    const Icon = meta.icon;
-                    const isActive = categories.includes(cat);
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => toggle(categories, cat, setCategories)}
-                        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-                        style={{
-                          backgroundColor: isActive ? meta.color : `${meta.color}1A`,
-                          color: isActive ? "white" : meta.color,
-                        }}
-                      >
-                        <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
                   {t("price")}

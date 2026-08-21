@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import type { DayHours, Photo, SpotRecord } from "@/lib/types/database";
+import type { DayHours, Photo, SpotRecord, SpotVibe } from "@/lib/types/database";
 
 export interface SpotFormValues {
   id?: string;
@@ -16,6 +16,7 @@ export interface SpotFormValues {
   article_es: string;
   article_en: string;
   category: SpotRecord["category"];
+  vibes: SpotVibe[];
   latitude: number;
   longitude: number;
   address: string;

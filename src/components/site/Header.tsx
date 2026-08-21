@@ -65,12 +65,14 @@ export function Header() {
             >
               {tNav("spots")}
             </Link>
-            <Link
+            {/* Events temporarily hidden site-wide — see AGENTS note in this
+                PR/commit. Uncomment to bring the nav link back. */}
+            {/* <Link
               href={{ pathname: "/", hash: "events" }}
               className="rounded-full px-3 py-1.5 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
             >
               {tNav("events")}
-            </Link>
+            </Link> */}
             <Link
               href="/articles"
               className="rounded-full px-3 py-1.5 transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"

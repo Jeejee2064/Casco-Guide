@@ -21,6 +21,16 @@ export type EventCategory =
   | "theatre"
   | "workshop";
 
+// A second, orthogonal classification axis for spots (see src/lib/vibes.ts)
+// — unlike `category`, multi-valued: a spot can carry several vibes at once.
+export type SpotVibe =
+  | "rooftop_party"
+  | "nomad_work"
+  | "romantic_sunset"
+  | "local_heritage"
+  | "gastro_trendy"
+  | "chill_coffee";
+
 export type PriceRange = "$" | "$$" | "$$$" | "$$$$";
 export type ParkingType = "street" | "paid-lot" | "none";
 export type RecurrenceType = "once" | "daily" | "weekly" | "monthly";
@@ -44,6 +54,7 @@ export interface Spot {
   description: string | null;
   article: string | null;
   category: SpotCategory;
+  vibes: SpotVibe[];
 
   latitude: number;
   longitude: number;

@@ -16,6 +16,9 @@
   },
   "filters": {
     "title": "Filters",
+    "all": "All",
+    "classic": "Classic",
+    "vibes": "Vibes",
     "category": "Category",
     "price": "Price range",
     "openNow": "Open now",
@@ -43,6 +46,14 @@
     "shop": "Shop",
     "gallery": "Gallery",
     "hotel": "Hotel"
+  },
+  "vibe": {
+    "rooftop_party": "Rooftops & Party",
+    "nomad_work": "Work & Coffee",
+    "romantic_sunset": "Romantic / Sunset",
+    "local_heritage": "Local & Heritage",
+    "gastro_trendy": "Gastro & Trendy",
+    "chill_coffee": "Chill & Cafe"
   },
   "price": {
     "$": "Budget",
@@ -219,6 +230,35 @@
       "title2": "Title 2"
     },
     "spotForm": {
+      "import": {
+        "title": "Import from Google Maps screenshot",
+        "description": "Upload up to 5 screenshots of the place's Google Maps card (when it doesn't fit in one) and Claude combines whatever each one shows — review everything before saving. Tip: right-click the exact point on the map (\"What's here?\") so the coordinates show up in a screenshot and get imported too.",
+        "button": "Import screenshot",
+        "modalTitle": "Import from screenshot",
+        "hint": "Up to 5 screenshots of the same place (name, address, hours, coordinates…). Paste with Ctrl+V, drag & drop, or click to upload them.",
+        "dropHint": "Paste (Ctrl+V), drag & drop, or click to upload screenshots",
+        "addAnother": "Add another",
+        "analyzing": "Analyzing…",
+        "apply": "Analyze & fill in",
+        "cancel": "Cancel",
+        "close": "Close",
+        "success": "✨ Data imported — review every field before saving.",
+        "reviewNotice": "This only fills in the form, nothing is saved yet. Review and fix anything that's off.",
+        "errors": {
+          "unauthorized": "Your session expired. Please sign in again.",
+          "missing_api_key": "ANTHROPIC_API_KEY isn't configured on the server.",
+          "no_image": "No image was received.",
+          "image_too_large": "That image is too large (max 5 MB).",
+          "unsupported_type": "Unsupported image format. Use PNG, JPG, WEBP, or GIF.",
+          "network": "Couldn't reach the AI service. Check your connection.",
+          "api": "The AI service returned an error. Please try again.",
+          "empty_response": "The AI service didn't return any data.",
+          "parse_failed": "Couldn't parse the AI's response.",
+          "invalid_shape": "The AI's response wasn't in the expected shape.",
+          "unknown": "Something went wrong importing that. Try again.",
+          "too_many_images": "Max 5 screenshots at a time."
+        }
+      },
       "titleNew": "Add a new spot",
       "titleEdit": "Edit spot",
       "translationLabel": "Content language",
@@ -242,6 +282,7 @@
       "article": "Full article",
       "articleHint": "200–500 words — the story of this place",
       "category": "Category",
+      "vibes": "Vibes",
       "address": "Address",
       "geocode": "Locate on map",
       "geocoding": "Locating…",
@@ -328,6 +369,13 @@
       "no": "No",
       "loading": "Loading…",
       "required": "Required"
+    },
+    "translationSync": {
+      "title": "Only {modified} was changed",
+      "message": "The {target} text hasn't been touched. Do you want to update it too before saving?",
+      "switchTo": "Switch to {target}",
+      "saveAnyway": "Save without editing {target}",
+      "close": "Close"
     },
     "articles": {
       "title": "Articles",

@@ -1,18 +1,20 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { MapPin, CalendarDays, Newspaper, Clock } from "lucide-react";
+import { MapPin, Newspaper, Clock } from "lucide-react";
+// CalendarDays: only used by the events stat card below, currently commented out.
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
 import { getSpots } from "@/lib/data/spots";
-import { getEvents } from "@/lib/data/events";
+// Events temporarily hidden site-wide — see the commented stat card below.
+// import { getEvents } from "@/lib/data/events";
 import { getAllArticles } from "@/lib/data/articles";
 import type { Locale } from "@/i18n/routing";
 
 export default async function AdminDashboardPage() {
   const t = await getTranslations("admin.dashboard");
   const locale = (await getLocale()) as Locale;
-  const [spots, events, articles] = await Promise.all([
+  const [spots, articles] = await Promise.all([
     getSpots(locale),
-    getEvents(locale),
+    // getEvents(locale),
     getAllArticles(locale),
   ]);
   const lastUpdated = spots[0]?.updated_at
@@ -27,13 +29,14 @@ export default async function AdminDashboardPage() {
       className: "bg-aqua/15 text-aqua-dark dark:text-aqua",
       href: "/admin/spots" as const,
     },
-    {
-      label: t("totalEvents"),
-      value: events.length,
-      icon: CalendarDays,
-      className: "bg-coral/15 text-coral-dark dark:text-coral",
-      href: "/admin/events" as const,
-    },
+    // Events temporarily hidden site-wide — uncomment to restore this card.
+    // {
+    //   label: t("totalEvents"),
+    //   value: events.length,
+    //   icon: CalendarDays,
+    //   className: "bg-coral/15 text-coral-dark dark:text-coral",
+    //   href: "/admin/events" as const,
+    // },
     {
       label: t("totalArticles"),
       value: articles.length,
@@ -61,9 +64,10 @@ export default async function AdminDashboardPage() {
           <Link href="/admin/spots/new">
             <Button variant="primary">{t("addSpot")}</Button>
           </Link>
-          <Link href="/admin/events/new">
+          {/* Events temporarily hidden site-wide — uncomment to restore. */}
+          {/* <Link href="/admin/events/new">
             <Button variant="coral">{t("addEvent")}</Button>
-          </Link>
+          </Link> */}
         </div>
       </div>
 

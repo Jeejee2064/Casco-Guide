@@ -12,6 +12,8 @@ import { FeaturedPhotoUploader } from "./PhotoUploader";
 import { ArticleEditor } from "./ArticleEditor";
 import { LangTabs } from "./LangTabs";
 import { LocationPickerModal } from "./LocationPickerModal";
+import { TranslationSyncModal } from "./TranslationSyncModal";
+import { useTranslationSyncGuard } from "./useTranslationSyncGuard";
 import { PreviewModeTabs, type PreviewMode } from "./PreviewModeTabs";
 import { EventDetailView } from "@/components/site/EventDetailView";
 import { EventCard } from "@/components/site/EventCard";
@@ -129,6 +131,7 @@ const fromEvent = (event: EventRecord): EventFormValues => ({
 export function EventForm({ event }: { event?: EventRecord }) {
   const t = useTranslations("admin.eventForm");
   const tPreview = useTranslations("admin.preview");
+  const tSync = useTranslations("admin.translationSync");
   const tCat = useTranslations("events.recurring");
   const tEventCat = useTranslations("eventCategory");
   const locale = useLocale() as Locale;
@@ -136,6 +139,7 @@ export function EventForm({ event }: { event?: EventRecord }) {
   const [slugTouched, setSlugTouched] = useState(Boolean(event));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
+  const syncGuard = useTranslationSyncGuard(event ? fromEvent(event) : emptyValues());
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [pending, startTransition] = useTransition();
@@ -188,10 +192,18 @@ export function EventForm({ event }: { event?: EventRecord }) {
       setLang("en");
       return;
     }
+    if (syncGuard.check(values)) return;
+    saveNow();
+  };
+
+  const saveNow = () => {
     startTransition(async () => {
       const res = await upsertEvent(locale, { ...values, id: event?.id });
       if (res?.error) toast.error(res.error);
-      else toast.success(t("saved"));
+      else {
+        toast.success(t("saved"));
+        syncGuard.markSaved(values);
+      }
     });
   };
 
@@ -549,6 +561,29 @@ export function EventForm({ event }: { event?: EventRecord }) {
               setPickerOpen(false);
             }}
             onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {syncGuard.unmodifiedLang && (
+          <TranslationSyncModal
+            labels={{
+              title: tSync("title", { modified: (syncGuard.unmodifiedLang === "en" ? "es" : "en").toUpperCase() }),
+              message: tSync("message", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              switchTo: tSync("switchTo", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              saveAnyway: tSync("saveAnyway", { target: syncGuard.unmodifiedLang.toUpperCase() }),
+              close: tSync("close"),
+            }}
+            onSwitch={() => {
+              setLang(syncGuard.unmodifiedLang!);
+              syncGuard.dismiss();
+            }}
+            onSaveAnyway={() => {
+              syncGuard.dismiss();
+              saveNow();
+            }}
+            onClose={syncGuard.dismiss}
           />
         )}
       </AnimatePresence>

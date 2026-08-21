@@ -6,7 +6,8 @@ import { Footer } from "@/components/site/Footer";
 import { ArticleDetailView } from "@/components/site/ArticleDetailView";
 import { getArticleBySlug } from "@/lib/data/articles";
 import { getSpotsByIds } from "@/lib/data/spots";
-import { getEventsByIds } from "@/lib/data/events";
+// Events temporarily hidden site-wide — see the commented block below.
+// import { getEventsByIds } from "@/lib/data/events";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -35,16 +36,17 @@ export default async function ArticleDetailPage({
   const article = await getArticleBySlug(slug, locale);
   if (!article) notFound();
 
-  const [citedSpots, citedEvents] = await Promise.all([
+  const [citedSpots] = await Promise.all([
     getSpotsByIds(article.spot_refs, locale),
-    getEventsByIds(article.event_refs, locale),
+    // getEventsByIds(article.event_refs, locale),
   ]);
 
   return (
     <>
       <Header />
       <main className="flex-1">
-        <ArticleDetailView article={article} citedSpots={citedSpots} citedEvents={citedEvents} />
+        {/* citedEvents intentionally omitted — events hidden site-wide */}
+        <ArticleDetailView article={article} citedSpots={citedSpots} />
       </main>
       <Footer />
     </>

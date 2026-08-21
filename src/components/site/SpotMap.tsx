@@ -24,8 +24,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EASE_OUT, TAP_SPRING } from "./motion";
+import { useHeaderHeight } from "./useHeaderHeight";
 import { useRouter } from "@/i18n/navigation";
-import { CATEGORY_META, SPOT_CATEGORIES } from "@/lib/categories";
+import { CATEGORY_META } from "@/lib/categories";
 import { EVENT_CATEGORIES, EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { isOpenNow, formatTime } from "@/lib/hours";
@@ -316,7 +317,6 @@ export function SpotMap({
   fullScreen?: boolean;
 }) {
   const t = useTranslations("filters");
-  const tSite = useTranslations("site");
   const tSpot = useTranslations("spot");
   const tCategory = useTranslations("category");
   const tEventCategory = useTranslations("eventCategory");
@@ -337,8 +337,11 @@ export function SpotMap({
   const [mode, setMode] = useState<MapMode>("spots");
   const hasEvents = events.length > 0;
 
+  // Spots search now lives in the shared top bar (ExploreFilterBar) and
+  // pre-filters the `spots` prop before it even reaches this component —
+  // `query` here only powers the (currently dormant, hasEvents-gated)
+  // events-mode search, which that shared bar doesn't cover.
   const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
   const [prices, setPrices] = useState<PriceRange[]>([]);
   const [openNow, setOpenNow] = useState(false);
   const [eventCategories, setEventCategories] = useState<EventCategory[]>([]);
@@ -375,12 +378,11 @@ export function SpotMap({
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
   const resetFilters = () => {
-    setQuery("");
     if (mode === "spots") {
-      setCategories([]);
       setPrices([]);
       setOpenNow(false);
     } else {
+      setQuery("");
       setEventCategories([]);
       setEventPrices([]);
       setEventDate("all");
@@ -398,24 +400,17 @@ export function SpotMap({
     };
   }, [fullScreen]);
 
+  // `spots` is already filtered by search/category/vibe (see ExploreSection)
+  // — this only layers price/openNow on top of that.
   const filteredSpots = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return spots.filter((spot) => {
       if (spot.latitude == null || spot.longitude == null) return false;
-      if (categories.length && !categories.includes(spot.category)) return false;
       if (prices.length && (!spot.price_range || !prices.includes(spot.price_range)))
         return false;
       if (openNow && !isOpenNow(spot)) return false;
-      if (q) {
-        const haystack = [spot.name, spot.description, spot.cuisine_type, ...(spot.tags ?? [])]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
       return true;
     });
-  }, [spots, query, categories, prices, openNow]);
+  }, [spots, prices, openNow]);
 
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -441,11 +436,11 @@ export function SpotMap({
   const hasQuery = query.trim().length > 0;
   const hasActiveFilters =
     mode === "spots"
-      ? hasQuery || categories.length > 0 || prices.length > 0 || openNow
+      ? prices.length > 0 || openNow
       : hasQuery || eventCategories.length > 0 || eventPrices.length > 0 || eventDate !== "all";
   const activeFilterCount =
     mode === "spots"
-      ? categories.length + prices.length + (openNow ? 1 : 0) + (hasQuery ? 1 : 0)
+      ? prices.length + (openNow ? 1 : 0)
       : eventCategories.length +
         eventPrices.length +
         (eventDate !== "all" ? 1 : 0) +
@@ -651,19 +646,9 @@ export function SpotMap({
   // The fixed site header's real rendered height (it grows with safe-area
   // insets on notched devices) — a hardcoded `top-14` left a gap the map's
   // tiles could show through, blurred, behind the header's glass background.
-  // Measured instead of assumed so it can't drift out of sync.
-  const [headerHeight, setHeaderHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!fullScreen) return;
-    const header = document.querySelector("header");
-    if (!header) return;
-    const update = () => setHeaderHeight(header.getBoundingClientRect().height);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(header);
-    return () => ro.disconnect();
-  }, [fullScreen]);
+  // Measured instead of assumed so it can't drift out of sync. Shared with
+  // ExploreFilterBar, which needs the same measurement.
+  const headerHeight = useHeaderHeight(fullScreen);
 
   const locateMe = useCallback(() => {
     if (!mapRef.current) return;
@@ -736,6 +721,10 @@ export function SpotMap({
             1000 internally, so anything at or below that can end up
             rendering behind the map instead of on top of it. */}
         <div className="safe-top absolute left-4 right-16 top-4 z-[1200] flex flex-col items-start gap-2 sm:right-auto sm:w-72">
+          {/* TODO: ExploreFilterBar (rendered by ExploreSection, above this
+              component) now also occupies this top strip — reconsider this
+              pill's position together with that bar when events are
+              re-enabled, rather than rediscovering the overlap from scratch. */}
           {hasEvents && (
             <div className="glass relative inline-flex rounded-full border border-border p-1 shadow-lg">
               {(
@@ -773,18 +762,23 @@ export function SpotMap({
             </div>
           )}
 
-          <div className="relative w-full">
-            <Search
-              size={17}
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40"
-            />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={mode === "spots" ? tSite("searchPlaceholder") : tEvents("searchPlaceholder")}
-              className="glass h-11 w-full rounded-full border border-border pl-10 pr-4 text-sm shadow-lg outline-none focus:ring-2 focus:ring-aqua"
-            />
-          </div>
+          {/* Spots search now lives in the shared ExploreFilterBar above this
+              component — only the (dormant, hasEvents-gated) events mode
+              still needs its own search here. */}
+          {mode === "events" && (
+            <div className="relative w-full">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40"
+              />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={tEvents("searchPlaceholder")}
+                className="glass h-11 w-full rounded-full border border-border pl-10 pr-4 text-sm shadow-lg outline-none focus:ring-2 focus:ring-aqua"
+              />
+            </div>
+          )}
         </div>
 
         <button
@@ -859,32 +853,6 @@ export function SpotMap({
 
               {mode === "spots" ? (
                 <>
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                      {t("category")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {SPOT_CATEGORIES.map((cat) => {
-                        const meta = CATEGORY_META[cat];
-                        const Icon = meta.icon;
-                        const isActive = categories.includes(cat);
-                        return (
-                          <button
-                            key={cat}
-                            onClick={() => toggle(categories, cat, setCategories)}
-                            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
-                            style={{
-                              backgroundColor: isActive ? meta.color : `${meta.color}1A`,
-                              color: isActive ? "white" : meta.color,
-                            }}
-                          >
-                            <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
                   <div>
                     <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
                       {t("price")}
