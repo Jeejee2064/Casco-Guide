@@ -9,9 +9,9 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://cascoviejo
 
 export const SITE_NAME = "Casco Viejo Guide";
 
-// The hero photo doubles as the site-wide fallback Open Graph image — every
-// spot/article page overrides it with its own photo when it has one.
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/hero.webp`;
+// Site-wide fallback Open Graph image (the logo mark on the brand teal) —
+// every spot/article page overrides it with its own photo when it has one.
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 /** Resolves a site-relative path (or passes through an already-absolute URL)
  * against SITE_URL — metadata fields that require a fully qualified URL

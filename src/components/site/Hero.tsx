@@ -9,14 +9,16 @@ import { HERO_IMAGE } from "@/lib/data/categoryImages";
 import { Link } from "@/i18n/navigation";
 import { useExploreView } from "./ExploreViewContext";
 import { staggerContainer, fadeUp } from "./motion";
+import { HeroArticles } from "./HeroArticles";
+import type { Article } from "@/lib/types/database";
 
 /**
  * Full-bleed photo hero — the very first thing anyone sees, on any screen
- * size. It states what the site is (title + subtitle) and, more
- * importantly, puts one direct, always-visible link to each of the three
- * content types (spots, events, guides) right in front of the visitor, so
- * nobody has to scroll to discover the guide covers more than just a map of
- * places to eat.
+ * size. It states what the site is (title + subtitle), puts one direct,
+ * always-visible link to each of the three content types (spots, events,
+ * guides) right in front of the visitor, and — since it no longer needs to
+ * fill the whole first viewport on its own — leads straight into the 3
+ * latest guides (see HeroArticles) before the search/filter bar takes over.
  */
 export function Hero({
   spotsCount,
@@ -25,10 +27,12 @@ export function Hero({
   // commented out.
   eventsCount: _eventsCount,
   articlesCount,
+  articles,
 }: {
   spotsCount: number;
   eventsCount: number;
   articlesCount: number;
+  articles: Article[];
 }) {
   const t = useTranslations("site");
   const tNav = useTranslations("nav");
@@ -68,7 +72,7 @@ export function Hero({
     "group flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2.5 text-sm font-semibold backdrop-blur-md transition-colors hover:border-white/40 hover:bg-white/20";
 
   return (
-    <section className="relative isolate flex min-h-[68svh] items-end overflow-hidden sm:min-h-[70svh]">
+    <section className="relative isolate overflow-hidden">
       <Image
         src={HERO_IMAGE}
         alt=""
@@ -77,13 +81,13 @@ export function Hero({
         sizes="100vw"
         className="object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0d0a17] via-[#0d0a17]/55 to-[#0d0a17]/10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0d0a17]/85 via-[#0d0a17]/70 to-[#0d0a17]" />
 
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="relative mx-auto w-full max-w-6xl px-4 pb-8 pt-10 text-white sm:px-6 sm:pb-12 sm:pt-16"
+        className="relative mx-auto w-full max-w-6xl px-4 pb-10 pt-10 text-white sm:px-6 sm:pb-14 sm:pt-16"
       >
         <motion.span
           variants={fadeUp}
@@ -126,6 +130,8 @@ export function Hero({
             />
           </button>
         </motion.div>
+
+        <HeroArticles articles={articles} />
       </motion.div>
     </section>
   );

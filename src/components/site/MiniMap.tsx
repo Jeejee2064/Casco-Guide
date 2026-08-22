@@ -8,10 +8,6 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
 
-// Casco Viejo, Panama City — same fallback center as SpotMap/LocationPickerModal,
-// used when geolocation isn't available so the distance badge still means something.
-const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
-
 const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTRIBUTION =
@@ -159,9 +155,13 @@ export function MiniMap({
     };
   }, [ready, userLocation, latitude, longitude, tMap]);
 
-  const origin = userLocation ?? { lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] };
-  const distanceKm = haversineKm(origin.lat, origin.lng, latitude, longitude);
-  const isClose = distanceKm < 0.8;
+  // Only real when we actually have the visitor's position — no fallback
+  // center, since a distance/walk-time badge computed against a guessed
+  // origin would just be misleading.
+  const distanceKm = userLocation
+    ? haversineKm(userLocation.lat, userLocation.lng, latitude, longitude)
+    : null;
+  const isClose = distanceKm != null && distanceKm < 0.8;
 
   return (
     <div className={cn("space-y-2.5", className)}>
@@ -169,17 +169,19 @@ export function MiniMap({
         ref={containerRef}
         className="h-[200px] w-full overflow-hidden rounded-[var(--radius-card)] border border-border"
       />
-      <div
-        className={cn(
-          "flex items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-3 py-2.5 text-sm font-bold",
-          isClose
-            ? "border-lime/30 bg-lime/10 text-lime-dark dark:text-lime"
-            : "border-gold/30 bg-gold/10 text-gold-dark dark:text-gold",
-        )}
-      >
-        <Ruler size={15} />
-        {formatDistance(distanceKm)} · {tMap("walkTime", { mins: walkingMinutes(distanceKm) })}
-      </div>
+      {distanceKm != null && (
+        <div
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-3 py-2.5 text-sm font-bold",
+            isClose
+              ? "border-lime/30 bg-lime/10 text-lime-dark dark:text-lime"
+              : "border-gold/30 bg-gold/10 text-gold-dark dark:text-gold",
+          )}
+        >
+          <Ruler size={15} />
+          {formatDistance(distanceKm)} · {tMap("walkTime", { mins: walkingMinutes(distanceKm) })}
+        </div>
+      )}
     </div>
   );
 }

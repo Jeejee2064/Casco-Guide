@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
-import { Eye, X, FileText, ListOrdered, Images } from "lucide-react";
+import { Eye, X, FileText, ListOrdered, Images, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea, FieldHint } from "@/components/ui/Field";
 import { TagInput } from "./TagInput";
@@ -101,6 +101,7 @@ const LAYOUTS: { value: ArticleLayout; icon: typeof FileText }[] = [
   { value: "standard", icon: FileText },
   { value: "list", icon: ListOrdered },
   { value: "photo-story", icon: Images },
+  { value: "itinerary", icon: Clock },
 ];
 
 export function ArticleForm({
@@ -228,7 +229,7 @@ export function ArticleForm({
         </div>
 
         <Section title={t("sections.layout")}>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {LAYOUTS.map(({ value, icon: Icon }) => (
               <button
                 key={value}

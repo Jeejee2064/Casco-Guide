@@ -28,10 +28,12 @@ function emptyBlock(): ArticleBlockRecord {
 
 /**
  * The "fill in the boxes" structured editor behind the "list" (ranked
- * Top-N) and "photo-story" layouts — see ArticleForm.tsx. Each block can
- * optionally be linked to an existing spot/event (via the same
- * PlaceLinkPicker the free-text editor uses), which also feeds
- * Article.spot_refs/event_refs for the "places mentioned" map.
+ * Top-N), "photo-story" and "itinerary" (chronological day plan) layouts —
+ * see ArticleForm.tsx. Each block can optionally be linked to an existing
+ * spot/event (via the same PlaceLinkPicker the free-text editor uses),
+ * which also feeds Article.spot_refs/event_refs for the "places mentioned"
+ * map. For "itinerary", the title field doubles as the time-of-day label
+ * (e.g. "9:00 AM" or "Morning").
  */
 export function ArticleBlocksEditor({
   layout,
@@ -40,7 +42,7 @@ export function ArticleBlocksEditor({
   places,
   lang,
 }: {
-  layout: Extract<ArticleLayout, "list" | "photo-story">;
+  layout: Extract<ArticleLayout, "list" | "photo-story" | "itinerary">;
   value: ArticleBlockRecord[];
   onChange: (blocks: ArticleBlockRecord[]) => void;
   places: LinkablePlace[];
@@ -80,7 +82,7 @@ export function ArticleBlocksEditor({
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/50">
               <GripVertical size={14} />
-              {layout === "list" ? t("rank", { n: i + 1 }) : t("item", { n: i + 1 })}
+              {layout === "list" ? t("rank", { n: i + 1 }) : layout === "itinerary" ? t("step", { n: i + 1 }) : t("item", { n: i + 1 })}
             </div>
             <div className="flex items-center gap-1">
               <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="rounded p-1 hover:bg-black/5 disabled:opacity-30 dark:hover:bg-white/10">
@@ -107,7 +109,7 @@ export function ArticleBlocksEditor({
               <input
                 value={(block[`title_${lang}`] as string) ?? ""}
                 onChange={(e) => update(block.id, { [`title_${lang}`]: e.target.value } as Partial<ArticleBlockRecord>)}
-                placeholder={t("titlePlaceholder")}
+                placeholder={layout === "itinerary" ? t("timePlaceholder") : t("titlePlaceholder")}
                 className="w-full rounded-[var(--radius-button)] border border-border bg-background px-3 py-2 text-sm font-semibold outline-none focus:border-aqua"
               />
               <textarea
@@ -150,7 +152,7 @@ export function ArticleBlocksEditor({
         onClick={() => onChange([...value, emptyBlock()])}
         className="flex w-full items-center justify-center gap-1.5 rounded-[var(--radius-button)] border-2 border-dashed border-border py-2.5 text-sm font-semibold text-foreground/50 hover:border-aqua hover:text-aqua"
       >
-        <Plus size={15} /> {layout === "list" ? t("addRank") : t("addItem")}
+        <Plus size={15} /> {layout === "list" ? t("addRank") : layout === "itinerary" ? t("addStep") : t("addItem")}
       </button>
 
       {pickerForId && (

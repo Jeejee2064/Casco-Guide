@@ -407,7 +407,8 @@
       "layout": {
         "standard": "Standard",
         "list": "Ranked list",
-        "photo-story": "Photo story"
+        "photo-story": "Photo story",
+        "itinerary": "Itinerary"
       }
     },
     "articleForm": {
@@ -437,6 +438,10 @@
         "photo-story": {
           "name": "Photo story",
           "hint": "Big photos with a short caption."
+        },
+        "itinerary": {
+          "name": "Itinerary",
+          "hint": "A chronological day plan (morning, midday, afternoon, evening) with a link to each spot. Great for \"48h in…\" or \"A perfect day in…\" guides."
         }
       },
       "title": "Title",
@@ -472,11 +477,14 @@
       "blocks": {
         "rank": "Rank #{n}",
         "item": "Item #{n}",
+        "step": "Step #{n}",
         "titlePlaceholder": "Title",
+        "timePlaceholder": "Time (e.g. 9:00 AM or Morning)",
         "textPlaceholder": "Short text…",
         "linkPlace": "Link a spot/event",
         "addRank": "+ Add rank",
         "addItem": "+ Add item",
+        "addStep": "+ Add step",
         "searchPlaceholder": "Search by name…",
         "noResults": "No results",
         "close": "Close",
@@ -556,5 +564,14 @@
         "a": "Panama's dry season, mid-December through April, brings the least rain. Within a day, late afternoon into the evening is the best window — the heat eases, the light is great for photos, and rooftop bars fill up for sunset over Panama Bay."
       }
     }
+  },
+  "installPwa": {
+    "title": "Install Casco Viejo Guide",
+    "subtitle": "Add it to your home screen for quick, full-screen access — even offline.",
+    "install": "Install",
+    "notNow": "Not now",
+    "gotIt": "Got it",
+    "iosStep1": "Tap the Share icon in Safari's toolbar",
+    "iosStep2": "Then choose “Add to Home Screen”"
   }
 }

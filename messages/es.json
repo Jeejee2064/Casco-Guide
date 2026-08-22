@@ -407,7 +407,8 @@
       "layout": {
         "standard": "Estándar",
         "list": "Lista clasificada",
-        "photo-story": "Crónica fotográfica"
+        "photo-story": "Crónica fotográfica",
+        "itinerary": "Itinerario"
       }
     },
     "articleForm": {
@@ -437,6 +438,10 @@
         "photo-story": {
           "name": "Crónica fotográfica",
           "hint": "Grandes fotos con leyenda corta."
+        },
+        "itinerary": {
+          "name": "Itinerario",
+          "hint": "Un plan cronológico del día (mañana, mediodía, tarde, noche) con un enlace a cada lugar. Ideal para guías tipo \"48h en…\" o \"Un día ideal en…\"."
         }
       },
       "title": "Título",
@@ -472,11 +477,14 @@
       "blocks": {
         "rank": "Puesto #{n}",
         "item": "Elemento #{n}",
+        "step": "Paso #{n}",
         "titlePlaceholder": "Título",
+        "timePlaceholder": "Hora (ej. 9:00 a.m. o Mañana)",
         "textPlaceholder": "Texto corto…",
         "linkPlace": "Enlazar lugar/evento",
         "addRank": "+ Agregar puesto",
         "addItem": "+ Agregar elemento",
+        "addStep": "+ Agregar paso",
         "searchPlaceholder": "Buscar por nombre…",
         "noResults": "Sin resultados",
         "close": "Cerrar",
@@ -556,5 +564,14 @@
         "a": "La temporada seca de Panamá, de mediados de diciembre a abril, trae menos lluvia. Dentro de un mismo día, la mejor franja es la tarde-noche — baja el calor, la luz es ideal para fotos y los bares en azotea se llenan para el atardecer sobre la Bahía de Panamá."
       }
     }
+  },
+  "installPwa": {
+    "title": "Instala Casco Viejo Guide",
+    "subtitle": "Añádela a tu pantalla de inicio para un acceso rápido a pantalla completa, incluso sin conexión.",
+    "install": "Instalar",
+    "notNow": "Ahora no",
+    "gotIt": "Entendido",
+    "iosStep1": "Toca el icono de Compartir en la barra de Safari",
+    "iosStep2": "Luego elige “Añadir a pantalla de inicio”"
   }
 }

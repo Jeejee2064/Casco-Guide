@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ExploreSection } from "@/components/site/ExploreSection";
@@ -8,11 +8,10 @@ import { ExploreViewProvider } from "@/components/site/ExploreViewContext";
 import { ExploreFilterProvider } from "@/components/site/ExploreFilterContext";
 // Events temporarily hidden site-wide — see the commented block below.
 // import { EventCard } from "@/components/site/EventCard";
-import { ArticlesGrid } from "@/components/site/ArticlesGrid";
 import { AboutCascoViejo } from "@/components/site/AboutCascoViejo";
 import { Hero } from "@/components/site/Hero";
+import { InstallPwaPrompt } from "@/components/site/InstallPwaPrompt";
 // import { Stagger, StaggerItem } from "@/components/site/motion";
-import { Link } from "@/i18n/navigation";
 import { getSpots } from "@/lib/data/spots";
 // import { getEvents } from "@/lib/data/events";
 import { getArticles } from "@/lib/data/articles";
@@ -49,7 +48,6 @@ export default async function HomePage({
     getArticles(locale),
   ]);
   // const tEvents = await getTranslations("events");
-  const tArticles = await getTranslations("articles");
 
   return (
     // ExploreViewProvider reads the `?view=map` query client-side (via
@@ -66,6 +64,7 @@ export default async function HomePage({
             spotsCount={spots.length}
             eventsCount={0}
             articlesCount={articles.length}
+            articles={articles.slice(0, HOME_ARTICLES_COUNT)}
           />
 
           <div id="explore" className="scroll-mt-20">
@@ -91,23 +90,12 @@ export default async function HomePage({
           )}
           */}
 
-          {articles.length > 0 && (
-            <div id="articles" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="font-heading text-2xl font-extrabold">{tArticles("latestTitle")}</h2>
-                <Link href="/articles" className="text-sm font-semibold text-aqua hover:underline">
-                  {tArticles("seeAll")} →
-                </Link>
-              </div>
-              <ArticlesGrid articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
-            </div>
-          )}
-
           <div className="border-t border-border">
             <AboutCascoViejo />
           </div>
         </main>
         <Footer />
+        <InstallPwaPrompt />
       </ExploreViewProvider>
     </Suspense>
   );

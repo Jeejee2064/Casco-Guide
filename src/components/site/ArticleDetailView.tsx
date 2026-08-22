@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ChevronLeft, MapPin, CalendarDays, User } from "lucide-react";
+import { ChevronLeft, MapPin, CalendarDays, User, Clock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { SpotMap } from "./SpotMap";
@@ -13,7 +13,7 @@ import type { Article, EventRow, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
 /** Full public article page — cover, story (either freeform HTML or
- * structured "list"/"photo-story" blocks, see Article.layout), and a map of
+ * structured "list"/"photo-story"/"itinerary" blocks, see Article.layout), and a map of
  * every spot/event the article links to. `citedSpots`/`citedEvents` are
  * `Article.spot_refs`/`event_refs` already resolved server-side (see
  * src/app/[locale]/articles/[slug]/page.tsx). `onBack`, when given, is used
@@ -185,6 +185,36 @@ export function ArticleDetailView({
             </StaggerItem>
           ))}
         </Stagger>
+      )}
+
+      {article.layout === "itinerary" && article.blocks.length > 0 && (
+        <motion.ol
+          className="relative mt-8 space-y-6 border-l-2 border-dashed border-aqua/30 pl-6"
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.1 }}
+        >
+          {article.blocks.map((block) => (
+            <motion.li key={block.id} variants={fadeUp} className="relative">
+              <span className="absolute -left-[31px] flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-aqua text-white">
+                <Clock size={14} />
+              </span>
+              <div className="space-y-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+                {block.title && (
+                  <span className="inline-block rounded-full bg-aqua/15 px-2.5 py-1 text-xs font-bold text-aqua">{block.title}</span>
+                )}
+                {block.photo && (
+                  <div className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
+                    <Image src={block.photo} alt={block.title ?? ""} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
+                  </div>
+                )}
+                {block.text && <p className="text-[15px] leading-relaxed text-foreground/80">{block.text}</p>}
+                <BlockRefLink block={block} />
+              </div>
+            </motion.li>
+          ))}
+        </motion.ol>
       )}
 
       {hasCitations && (

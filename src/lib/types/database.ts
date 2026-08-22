@@ -159,13 +159,16 @@ export interface EventRecord extends Omit<EventRow, "title" | "description" | "a
   article_en: string | null;
 }
 
-// Three proven presentation formats — deliberately not an open-ended
-// template system. "standard" is a freeform write-up; "list" and
-// "photo-story" additionally render `blocks` as, respectively, a numbered
-// ranking (e.g. "Top 5 vegan spots") or a full-bleed photo sequence.
-export type ArticleLayout = "standard" | "list" | "photo-story";
+// Four proven presentation formats — deliberately not an open-ended
+// template system. "standard" is a freeform write-up; "list", "photo-story"
+// and "itinerary" additionally render `blocks` as, respectively, a numbered
+// ranking (e.g. "Top 5 vegan spots"), a full-bleed photo sequence, or a
+// chronological day plan (e.g. "48h in Casco Viejo") — each block's `title`
+// doubles as its time-of-day label (e.g. "9:00 AM" or "Morning").
+export type ArticleLayout = "standard" | "list" | "photo-story" | "itinerary";
 
-/** One structured item inside a "list"/"photo-story" article — locale-resolved. */
+/** One structured item inside a "list"/"photo-story"/"itinerary" article —
+ * locale-resolved. */
 export interface ArticleBlock {
   id: string;
   photo: string | null;

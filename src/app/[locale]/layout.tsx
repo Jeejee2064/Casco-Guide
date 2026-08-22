@@ -42,7 +42,7 @@ export async function generateMetadata({
       title: t("title"),
       description: t("description"),
       url: buildAlternates("/", locale)?.canonical as string,
-      images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME }],
+      images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 650, alt: SITE_NAME }],
       locale: ogLocale,
       alternateLocale: routing.locales.filter((l) => l !== locale).map(ogLocaleOf),
       type: "website",
@@ -59,11 +59,15 @@ export async function generateMetadata({
       googleBot: { index: true, follow: true, "max-image-preview": "large" },
     },
     // The favicon.ico file convention (src/app/favicon.ico) already emits
-    // its own <link rel="icon">, so this only needs to add the PNG mark on
-    // top of that fallback.
+    // its own <link rel="icon">, so this only adds the sized PNG marks on
+    // top of that fallback — pre-rendered from cascoviejo.svg into
+    // public/favicon_io/ (the manifest.ts icons reuse the same set).
     icons: {
-      icon: { url: "/cascoviejo.png", type: "image/png" },
-      apple: "/cascoviejo.png",
+      icon: [
+        { url: "/favicon_io/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+        { url: "/favicon_io/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      ],
+      apple: "/favicon_io/apple-touch-icon.png",
     },
     ...(process.env.GOOGLE_SITE_VERIFICATION && {
       verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
