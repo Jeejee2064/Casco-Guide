@@ -9,6 +9,7 @@ import { routing, type Locale } from "@/i18n/routing";
 import { MotionProvider } from "@/components/site/MotionProvider";
 import { NightModeProvider, NIGHT_MODE_STORAGE_KEY } from "@/components/site/NightModeContext";
 import { InstallPwaPrompt } from "@/components/site/InstallPwaPrompt";
+import { ScrollToTopOnNavigate } from "@/components/site/ScrollToTopOnNavigate";
 import { JsonLd } from "@/components/site/JsonLd";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { organizationSchema, websiteSchema } from "@/lib/seo/schema";
@@ -148,6 +149,7 @@ export default async function LocaleLayout({
                   real content — see InstallPwaPrompt's doc comment. */}
               <InstallPwaPrompt />
               <Toaster richColors position="top-center" />
+              <ScrollToTopOnNavigate />
             </NightModeProvider>
           </MotionProvider>
         </NextIntlClientProvider>

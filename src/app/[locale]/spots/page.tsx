@@ -55,12 +55,14 @@ export default async function SpotsPage({
   const spots = await getSpots(locale);
 
   // Powers the homepage vibe teaser's deep links (?vibe=romantic_sunset) and
-  // the general "Discover your vibe" CTA (?mode=vibes, no vibe picked yet) —
-  // read here, server-side, rather than via useSearchParams() client-side,
-  // so opening straight into vibes mode doesn't need its own Suspense
-  // boundary the way the old `?view=map` toggle used to.
+  // the general "Discover your vibe" CTA (?mode=vibes&vibesModal=1, no vibe
+  // picked yet, VibesModal popped open right away) — read here, server-side,
+  // rather than via useSearchParams() client-side, so opening straight into
+  // vibes mode doesn't need its own Suspense boundary the way the old
+  // `?view=map` toggle used to. Same params /map's page.tsx reads.
   const vibe = parseVibe(sp.vibe);
   const initialMode = vibe || sp.mode === "vibes" ? "vibes" : "classic";
+  const autoOpenVibesModal = sp.vibesModal === "1";
 
   return (
     <>
@@ -70,6 +72,7 @@ export default async function SpotsPage({
           spots={spots}
           initialMode={initialMode}
           initialVibes={vibe ? [vibe] : []}
+          autoOpenVibesModal={autoOpenVibesModal}
         />
       </main>
       <Footer />

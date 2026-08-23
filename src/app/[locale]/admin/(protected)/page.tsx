@@ -219,6 +219,7 @@ export default async function AdminDashboardPage() {
             slug: spot.slug,
             name: spot.name,
             category: spot.category,
+            vibes: spot.vibes,
             isFeatured: spot.is_featured,
             ...c,
             total,

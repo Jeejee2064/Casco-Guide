@@ -239,6 +239,8 @@
       "interactionsCount": "{count, plural, one {# spot ranked} other {# spots ranked}}",
       "interactionsSearch": "Search spots…",
       "interactionsFeaturedOnly": "Featured only",
+      "interactionsAllCategories": "All categories",
+      "interactionsAllVibes": "All vibes",
       "interactionsColSpot": "Spot",
       "interactionsColCategory": "Category",
       "interactionsColViews": "Views",

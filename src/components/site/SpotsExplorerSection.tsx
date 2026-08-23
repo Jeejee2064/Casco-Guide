@@ -24,7 +24,13 @@ const NO_VIBES: SpotVibe[] = [];
  * (which used to also own a grid↔map toggle; now that grid and map are
  * separate pages, this is just the grid half).
  */
-function SpotsExplorerContent({ spots }: { spots: Spot[] }) {
+function SpotsExplorerContent({
+  spots,
+  autoOpenVibesModal,
+}: {
+  spots: Spot[];
+  autoOpenVibesModal: boolean;
+}) {
   // Category, search and (when in vibes mode) vibe all narrow the set —
   // each is single-select (see ExploreFilterBar's toggleCategory/toggleVibe),
   // while search/category/vibe still AND together. Among those matches,
@@ -65,7 +71,7 @@ function SpotsExplorerContent({ spots }: { spots: Spot[] }) {
 
   return (
     <div className="pb-20">
-      <ExploreFilterBar spots={spots} />
+      <ExploreFilterBar spots={spots} autoOpenVibesModal={autoOpenVibesModal} />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <SpotExplorer spots={filteredSpots} activeVibes={activeVibes} mode={mode} />
       </div>
@@ -77,6 +83,7 @@ export function SpotsExplorerSection({
   spots,
   initialMode = "classic",
   initialVibes = [],
+  autoOpenVibesModal = false,
 }: {
   spots: Spot[];
   /** Seeded server-side from the homepage vibe teaser's `?vibe=`/`?mode=vibes`
@@ -84,10 +91,13 @@ export function SpotsExplorerSection({
    * instead of requiring a click through the discovery modal. */
   initialMode?: ExploreFilterMode;
   initialVibes?: SpotVibe[];
+  /** Same deep link's `?vibesModal=1` — pops VibesModal open immediately,
+   * since "Discover your vibe" is explicitly asking to see it, same as /map. */
+  autoOpenVibesModal?: boolean;
 }) {
   return (
     <ExploreFilterProvider initialMode={initialMode} initialVibes={initialVibes}>
-      <SpotsExplorerContent spots={spots} />
+      <SpotsExplorerContent spots={spots} autoOpenVibesModal={autoOpenVibesModal} />
     </ExploreFilterProvider>
   );
 }

@@ -239,6 +239,8 @@
       "interactionsCount": "{count, plural, one {# lugar clasificado} other {# lugares clasificados}}",
       "interactionsSearch": "Buscar lugares…",
       "interactionsFeaturedOnly": "Solo destacados",
+      "interactionsAllCategories": "Todas las categorías",
+      "interactionsAllVibes": "Todas las vibes",
       "interactionsColSpot": "Lugar",
       "interactionsColCategory": "Categoría",
       "interactionsColViews": "Vistas",

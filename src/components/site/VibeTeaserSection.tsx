@@ -4,13 +4,12 @@ import { Link } from "@/i18n/navigation";
 import { VIBE_META, SPOT_VIBES } from "@/lib/vibes";
 
 /**
- * Homepage teaser into vibes mode — all 6 vibes. Each mood card deep-links
- * straight to the /spots grid with that one vibe pre-selected (`?vibe=<id>`,
- * read server-side by spots/page.tsx, same parseVibe as /map's), landing on
- * an already-filtered list rather than the full map. The general "Discover
- * your vibe" CTA still goes to /map instead — it has nothing chosen yet, so
- * it opens the VibesModal picker there (`?mode=vibes&vibesModal=1`), which
- * /spots has no equivalent of.
+ * Homepage teaser into vibes mode — all 6 vibes, every card (and the CTA
+ * below) going to /spots, not /map: each mood card deep-links with that one
+ * vibe pre-selected (`?vibe=<id>`), the general "Discover your vibe" CTA
+ * opens the picker with nothing chosen yet and VibesModal popped open right
+ * away (`?mode=vibes&vibesModal=1`) — both read server-side by spots/page.tsx,
+ * same params /map's page.tsx also understands.
  */
 export async function VibeTeaserSection() {
   const [t, tVibe, tDescriptor] = await Promise.all([
@@ -51,11 +50,11 @@ export async function VibeTeaserSection() {
         })}
       </div>
 
-      {/* Goes to /map (not /spots) and pops VibesModal open right away —
-          "Discover your vibe" is asking to see the picker, not just landing
-          quietly in vibes mode (see map/page.tsx's ?vibesModal=1). */}
+      {/* Pops VibesModal open right away — "Discover your vibe" is asking to
+          see the picker, not just landing quietly in vibes mode (see
+          spots/page.tsx's ?vibesModal=1). */}
       <Link
-        href={{ pathname: "/map", query: { mode: "vibes", vibesModal: "1" } }}
+        href={{ pathname: "/spots", query: { mode: "vibes", vibesModal: "1" } }}
         className="group mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-aqua hover:underline"
       >
         {t("cta")}
