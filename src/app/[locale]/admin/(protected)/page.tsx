@@ -8,10 +8,7 @@ import {
   Search,
   Download,
   TriangleAlert,
-  MessageCircle,
-  Navigation,
   Moon,
-  Share2,
 } from "lucide-react";
 // CalendarDays: only used by the events stat card below, currently commented out.
 import { Link } from "@/i18n/navigation";
@@ -24,11 +21,9 @@ import type { Locale } from "@/i18n/routing";
 import { RankedBarList } from "@/components/admin/RankedBarList";
 import { AnalyticsStatTile } from "@/components/admin/AnalyticsStatTile";
 import { PageviewTrendChart } from "@/components/admin/PageviewTrendChart";
-import { SpotInteractionsTable, type SpotInteractionRow } from "@/components/admin/SpotInteractionsTable";
 import {
   getAnalyticsSummary,
   getDeviceBreakdown,
-  getEngagementCounts,
   getLanguageSplit,
   getNightModeStats,
   getPageviewTrend,
@@ -36,7 +31,6 @@ import {
   getPwaFunnel,
   getReferrers,
   getSearchStats,
-  getSpotInteractionCounts,
   getTopArticles,
   getTopCategoryFilters,
   getTopSpots,
@@ -126,8 +120,6 @@ export default async function AdminDashboardPage() {
     trend30: Awaited<ReturnType<typeof getPageviewTrend>>;
     topSpots: Awaited<ReturnType<typeof getTopSpots>>;
     topArticles: Awaited<ReturnType<typeof getTopArticles>>;
-    spotInteractions: Awaited<ReturnType<typeof getSpotInteractionCounts>>;
-    engagement: Awaited<ReturnType<typeof getEngagementCounts>>;
     topCategories: Awaited<ReturnType<typeof getTopCategoryFilters>>;
     topVibes: Awaited<ReturnType<typeof getTopVibeFilters>>;
     searchStats: Awaited<ReturnType<typeof getSearchStats>>;
@@ -148,8 +140,6 @@ export default async function AdminDashboardPage() {
         trend30,
         topSpots,
         topArticles,
-        spotInteractions,
-        engagement,
         topCategories,
         topVibes,
         searchStats,
@@ -165,8 +155,6 @@ export default async function AdminDashboardPage() {
         getPageviewTrend(30),
         getTopSpots(),
         getTopArticles(),
-        getSpotInteractionCounts(),
-        getEngagementCounts(),
         getTopCategoryFilters(),
         getTopVibeFilters(),
         getSearchStats(),
@@ -183,8 +171,6 @@ export default async function AdminDashboardPage() {
         trend30,
         topSpots,
         topArticles,
-        spotInteractions,
-        engagement,
         topCategories,
         topVibes,
         searchStats,
@@ -198,36 +184,6 @@ export default async function AdminDashboardPage() {
       analyticsError = true;
     }
   }
-
-  // Every spot, PostHog's per-slug counts merged onto Supabase's spot list
-  // (not the other way around) so a spot with zero interactions still gets
-  // a row — that's the whole point of a ranking meant to tell a business
-  // "you're #37", not just list who happened to show up in PostHog.
-  const spotInteractionRows: SpotInteractionRow[] = analytics
-    ? spots
-        .map((spot) => {
-          const c = analytics.spotInteractions[spot.slug] ?? {
-            views: 0,
-            whatsapp: 0,
-            directions: 0,
-            mapClicks: 0,
-            shares: 0,
-          };
-          const total = c.views + c.whatsapp + c.directions + c.mapClicks + c.shares;
-          return {
-            id: spot.id,
-            slug: spot.slug,
-            name: spot.name,
-            category: spot.category,
-            vibes: spot.vibes,
-            isFeatured: spot.is_featured,
-            ...c,
-            total,
-          };
-        })
-        .sort((a, b) => b.total - a.total)
-        .map((row, i) => ({ ...row, rank: i + 1 }))
-    : [];
 
   return (
     <div className="space-y-10">
@@ -335,17 +291,6 @@ export default async function AdminDashboardPage() {
               />
             </div>
 
-            {/* Interactions by spot — the ranking meant for pulling up a
-                specific business and showing them exactly where they
-                stand. */}
-            <div className="space-y-4">
-              <SectionHeading
-                title={ta("interactionsSection")}
-                subtitle={ta("interactionsSubtitle")}
-              />
-              <SpotInteractionsTable rows={spotInteractionRows} />
-            </div>
-
             {/* Traffic trend */}
             <div className="space-y-4">
               <SectionHeading title={ta("trafficTrend")} subtitle={ta("trafficTrendSubtitle")} />
@@ -361,6 +306,8 @@ export default async function AdminDashboardPage() {
                     last7: ta("rangeLast7"),
                     last30: ta("rangeLast30"),
                     empty: ta("empty"),
+                    pageviews: ta("pageviews"),
+                    visitors: ta("uniqueVisitors"),
                   }}
                 />
               </div>
@@ -379,37 +326,6 @@ export default async function AdminDashboardPage() {
                   title={ta("topArticles")}
                   items={analytics.topArticles}
                   emptyLabel={ta("empty")}
-                />
-              </div>
-            </div>
-
-            {/* Engagement */}
-            <div className="space-y-4">
-              <SectionHeading title={ta("engagementSection")} subtitle={ta("engagementSubtitle")} />
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <AnalyticsStatTile
-                  label={ta("whatsappClicks")}
-                  value={analytics.engagement.whatsappClicks}
-                  icon={MessageCircle}
-                  className="bg-[#25D366]/15 text-[#1a9e4b]"
-                />
-                <AnalyticsStatTile
-                  label={ta("directionsClicks")}
-                  value={analytics.engagement.directionsClicks}
-                  icon={Navigation}
-                  className="bg-aqua/15 text-aqua-dark dark:text-aqua"
-                />
-                <AnalyticsStatTile
-                  label={ta("mapPinClicks")}
-                  value={analytics.engagement.mapPinClicks}
-                  icon={MapPin}
-                  className="bg-magenta/15 text-magenta-dark dark:text-magenta"
-                />
-                <AnalyticsStatTile
-                  label={ta("shareClicks")}
-                  value={analytics.engagement.shareClicks}
-                  icon={Share2}
-                  className="bg-coral/15 text-coral-dark dark:text-coral"
                 />
               </div>
             </div>

@@ -195,7 +195,8 @@
       "events": "Eventos",
       "logout": "Cerrar sesión",
       "viewSite": "Ver sitio",
-      "articles": "Artículos"
+      "articles": "Artículos",
+      "engagement": "Interacción"
     },
     "login": {
       "title": "Bienvenido de nuevo",
@@ -291,6 +292,7 @@
       "add": "Agregar lugar",
       "search": "Buscar lugares…",
       "allCategories": "Todas las categorías",
+      "allVibes": "Todas las vibes",
       "featuredOnly": "Solo destacados",
       "columns": {
         "name": "Nombre",

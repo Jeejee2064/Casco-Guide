@@ -1,8 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 
-type TrendPoint = { date: string; count: number };
+type TrendPoint = { date: string; pageviews: number; visitors: number };
 type RangeKey = "today" | "last7" | "last30";
 
 const WIDTH = 600;
@@ -12,6 +12,13 @@ const PAD_BOTTOM = 28;
 const PAD_LEFT = 34;
 const PAD_RIGHT = 8;
 const Y_TICKS = 4;
+
+// Two series, one shared axis (both are plain counts) rather than a
+// dual-y-axis chart — see the note on TrendPoint in posthog-server.ts for
+// why. Fixed-order pair, not generated: pageviews first (the volume
+// metric), visitors second.
+const PAGEVIEWS_COLOR = "var(--color-aqua)";
+const VISITORS_COLOR = "var(--color-coral)";
 
 // A "nice" round step for the requested tick count — 1/2/5/10/20/50/100...
 // rather than whatever ugly fraction `max / tickCount` lands on, so the
@@ -47,11 +54,25 @@ function formatTooltipLabel(point: TrendPoint, locale: string | undefined) {
       });
 }
 
+function Legend({ pageviewsLabel, visitorsLabel }: { pageviewsLabel: string; visitorsLabel: string }) {
+  return (
+    <div className="flex items-center gap-4 text-xs font-semibold text-foreground/60">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full" style={{ background: PAGEVIEWS_COLOR }} />
+        {pageviewsLabel}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full" style={{ background: VISITORS_COLOR }} />
+        {visitorsLabel}
+      </span>
+    </div>
+  );
+}
+
 function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string }) {
-  const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  const totalCount = data.reduce((sum, d) => sum + d.count, 0);
+  const totalCount = data.reduce((sum, d) => sum + d.pageviews + d.visitors, 0);
   if (totalCount === 0 || data.length === 0) {
     return (
       <div className="flex h-[220px] items-center justify-center text-sm text-foreground/50">
@@ -60,7 +81,7 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
     );
   }
 
-  const rawMax = Math.max(...data.map((d) => d.count));
+  const rawMax = Math.max(...data.map((d) => Math.max(d.pageviews, d.visitors)));
   const step = niceStep(rawMax, Y_TICKS);
   const axisMax = step * Y_TICKS;
 
@@ -71,8 +92,8 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
   const xAt = (i: number) => PAD_LEFT + i * stepX;
   const yAt = (count: number) => PAD_TOP + innerHeight - (count / axisMax) * innerHeight;
 
-  const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(d.count)}`).join(" ");
-  const areaPath = `${linePath} L ${xAt(data.length - 1)} ${PAD_TOP + innerHeight} L ${xAt(0)} ${PAD_TOP + innerHeight} Z`;
+  const pathFor = (key: "pageviews" | "visitors") =>
+    data.map((d, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(d[key])}`).join(" ");
 
   // A handful of evenly-spaced x ticks — enough to orient (which day/hour
   // this is) without crowding a 24- or 30-point axis with a label per point.
@@ -97,16 +118,9 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
         onPointerMove={handlePointerMove}
         onPointerLeave={() => setHoverIndex(null)}
       >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-aqua)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="var(--color-aqua)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
         {/* Y-axis gridlines + labels — recessive, text tokens only (never
-            the series color), so they orient without competing with the
-            line itself. */}
+            a series color), so they orient without competing with the
+            lines themselves. */}
         {yTickValues.map((value) => (
           <g key={value}>
             <line
@@ -132,11 +146,18 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
           </g>
         ))}
 
-        <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
         <path
-          d={linePath}
+          d={pathFor("pageviews")}
           fill="none"
-          stroke="var(--color-aqua)"
+          stroke={PAGEVIEWS_COLOR}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d={pathFor("visitors")}
+          fill="none"
+          stroke={VISITORS_COLOR}
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -172,9 +193,17 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
             />
             <circle
               cx={xAt(hoverIndex)}
-              cy={yAt(hovered.count)}
+              cy={yAt(hovered.pageviews)}
               r={4}
-              fill="var(--color-aqua)"
+              fill={PAGEVIEWS_COLOR}
+              stroke="var(--surface)"
+              strokeWidth={2}
+            />
+            <circle
+              cx={xAt(hoverIndex)}
+              cy={yAt(hovered.visitors)}
+              r={4}
+              fill={VISITORS_COLOR}
               stroke="var(--surface)"
               strokeWidth={2}
             />
@@ -189,8 +218,15 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
             left: `${(xAt(hoverIndex) / WIDTH) * 100}%`,
           }}
         >
-          <p className="font-bold tabular-nums">{hovered.count.toLocaleString()}</p>
-          <p className="text-foreground/50">{formatTooltipLabel(hovered, undefined)}</p>
+          <p className="flex items-center gap-1.5 font-bold tabular-nums">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: PAGEVIEWS_COLOR }} />
+            {hovered.pageviews.toLocaleString()}
+          </p>
+          <p className="flex items-center gap-1.5 font-bold tabular-nums">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: VISITORS_COLOR }} />
+            {hovered.visitors.toLocaleString()}
+          </p>
+          <p className="mt-0.5 text-foreground/50">{formatTooltipLabel(hovered, undefined)}</p>
         </div>
       )}
     </div>
@@ -198,17 +234,25 @@ function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string })
 }
 
 /**
- * Daily pageviews (or hourly, for "today") with a range switch above it.
- * All three ranges are fetched once server-side (see the analytics page)
- * and handed to this client component together, so switching range is
- * instant — no round trip.
+ * Pageviews and unique visitors, overlaid on one shared axis (never a
+ * dual-y-axis chart — see the note on TrendPoint), with a range switch
+ * above it. All three ranges are fetched once server-side (see the
+ * analytics page) and handed to this client component together, so
+ * switching range is instant — no round trip.
  */
 export function PageviewTrendChart({
   series,
   labels,
 }: {
   series: { today: TrendPoint[]; last7: TrendPoint[]; last30: TrendPoint[] };
-  labels: { today: string; last7: string; last30: string; empty: string };
+  labels: {
+    today: string;
+    last7: string;
+    last30: string;
+    empty: string;
+    pageviews: string;
+    visitors: string;
+  };
 }) {
   const [range, setRange] = useState<RangeKey>("last30");
 
@@ -220,20 +264,23 @@ export function PageviewTrendChart({
 
   return (
     <div className="space-y-4">
-      <div className="inline-flex rounded-full border border-border bg-background p-1 text-xs font-semibold">
-        {options.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setRange(key)}
-            aria-pressed={range === key}
-            className={`rounded-full px-3 py-1.5 transition-colors ${
-              range === key ? "bg-aqua text-white" : "text-foreground/60 hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-full border border-border bg-background p-1 text-xs font-semibold">
+          {options.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setRange(key)}
+              aria-pressed={range === key}
+              className={`rounded-full px-3 py-1.5 transition-colors ${
+                range === key ? "bg-aqua text-white" : "text-foreground/60 hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <Legend pageviewsLabel={labels.pageviews} visitorsLabel={labels.visitors} />
       </div>
 
       <Chart data={series[range]} emptyLabel={labels.empty} />

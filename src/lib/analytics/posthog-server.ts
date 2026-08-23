@@ -102,24 +102,34 @@ export async function getAnalyticsSummary(
 // ---------------------------------------------------------------------------
 
 // ISO date (daily points) or ISO hour-start (hourly, "today" points) — the
-// chart tells them apart by string length, see PageviewTrendChart.
-export type TrendPoint = { date: string; count: number };
+// chart tells them apart by string length, see PageviewTrendChart. Two
+// series, not one — pageviews and unique visitors overlaid on the same
+// axis (both are plain counts, so a shared scale is honest, unlike a
+// dual-y-axis chart, which distorts however the two scales happen to be
+// picked — see the dataviz skill's anti-patterns).
+export type TrendPoint = { date: string; pageviews: number; visitors: number };
 
 export async function getPageviewTrend(days = ANALYTICS_WINDOW_DAYS): Promise<TrendPoint[]> {
   const response = await runHogQLQuery(
-    `SELECT toDate(timestamp) AS day, count() AS n
+    `SELECT toDate(timestamp) AS day, count() AS pageviews, count(DISTINCT distinct_id) AS visitors
      FROM events
      WHERE event = '$pageview' AND timestamp >= now() - INTERVAL ${days} DAY
      GROUP BY day ORDER BY day`,
   );
-  const byDay = new Map(response.results.map(([day, n]) => [String(day).slice(0, 10), Number(n)]));
+  const byDay = new Map(
+    response.results.map(([day, pageviews, visitors]) => [
+      String(day).slice(0, 10),
+      { pageviews: Number(pageviews), visitors: Number(visitors) },
+    ]),
+  );
 
   const points: TrendPoint[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().slice(0, 10);
-    points.push({ date: key, count: byDay.get(key) ?? 0 });
+    const bucket = byDay.get(key);
+    points.push({ date: key, pageviews: bucket?.pageviews ?? 0, visitors: bucket?.visitors ?? 0 });
   }
   return points;
 }
@@ -129,13 +139,16 @@ export async function getPageviewTrend(days = ANALYTICS_WINDOW_DAYS): Promise<Tr
 // zero-fill them with that wouldn't be misleading).
 export async function getPageviewTrendToday(): Promise<TrendPoint[]> {
   const response = await runHogQLQuery(
-    `SELECT toStartOfHour(timestamp) AS hour, count() AS n
+    `SELECT toStartOfHour(timestamp) AS hour, count() AS pageviews, count(DISTINCT distinct_id) AS visitors
      FROM events
      WHERE event = '$pageview' AND toDate(timestamp) = today()
      GROUP BY hour ORDER BY hour`,
   );
   const byHour = new Map(
-    response.results.map(([hour, n]) => [String(hour).slice(0, 13), Number(n)]),
+    response.results.map(([hour, pageviews, visitors]) => [
+      String(hour).slice(0, 13),
+      { pageviews: Number(pageviews), visitors: Number(visitors) },
+    ]),
   );
 
   const now = new Date();
@@ -143,7 +156,12 @@ export async function getPageviewTrendToday(): Promise<TrendPoint[]> {
   const points: TrendPoint[] = [];
   for (let h = 0; h <= currentHour; h++) {
     const key = `${now.toISOString().slice(0, 10)}T${String(h).padStart(2, "0")}`;
-    points.push({ date: `${key}:00:00`, count: byHour.get(key) ?? 0 });
+    const bucket = byHour.get(key);
+    points.push({
+      date: `${key}:00:00`,
+      pageviews: bucket?.pageviews ?? 0,
+      visitors: bucket?.visitors ?? 0,
+    });
   }
   return points;
 }

@@ -195,7 +195,8 @@
       "events": "Events",
       "logout": "Log out",
       "viewSite": "View site",
-      "articles": "Articles"
+      "articles": "Articles",
+      "engagement": "Engagement"
     },
     "login": {
       "title": "Welcome back",
@@ -291,6 +292,7 @@
       "add": "Add spot",
       "search": "Search spots…",
       "allCategories": "All categories",
+      "allVibes": "All vibes",
       "featuredOnly": "Featured only",
       "columns": {
         "name": "Name",

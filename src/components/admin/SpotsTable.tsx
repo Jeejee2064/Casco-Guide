@@ -9,17 +9,20 @@ import { Link } from "@/i18n/navigation";
 import { Input, Select } from "@/components/ui/Field";
 import { CategoryBadge } from "@/components/site/CategoryBadge";
 import { SPOT_CATEGORIES } from "@/lib/categories";
+import { SPOT_VIBES } from "@/lib/vibes";
 import { deleteSpot } from "@/lib/actions/spots";
 import { cn } from "@/lib/utils";
-import type { Spot } from "@/lib/types/database";
+import type { Spot, SpotVibe } from "@/lib/types/database";
 
 export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
   const t = useTranslations("admin.spots");
   const tCat = useTranslations("category");
+  const tVibe = useTranslations("vibe");
   const searchParams = useSearchParams();
   const [spots, setSpots] = useState(initialSpots);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
+  const [vibe, setVibe] = useState("");
   // Lets the dashboard's "Featured spots" stat card deep-link here pre-filtered.
   const [featuredOnly, setFeaturedOnly] = useState(searchParams.get("featured") === "1");
   const [pending, startTransition] = useTransition();
@@ -28,11 +31,12 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
     const q = query.trim().toLowerCase();
     return spots.filter((s) => {
       if (category && s.category !== category) return false;
+      if (vibe && !s.vibes.includes(vibe as SpotVibe)) return false;
       if (featuredOnly && !s.is_featured) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [spots, query, category, featuredOnly]);
+  }, [spots, query, category, vibe, featuredOnly]);
 
   const handleDelete = (spot: Spot) => {
     if (!confirm(t("deleteConfirm", { name: spot.name }))) return;
@@ -59,11 +63,19 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
             className="pl-10"
           />
         </div>
-        <Select value={category} onChange={(e) => setCategory(e.target.value)} className="sm:w-56">
+        <Select value={category} onChange={(e) => setCategory(e.target.value)} className="sm:w-52">
           <option value="">{t("allCategories")}</option>
           {SPOT_CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {tCat(c)}
+            </option>
+          ))}
+        </Select>
+        <Select value={vibe} onChange={(e) => setVibe(e.target.value)} className="sm:w-52">
+          <option value="">{t("allVibes")}</option>
+          {SPOT_VIBES.map((v) => (
+            <option key={v} value={v}>
+              {tVibe(v)}
             </option>
           ))}
         </Select>
