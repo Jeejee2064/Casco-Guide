@@ -8,7 +8,6 @@ import { FeaturedSpotsSection } from "@/components/site/FeaturedSpotsSection";
 import { MapTeaserSection } from "@/components/site/MapTeaserSection";
 import { VibeTeaserSection } from "@/components/site/VibeTeaserSection";
 import { Hero } from "@/components/site/Hero";
-import { InstallPwaPrompt } from "@/components/site/InstallPwaPrompt";
 import { getSpots } from "@/lib/data/spots";
 import { getArticles } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
@@ -83,7 +82,6 @@ export default async function HomePage({
         </div>
       </main>
       <Footer />
-      <InstallPwaPrompt />
     </>
   );
 }

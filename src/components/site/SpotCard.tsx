@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star, MapPin, Phone } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { TAP_SPRING } from "./motion";
@@ -19,17 +18,16 @@ export function SpotCard({
 }: {
   spot: Spot;
   onClick: () => void;
-  /** The vibes currently driving the filter/sort (see SpotExplorer) — when
-   * this spot carries one, its badge below gets the full labeled treatment
-   * instead of just an icon, so it reads as "this is why you're seeing
-   * this" (several matches can be labeled at once). Independent of that,
-   * every one of the spot's own vibes shows up here too (icon-only) in
-   * every mode, category included — not just while a vibe filter is
-   * active. */
+  /** The vibes currently driving the filter/sort (see SpotExplorer) — a spot
+   * that carries one gets a whisper-thin accent ring in that vibe's color
+   * (see `accentColor` below) instead of a second badge, so "this is why
+   * you're seeing this" reads without adding to the image's visual noise —
+   * the single category badge stays the only mark on the photo itself. */
   activeVibes?: SpotVibe[];
 }) {
-  const tVibe = useTranslations("vibe");
   const priceLabel = spot.price_range ?? "";
+  const matchedVibe = spot.vibes.find((v) => activeVibes.includes(v));
+  const accentColor = matchedVibe ? VIBE_META[matchedVibe].color : undefined;
 
   return (
     <motion.button
@@ -37,6 +35,14 @@ export function SpotCard({
       onClick={onClick}
       whileTap={{ scale: 0.97 }}
       transition={TAP_SPRING}
+      style={
+        accentColor
+          ? {
+              borderColor: `color-mix(in srgb, ${accentColor} 45%, var(--border))`,
+              boxShadow: `0 0 0 1px color-mix(in srgb, ${accentColor} 25%, transparent)`,
+            }
+          : undefined
+      }
       className="card-lift group flex h-full w-full flex-col text-left rounded-[var(--radius-card)] bg-surface border border-border overflow-hidden shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-aqua"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-aqua/20 to-coral/20">
@@ -49,38 +55,11 @@ export function SpotCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-black/0" />
 
-        <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center gap-1.5">
+        {/* One badge, one job: category. Everything else that used to live
+            here (per-vibe icon chips) moved to the card's border accent
+            above — see `accentColor`. */}
+        <div className="absolute top-3 left-3 right-3">
           <CategoryBadge category={spot.category} />
-          {spot.vibes.slice(0, 3).map((v) => {
-            const meta = VIBE_META[v];
-            const Icon = meta.icon;
-            const gradient = `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`;
-            // Any vibe actually driving the current filter/sort gets called
-            // out with its label — every other vibe the spot carries still
-            // shows, just as a plain icon chip, so category mode isn't
-            // vibe-blind the way it used to be.
-            if (activeVibes.includes(v)) {
-              return (
-                <span
-                  key={v}
-                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm"
-                  style={{ background: gradient }}
-                >
-                  <Icon size={11} /> {tVibe(v)}
-                </span>
-              );
-            }
-            return (
-              <span
-                key={v}
-                title={tVibe(v)}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
-                style={{ background: gradient }}
-              >
-                <Icon size={12} strokeWidth={2.5} />
-              </span>
-            );
-          })}
         </div>
         {/* "Featured" badge hidden site-wide for now — no spot is currently
             promoted this way. Re-enable by restoring this block (and

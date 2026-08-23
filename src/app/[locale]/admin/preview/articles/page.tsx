@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArticleDetailView } from "@/components/site/ArticleDetailView";
+import { AdminAnalyticsOptOut } from "@/components/admin/AdminAnalyticsOptOut";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
 
 /**
@@ -27,5 +28,10 @@ export default function ArticlePreviewFramePage() {
   }, []);
 
   if (!state) return null;
-  return <ArticleDetailView article={state.article} citedSpots={state.citedSpots} citedEvents={state.citedEvents} />;
+  return (
+    <>
+      <AdminAnalyticsOptOut />
+      <ArticleDetailView article={state.article} citedSpots={state.citedSpots} citedEvents={state.citedEvents} />
+    </>
+  );
 }

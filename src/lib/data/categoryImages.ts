@@ -11,15 +11,22 @@ import type { Spot, SpotCategory } from "@/lib/types/database";
  * These are deliberately *not* real photos of the specific venue — they're
  * a tasteful category placeholder so cards never show a bare emoji.
  */
+// `?auto=format&fit=crop&w=1600&q=80` caps what Next's image optimizer has
+// to fetch and re-encode at source — without it, Unsplash serves each of
+// these at its full original resolution (several MB) on every cache miss,
+// even though no card ever renders one past ~800px wide. 1600 covers 2x
+// pixel-density screens at the widest slot these appear in (SpotCard's
+// 33vw); the optimizer still resizes/converts down further from there per
+// device via `sizes`.
 export const CATEGORY_IMAGES: Record<SpotCategory, string> = {
-  restaurant: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5",
-  bar: "https://images.unsplash.com/photo-1514933651103-005eec06c04b",
-  cafe: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
-  attraction: "https://images.unsplash.com/photo-1669697226220-e52a72a25ab1",
-  museum: "https://images.unsplash.com/photo-1491156855053-9cdff72c7f85",
-  gallery: "https://images.unsplash.com/photo-1605429523419-d828acb941d9",
-  shop: "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
-  hotel: "https://images.unsplash.com/photo-1566073771259-6a8506099945",
+  restaurant: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
+  bar: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1600&q=80",
+  cafe: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80",
+  attraction: "https://images.unsplash.com/photo-1669697226220-e52a72a25ab1?auto=format&fit=crop&w=1600&q=80",
+  museum: "https://images.unsplash.com/photo-1491156855053-9cdff72c7f85?auto=format&fit=crop&w=1600&q=80",
+  gallery: "https://images.unsplash.com/photo-1605429523419-d828acb941d9?auto=format&fit=crop&w=1600&q=80",
+  shop: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80",
+  hotel: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1600&q=80",
 };
 
 /** Homepage hero banner photo, served locally from /public. */

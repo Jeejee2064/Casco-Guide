@@ -98,7 +98,7 @@ export function PhotoLightbox({
                     fill
                     sizes="100vw"
                     className="object-contain"
-                    priority={i === startIndex}
+                    preload={i === startIndex}
                   />
                 </div>
               </div>

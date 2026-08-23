@@ -73,7 +73,7 @@ export function EventCard({ event }: { event: EventRow }) {
           <p className="text-sm text-foreground/70 line-clamp-2">{event.description}</p>
         )}
         <div className="flex items-center gap-3 pt-1 text-xs font-semibold">
-          <span className="flex items-center gap-1 text-lime-dark dark:text-lime">
+          <span className="flex items-center gap-1 text-lime-readable">
             <Ticket size={13} />
             {event.price && event.price > 0 ? `$${event.price}` : t("free")}
           </span>
@@ -83,7 +83,7 @@ export function EventCard({ event }: { event: EventRow }) {
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="text-aqua-dark dark:text-aqua"
+              className="text-aqua-readable"
             >
               {t("book")}
             </a>

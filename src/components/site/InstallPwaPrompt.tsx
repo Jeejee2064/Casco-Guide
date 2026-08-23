@@ -5,12 +5,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Download, Share, SquarePlus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EASE_OUT, TAP_SPRING } from "./motion";
+import { track } from "@/lib/analytics/track";
+import { hasContentEngagement, PWA_ENGAGED_EVENT } from "@/lib/pwaEngagement";
 
 const DISMISSED_KEY = "casco-pwa-install-dismissed-at";
 const INSTALLED_KEY = "casco-pwa-installed";
 // Re-offer the prompt after a dismissal instead of never asking again.
 const DISMISS_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
-// Let the page settle before interrupting with a popup.
+// Let a moment pass after the visitor engages before interrupting them.
 const SHOW_DELAY_MS = 2500;
 
 // `beforeinstallprompt` (Chromium) isn't in the DOM lib types yet.
@@ -41,13 +43,17 @@ function recentlyDismissed(): boolean {
 }
 
 /**
- * Mobile-only "install this as an app" popup, shown once on the home page.
- * Android/Chromium browsers get a real one-tap install via
- * `beforeinstallprompt`; iOS Safari never fires that event (no install API
- * at all), so it gets step-by-step "Add to Home Screen" instructions
- * instead. Silent everywhere else — desktop, already installed, or
- * dismissed within the last two weeks — so it never blocks first paint or
- * nags on every visit.
+ * Mobile-only "install this as an app" popup, mounted once in the locale
+ * layout so it can surface on any page. It waits for the visitor to have
+ * actually consulted content — opened a spot/article/event, page or modal
+ * (see `markContentEngaged` call sites) — before offering to install,
+ * rather than interrupting on a blind page-load timer; landing on the home
+ * page alone never triggers it. Android/Chromium browsers get a real
+ * one-tap install via `beforeinstallprompt`; iOS Safari never fires that
+ * event (no install API at all), so it gets step-by-step "Add to Home
+ * Screen" instructions instead. Silent everywhere else — desktop, already
+ * installed, or dismissed within the last two weeks — so it never blocks
+ * first paint or nags on every visit.
  */
 export function InstallPwaPrompt() {
   const t = useTranslations("installPwa");
@@ -70,16 +76,42 @@ export function InstallPwaPrompt() {
     const isAndroid = /Android/.test(ua);
     if (!isIOS && !isAndroid) return;
 
-    if (isIOS) {
-      // No native install signal to wait for — just surface the instructions.
-      const timer = setTimeout(() => setVariant("ios"), SHOW_DELAY_MS);
-      return () => clearTimeout(timer);
-    }
+    // Guards against scheduling the reveal twice (e.g. a stray extra
+    // "engaged" event after `beforeinstallprompt` already triggered it).
+    let scheduled = false;
+    let showTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleShow = (v: Variant) => {
+      if (scheduled) return;
+      scheduled = true;
+      showTimer = setTimeout(() => {
+        setVariant(v);
+        track("pwa_install_prompt_shown", { variant: v });
+      }, SHOW_DELAY_MS);
+    };
+
+    // iOS has no native readiness signal to wait for beyond engagement;
+    // Android additionally needs `beforeinstallprompt` to have fired.
+    const readyVariant = (): Variant | null => {
+      if (isIOS) return "ios";
+      if (isAndroid && deferredPromptRef.current) return "installable";
+      return null;
+    };
+    const maybeShow = () => {
+      if (!hasContentEngagement()) return;
+      const v = readyVariant();
+      if (v) scheduleShow(v);
+    };
+
+    // Covers remounting after engagement already happened this session
+    // (e.g. this component wasn't mounted yet when the visitor first
+    // opened a detail page/modal).
+    maybeShow();
+    window.addEventListener(PWA_ENGAGED_EVENT, maybeShow);
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
       deferredPromptRef.current = e as BeforeInstallPromptEvent;
-      setVariant("installable");
+      maybeShow();
     };
     const onInstalled = () => {
       try {
@@ -89,11 +121,18 @@ export function InstallPwaPrompt() {
       }
       setVariant(null);
     };
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    window.addEventListener("appinstalled", onInstalled);
+    if (isAndroid) {
+      window.addEventListener("beforeinstallprompt", onBeforeInstall);
+      window.addEventListener("appinstalled", onInstalled);
+    }
+
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      window.removeEventListener("appinstalled", onInstalled);
+      window.removeEventListener(PWA_ENGAGED_EVENT, maybeShow);
+      if (isAndroid) {
+        window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+        window.removeEventListener("appinstalled", onInstalled);
+      }
+      if (showTimer) clearTimeout(showTimer);
     };
   }, []);
 
@@ -103,6 +142,7 @@ export function InstallPwaPrompt() {
     } catch {
       // Storage unavailable — it'll just be offered again next visit.
     }
+    if (variant) track("pwa_install_dismissed", { variant });
     setVariant(null);
   };
 
@@ -112,6 +152,8 @@ export function InstallPwaPrompt() {
     await promptEvent.prompt();
     const choice = await promptEvent.userChoice;
     deferredPromptRef.current = null;
+    if (choice.outcome === "accepted") track("pwa_install_accepted", {});
+    else if (variant) track("pwa_install_dismissed", { variant });
     try {
       window.localStorage.setItem(
         choice.outcome === "accepted" ? INSTALLED_KEY : DISMISSED_KEY,

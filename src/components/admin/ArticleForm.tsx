@@ -24,7 +24,7 @@ import type { Locale } from "@/i18n/routing";
 import type { Article, ArticleLayout, ArticleRecord, EventRow, Spot } from "@/lib/types/database";
 
 type Lang = "es" | "en";
-type LocalizedField = "title" | "excerpt" | "body";
+type LocalizedField = "title" | "excerpt" | "body" | "duration";
 
 /** Builds a single-language `Article` from the in-progress (unsaved)
  * bilingual form values, for the live preview — same fallback rules as
@@ -39,6 +39,7 @@ function toPreviewArticle(values: ArticleFormValues, lang: Lang, existing?: Arti
     slug: values.slug,
     excerpt: pickNullable(values.excerpt_es, values.excerpt_en),
     body: pickNullable(values.body_es, values.body_en),
+    duration: pickNullable(values.duration_es, values.duration_en),
     layout: values.layout,
     blocks: values.blocks.map((b) => ({
       id: b.id,
@@ -69,6 +70,8 @@ const emptyValues = (): ArticleFormValues => ({
   slug: "",
   excerpt_es: "",
   excerpt_en: "",
+  duration_es: "",
+  duration_en: "",
   body_es: "",
   body_en: "",
   layout: "standard",
@@ -87,6 +90,8 @@ const fromArticle = (article: ArticleRecord): ArticleFormValues => ({
   slug: article.slug,
   excerpt_es: article.excerpt_es ?? "",
   excerpt_en: article.excerpt_en ?? "",
+  duration_es: article.duration_es ?? "",
+  duration_en: article.duration_en ?? "",
   body_es: article.body_es ?? "",
   body_en: article.body_en ?? "",
   layout: article.layout,
@@ -285,6 +290,19 @@ export function ArticleForm({
             </Label>
             <Textarea id="excerpt" rows={2} value={localized("excerpt")} onChange={(e) => setLocalized("excerpt", e.target.value)} />
             <FieldHint>{t("excerptHint")}</FieldHint>
+          </div>
+
+          <div>
+            <Label htmlFor="duration">
+              {t("duration")} <span className="font-normal text-foreground/40">· {lang.toUpperCase()}</span>
+            </Label>
+            <Input
+              id="duration"
+              value={localized("duration")}
+              onChange={(e) => setLocalized("duration", e.target.value)}
+              placeholder={t("durationPlaceholder")}
+            />
+            <FieldHint>{t("durationHint")}</FieldHint>
           </div>
 
           <div>

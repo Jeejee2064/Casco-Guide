@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.supabase.co" },
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
+    // AVIF first: ~20% smaller than WebP for browsers that support it
+    // (nearly all current ones), WebP as the fallback for the rest — Next
+    // caches both per source image, negligible extra disk cost at this
+    // site's image volume for a real payload win on every spot/article photo.
+    formats: ["image/avif", "image/webp"],
   },
   experimental: {
     // Server Actions default to a 1MB request body — too small for the spot
@@ -19,6 +24,28 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "30mb",
     },
   },
+  async rewrites() {
+    const posthogHost = process.env.POSTHOG_HOST;
+    const posthogAssetsHost = process.env.POSTHOG_ASSETS_HOST;
+
+    if (!posthogHost || !posthogAssetsHost) return [];
+
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: `${posthogAssetsHost}/static/:path*`,
+      },
+      {
+        source: "/ingest/array/:path*",
+        destination: `${posthogAssetsHost}/array/:path*`,
+      },
+      {
+        source: "/ingest/:path*",
+        destination: `${posthogHost}/:path*`,
+      },
+    ];
+  },
+  skipTrailingSlashRedirect: true,
 };
 
 export default withNextIntl(nextConfig);

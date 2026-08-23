@@ -12,6 +12,7 @@ import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META, SPOT_CATEGORIES } from "@/lib/categories";
 import { VIBE_META, SPOT_VIBES } from "@/lib/vibes";
 import type { Spot, SpotCategory, SpotVibe } from "@/lib/types/database";
+import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 
 // How many name matches the search dropdown shows at once — enough to be
@@ -95,6 +96,7 @@ export function ExploreFilterBar({
 
   const selectSuggestion = (spot: Spot) => {
     setIsSearchFocused(false);
+    track("search_performed", { result_count: suggestions.length });
     router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } });
   };
 
@@ -188,14 +190,18 @@ export function ExploreFilterBar({
   // its own toggle-off). Always ensures `mode` is "vibes" since this is also
   // reused for the toggle's post-discovery path.
   const toggleVibe = (v: SpotVibe) => {
-    setVibes(vibes.includes(v) ? [] : [v]);
+    const active = !vibes.includes(v);
+    setVibes(active ? [v] : []);
     setMode("vibes");
+    if (active) track("filter_applied", { mode: "vibes", kind: "vibe", value: v });
   };
 
   // Same idea for categories, no mode flip needed (classic is already
   // active whenever this fires).
   const toggleCategory = (c: SpotCategory) => {
-    setCategories(categories.includes(c) ? [] : [c]);
+    const active = !categories.includes(c);
+    setCategories(active ? [c] : []);
+    if (active) track("filter_applied", { mode: "classic", kind: "category", value: c });
   };
 
   return (
@@ -275,10 +281,7 @@ export function ExploreFilterBar({
                         i === activeSuggestion ? "bg-foreground/5" : "hover:bg-foreground/5",
                       )}
                     >
-                      <span
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-                        style={{ background: `${meta.color}26`, color: meta.color }}
-                      >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/60">
                         <Icon size={14} strokeWidth={2.5} />
                       </span>
                       <span className="min-w-0 flex-1 truncate font-semibold">{spot.name}</span>
@@ -424,7 +427,7 @@ export function ExploreFilterBar({
           className={cn(
             "pill-lift shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold",
             (mode === "classic" ? categories.length === 0 : vibes.length === 0)
-              ? "border-transparent bg-foreground text-background"
+              ? "brand-accent border-transparent text-white shadow-sm"
               : "border-border bg-transparent text-foreground/60 hover:text-foreground",
           )}
         >
@@ -432,7 +435,13 @@ export function ExploreFilterBar({
         </button>
 
         {mode === "classic"
-          ? SPOT_CATEGORIES.map((cat) => {
+          ? // Classic/category chips are deliberately not per-category
+            // colored — selection reads through the same brand-accent blue
+            // as the mode toggle above (`.brand-accent`, globals.css) and the
+            // "All" chip, not a different hue per category, so the bar
+            // doesn't compete for attention with the one filter axis (vibes)
+            // that actually earns per-item color.
+            SPOT_CATEGORIES.map((cat) => {
               const meta = CATEGORY_META[cat];
               const Icon = meta.icon;
               const isActive = categories.includes(cat);
@@ -442,22 +451,24 @@ export function ExploreFilterBar({
                   type="button"
                   onClick={() => toggleCategory(cat)}
                   aria-pressed={isActive}
-                  className="pill-lift flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
-                  style={{
-                    // Active chips get a subtle diagonal gradient instead of
-                    // a flat fill — same per-category color, just with a
-                    // touch more depth.
-                    background: isActive
-                      ? `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`
-                      : `${meta.color}1A`,
-                    color: isActive ? "white" : meta.color,
-                  }}
+                  className={cn(
+                    "pill-lift flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold",
+                    isActive
+                      ? "brand-accent border-transparent text-white shadow-sm"
+                      : "border-border bg-transparent text-foreground/60 hover:text-foreground",
+                  )}
                 >
                   <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
                 </button>
               );
             })
-          : SPOT_VIBES.map((v) => {
+          : // Vibe chips are the one place color carries meaning: inactive
+            // sits at a bare whisper of its own hue (just enough to hint
+            // which chip is which without shouting), and only the selected
+            // vibe lights up fully — that same hue then propagates to the
+            // map's pins and detail-panel CTA via `--accent-color` (see
+            // SpotMap/MapDetailPanel).
+            SPOT_VIBES.map((v) => {
               const meta = VIBE_META[v];
               const Icon = meta.icon;
               const isActive = vibes.includes(v);
@@ -467,12 +478,14 @@ export function ExploreFilterBar({
                   type="button"
                   onClick={() => toggleVibe(v)}
                   aria-pressed={isActive}
-                  className="pill-lift flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                  className={cn(
+                    "pill-lift flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                    isActive ? "text-white shadow-sm" : "text-foreground/60",
+                  )}
                   style={{
                     background: isActive
                       ? `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`
-                      : `${meta.color}1A`,
-                    color: isActive ? "white" : meta.color,
+                      : `color-mix(in srgb, ${meta.color} 10%, transparent)`,
                   }}
                 >
                   <Icon size={13} strokeWidth={2.5} /> {tVibe(v)}

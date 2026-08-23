@@ -24,6 +24,8 @@ import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { formatTime } from "@/lib/hours";
+import { track } from "@/lib/analytics/track";
+import { markContentEngaged } from "@/lib/pwaEngagement";
 import type { EventRow } from "@/lib/types/database";
 
 export function EventDetailModal({
@@ -45,6 +47,12 @@ export function EventDetailModal({
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  // Opening an event's detail modal is just as much "consulting content" as
+  // visiting its full page — see EventDetailView.
+  useEffect(() => {
+    markContentEngaged();
+  }, [event.id]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -75,6 +83,11 @@ export function EventDetailModal({
     if (!event.address) return;
     navigator.clipboard.writeText(event.address);
     toast.success(tSpot("addressCopied"));
+  };
+
+  const openBooking = () => {
+    track("event_booking_click", { event_id: event.id, event_slug: event.slug });
+    window.open(event.booking_url!, "_blank");
   };
 
   return (
@@ -183,17 +196,12 @@ export function EventDetailModal({
 
             {event.article && (
               <div
-                className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground/80 dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
+                className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground/80 prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
                 dangerouslySetInnerHTML={{ __html: event.article }}
               />
             )}
 
-            <MiniMap
-              name={event.title}
-              latitude={event.latitude}
-              longitude={event.longitude}
-              color={categoryMeta.color}
-            />
+            <MiniMap name={event.title} latitude={event.latitude} longitude={event.longitude} />
 
             <div className="grid gap-2 text-sm">
               {event.address && (
@@ -203,7 +211,7 @@ export function EventDetailModal({
                   </span>
                   <button
                     onClick={copyAddress}
-                    className="text-aqua-dark dark:text-aqua text-xs font-semibold shrink-0"
+                    className="text-aqua-readable text-xs font-semibold shrink-0"
                   >
                     {tSpot("copyAddress")}
                   </button>
@@ -215,7 +223,7 @@ export function EventDetailModal({
                 </p>
               )}
               <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-foreground/70">
-                <span className="flex items-center gap-1.5 font-semibold text-lime-dark dark:text-lime">
+                <span className="flex items-center gap-1.5 font-semibold text-lime-readable">
                   <Ticket size={14} />
                   {event.price && event.price > 0 ? `$${event.price}` : t("free")}
                 </span>
@@ -247,24 +255,29 @@ export function EventDetailModal({
             <Button
               variant="primary"
               className="flex-1"
-              onClick={() => window.open(event.booking_url!, "_blank")}
+              onClick={openBooking}
             >
               <ExternalLink size={16} /> {t("book")}
             </Button>
           )}
           <Button
-            variant="coral"
+            variant="outline"
             className="flex-1"
-            onClick={() =>
+            onClick={() => {
+              track("directions_click", {
+                entity: "event",
+                entity_id: event.id,
+                entity_slug: event.slug,
+              });
               window.open(
                 `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}`,
                 "_blank",
-              )
-            }
+              );
+            }}
           >
             <Navigation size={16} /> {tSpot("getDirections")}
           </Button>
-          <ShareMenu title={event.title} direction="up" />
+          <ShareMenu title={event.title} direction="up" variant="primary" size="icon" />
         </div>
       </motion.div>
     </motion.div>

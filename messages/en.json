@@ -1,8 +1,9 @@
 {
   "site": {
     "name": "Casco Viejo Guide",
-    "title": "Explore Casco Viejo",
-    "subtitle": "Handpicked restaurants, bars and sights, upcoming events, and local guides — everything you need to explore Casco Viejo like you live here.",
+    "heroBadge": "Made & updated by real locals",
+    "title": "Your local guide to Casco Viejo",
+    "subtitle": "Handpicked restaurants, bars, cafés and sights — curated by people who actually live and work in the neighborhood, kept current all year round.",
     "searchPlaceholder": "Search spots, tags, cuisine…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Grid",
@@ -95,6 +96,7 @@
   },
   "spot": {
     "call": "Call",
+    "whatsapp": "WhatsApp",
     "visitWebsite": "Visit website",
     "getDirections": "Get directions",
     "share": "Share",
@@ -193,7 +195,8 @@
       "events": "Events",
       "logout": "Log out",
       "viewSite": "View site",
-      "articles": "Articles"
+      "articles": "Articles",
+      "analytics": "Analytics"
     },
     "login": {
       "title": "Welcome back",
@@ -212,6 +215,57 @@
       "lastUpdated": "Last updated",
       "addSpot": "+ Add spot",
       "addEvent": "+ Add event"
+    },
+    "analytics": {
+      "title": "Analytics",
+      "subtitle": "Public site traffic, powered by PostHog",
+      "windowLabel": "Last 30 days",
+      "uniqueVisitors": "Unique visitors",
+      "pageviews": "Pageviews",
+      "searches": "Searches",
+      "pwaInstalls": "App installs",
+      "empty": "No data yet for this period.",
+      "notConfigured": "Set POSTHOG_PERSONAL_API_KEY in your environment to enable this tab.",
+      "error": "Couldn't load analytics right now. Try again shortly.",
+
+      "trafficTrend": "Traffic",
+      "trafficTrendSubtitle": "Pageviews per day",
+
+      "contentSection": "Most viewed",
+      "topSpots": "Top spots",
+      "topArticles": "Top articles",
+      "topEvents": "Top events",
+
+      "engagementSection": "Engagement",
+      "engagementSubtitle": "What people do once they land on a spot or event",
+      "whatsappClicks": "WhatsApp clicks",
+      "directionsClicks": "Directions clicks",
+      "bookingClicks": "Booking clicks",
+      "mapPinClicks": "Map pin taps",
+
+      "discoverySection": "Discovery",
+      "discoverySubtitle": "What people search and filter for",
+      "topCategories": "Top category filters",
+      "topVibes": "Top vibe filters",
+      "searchesTotal": "Searches",
+      "searchesNoResults": "No results",
+      "searchesNoResultsSub": "{pct}% of searches found nothing",
+
+      "audienceSection": "Audience",
+      "deviceBreakdown": "Devices",
+      "languageSplit": "Language",
+      "referrers": "Where traffic comes from",
+      "direct": "Direct",
+
+      "nightModeSection": "Night mode",
+      "nightModeAdoption": "Visitors who turned it on",
+      "nightModeSub": "{pct}% of unique visitors",
+
+      "pwaSection": "App install funnel",
+      "pwaShown": "Prompt shown",
+      "pwaAccepted": "Installed",
+      "pwaDismissed": "Dismissed",
+      "pwaConversionSub": "{pct}% of prompts convert"
     },
     "spots": {
       "title": "Spots",
@@ -455,6 +509,9 @@
       "excerpt": "Short excerpt",
       "excerptHint": "1–2 sentences, shown on the card",
       "author": "Author",
+      "duration": "Duration",
+      "durationPlaceholder": "e.g. 3–4 hours",
+      "durationHint": "Optional — shown as a badge right under the title on the public page. For itineraries, walking time between stops is computed automatically instead.",
       "body": "Article body",
       "intro": "Intro (optional)",
       "bodyHint": "Select text and use the link button to cite an existing spot, event, or article.",

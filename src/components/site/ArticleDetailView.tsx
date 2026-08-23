@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ChevronLeft, MapPin, CalendarDays, User, Clock } from "lucide-react";
+import { ChevronLeft, MapPin, CalendarDays, User, Clock, Footprints } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { SpotMap } from "./SpotMap";
@@ -11,7 +11,10 @@ import { ItineraryMap, type ItineraryStop } from "./ItineraryMap";
 import { ShareMenu } from "./ShareMenu";
 import { Stagger, StaggerItem, staggerContainer, fadeUp } from "./motion";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
+import { track } from "@/lib/analytics/track";
+import { markContentEngaged } from "@/lib/pwaEngagement";
 import { cn } from "@/lib/utils";
+import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
 
 /** Full public article page — cover, story (either freeform HTML or
  * structured "list"/"photo-story"/"itinerary" blocks, see Article.layout), and a map of
@@ -31,6 +34,7 @@ export function ArticleDetailView({
   onBack?: () => void;
 }) {
   const t = useTranslations("articleDetail");
+  const tMap = useTranslations("map");
   const locale = useLocale();
 
   // Gates the reveal of the title/meta block on the cover photo's actual
@@ -41,6 +45,14 @@ export function ArticleDetailView({
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [article.id]);
+
+  // Skip the admin form's live inline preview (`onBack` set — see the doc
+  // comment above) — an in-progress unsaved draft isn't a real visit.
+  useEffect(() => {
+    if (onBack) return;
+    track("article_view", { article_id: article.id, article_slug: article.slug });
+    markContentEngaged();
+  }, [article.id, article.slug, onBack]);
 
   const dateLabel = article.published_at
     ? new Date(article.published_at).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })
@@ -88,6 +100,24 @@ export function ArticleDetailView({
     return stops;
   }, [article.layout, article.blocks, citedSpots, citedEvents]);
 
+  // Walking time between one itinerary stop and the next, keyed by the
+  // *earlier* block's id — computed from coordinates (haversine distance,
+  // ~1.4 m/s walking pace, see lib/geo) rather than stored, so it always
+  // matches whatever spots/events the blocks actually link to. A pair
+  // where either side lacks resolved coordinates (no ref, or a ref without
+  // lat/lng) is simply skipped rather than showing a wrong or missing leg.
+  const walkToNext = useMemo(() => {
+    const segments = new Map<string, { km: number; mins: number }>();
+    if (article.layout !== "itinerary") return segments;
+    for (let i = 0; i < itineraryStops.length - 1; i++) {
+      const from = itineraryStops[i];
+      const to = itineraryStops[i + 1];
+      const km = haversineKm(from.latitude, from.longitude, to.latitude, to.longitude);
+      segments.set(from.id, { km, mins: walkingMinutes(km) });
+    }
+    return segments;
+  }, [article.layout, itineraryStops]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 pb-24 sm:px-6 sm:py-10">
       {onBack ? (
@@ -109,7 +139,7 @@ export function ArticleDetailView({
         // below (see the Stagger further down) waits on that same flag.
         <motion.div
           className={cn(
-            "relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-[var(--radius-card)]",
+            "relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-[var(--radius-card)] lg:aspect-auto lg:h-72",
             !coverLoaded && "animate-pulse bg-foreground/5",
           )}
           initial="hidden"
@@ -122,7 +152,7 @@ export function ArticleDetailView({
             fill
             sizes="100vw"
             className="object-cover"
-            priority
+            preload
             onLoad={() => setCoverLoaded(true)}
           />
         </motion.div>
@@ -132,6 +162,14 @@ export function ArticleDetailView({
         <StaggerItem>
           <h1 className="font-heading text-3xl font-extrabold sm:text-4xl">{article.title}</h1>
         </StaggerItem>
+
+        {article.duration && (
+          <StaggerItem>
+            <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-aqua/10 px-3 py-1.5 text-sm font-bold text-aqua">
+              <Clock size={15} /> {article.duration}
+            </span>
+          </StaggerItem>
+        )}
 
         <StaggerItem>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -164,7 +202,12 @@ export function ArticleDetailView({
 
       {article.body && (
         <motion.div
-          className="prose prose-sm sm:prose-base mt-8 max-w-none dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
+          // No `dark:prose-invert` — this project's Night Mode is a manual
+          // `[data-night]` attribute, not the OS-driven `dark:` variant that
+          // modifier depends on. `.prose`'s CSS variables are pointed at
+          // this site's own theme tokens instead (see globals.css), which
+          // already respond to both Night Mode and OS dark mode correctly.
+          className="prose prose-sm sm:prose-base mt-8 max-w-none prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
           variants={fadeUp}
           initial="hidden"
           whileInView="show"
@@ -236,25 +279,36 @@ export function ArticleDetailView({
           whileInView="show"
           viewport={{ once: true, amount: 0.1 }}
         >
-          {article.blocks.map((block) => (
-            <motion.li key={block.id} variants={fadeUp} className="relative">
-              <span className="absolute -left-[31px] flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-aqua text-white">
-                <Clock size={14} />
-              </span>
-              <div className="space-y-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
-                {block.title && (
-                  <span className="inline-block rounded-full bg-aqua/15 px-2.5 py-1 text-xs font-bold text-aqua">{block.title}</span>
-                )}
-                {block.photo && (
-                  <div className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
-                    <Image src={block.photo} alt={block.title ?? ""} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
+          {article.blocks.map((block) => {
+            const walk = walkToNext.get(block.id);
+            return (
+              <Fragment key={block.id}>
+                <motion.li variants={fadeUp} className="relative">
+                  <span className="absolute -left-[31px] flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-aqua text-white">
+                    <Clock size={14} />
+                  </span>
+                  <div className="space-y-2 rounded-[var(--radius-card)] border border-border bg-surface p-4">
+                    {block.title && (
+                      <span className="inline-block rounded-full bg-aqua/15 px-2.5 py-1 text-xs font-bold text-aqua">{block.title}</span>
+                    )}
+                    {block.photo && (
+                      <div className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
+                        <Image src={block.photo} alt={block.title ?? ""} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
+                      </div>
+                    )}
+                    {block.text && <p className="text-[15px] leading-relaxed text-foreground/80">{block.text}</p>}
+                    <BlockRefLink block={block} />
                   </div>
+                </motion.li>
+                {walk && (
+                  <motion.li variants={fadeUp} className="relative -my-3 flex items-center gap-1.5 text-xs font-semibold text-foreground/45">
+                    <Footprints size={13} className="shrink-0 text-aqua/60" />
+                    {tMap("walkTime", { mins: walk.mins })} · {formatDistance(walk.km)}
+                  </motion.li>
                 )}
-                {block.text && <p className="text-[15px] leading-relaxed text-foreground/80">{block.text}</p>}
-                <BlockRefLink block={block} />
-              </div>
-            </motion.li>
-          ))}
+              </Fragment>
+            );
+          })}
         </motion.ol>
       )}
 

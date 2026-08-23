@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
+import { track } from "@/lib/analytics/track";
 
 const STORAGE_KEY = "casco-night-mode";
 // No native event fires when *this* tab mutates localStorage/classList (the
@@ -67,7 +68,9 @@ export function NightModeProvider({ children }: { children: React.ReactNode }) {
   const isNight = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const toggleNight = useCallback(() => {
-    commitNight(!document.documentElement.hasAttribute("data-night"));
+    const next = !document.documentElement.hasAttribute("data-night");
+    commitNight(next);
+    track("night_mode_toggle", { to: next ? "night" : "day" });
   }, []);
 
   return (

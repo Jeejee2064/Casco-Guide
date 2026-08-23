@@ -13,6 +13,10 @@ export interface ArticleFormValues {
   slug: string;
   excerpt_es: string;
   excerpt_en: string;
+  // Total time, shown near the title when set — see ArticleDetailView /
+  // database.ts (Article.duration) for details.
+  duration_es: string;
+  duration_en: string;
   // HTML from ArticleBodyEditor — contains <a data-ref-type="spot|event"
   // data-ref-id="..."> for every linked place, parsed below into
   // spot_refs/event_refs.
@@ -83,6 +87,8 @@ export async function upsertArticle(locale: Locale, values: ArticleFormValues) {
     ...rest,
     excerpt_es: rest.excerpt_es || null,
     excerpt_en: rest.excerpt_en || null,
+    duration_es: rest.duration_es || null,
+    duration_en: rest.duration_en || null,
     body_es: rest.body_es || null,
     body_en: rest.body_en || null,
     cover_photo: rest.cover_photo || null,

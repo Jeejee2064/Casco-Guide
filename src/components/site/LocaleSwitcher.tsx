@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { useParams } from "next/navigation";
 import { TAP_SPRING } from "./motion";
+import { track } from "@/lib/analytics/track";
 
 /**
  * EN/ES switch — same sliding-pill idiom as the Classic/Vibes and grid/map
@@ -27,13 +28,14 @@ export function LocaleSwitcher() {
           <motion.button
             key={loc}
             type="button"
-            onClick={() =>
+            onClick={() => {
+              track("language_switch", { to: loc });
               router.replace(
                 // @ts-expect-error -- pathname/params are dynamic across routes
                 { pathname, params },
                 { locale: loc },
-              )
-            }
+              );
+            }}
             aria-pressed={active}
             whileTap={{ scale: 0.92 }}
             transition={TAP_SPRING}

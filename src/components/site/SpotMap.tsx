@@ -2,6 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type {
   CircleMarker,
   LayerGroup,
@@ -30,8 +31,9 @@ import { CATEGORY_META } from "@/lib/categories";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { VIBE_META } from "@/lib/vibes";
 import { getSpotImage } from "@/lib/data/categoryImages";
-import { formatTime } from "@/lib/hours";
+import { formatTime, getHoursStatus } from "@/lib/hours";
 import type { EventRow, Spot, SpotCategory, SpotVibe } from "@/lib/types/database";
+import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 
 type MapMode = "spots" | "events";
@@ -48,6 +50,16 @@ const DEFAULT_ZOOM = 15;
 // filter changes).
 const MULTI_VIBE_COLOR = "#d4a24c";
 const MULTI_VIBE_COLOR_NIGHT = "#ffcf6b";
+
+// Default pin tone whenever nothing singles a spot out — "All"/a classic
+// category filter, or vibes mode with no chip picked yet. Same brand blue as
+// the rest of the site's chrome (--color-aqua, globals.css — the mode toggle
+// and category chips in ExploreFilterBar use it via `.brand-accent`), and
+// unlike MULTI_VIBE_COLOR below it doesn't swap to a brighter night variant —
+// one fixed brand color for every category, day or night, so the *icon*, not
+// the fill, is what tells pins apart. Only an active vibe selection earns
+// pins their own color back.
+const NEUTRAL_PIN_COLOR = "#146b8c";
 
 const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -175,21 +187,26 @@ export function SpotMap({
   /** Breaks out of the page flow to fill the viewport below the header,
    * instead of the usual rounded, height-limited widget. */
   fullScreen?: boolean;
-  /** Mirrors ExploreFilterBar's Classic↔Vibes mode — when true, spot pins
-   * recolor to a vibe's color (VIBE_META, the same palette as the vibe
-   * chips/VibesModal cards) instead of its category's color. The glyph
+  /** Mirrors ExploreFilterBar's Classic↔Vibes mode — when true *and* a vibe
+   * chip is actually selected, spot pins recolor to that vibe's color
+   * (VIBE_META, the same palette as the vibe chips/VibesModal cards)
+   * instead of the shared neutral tone every pin otherwise uses. The glyph
    * itself stays the category icon either way (see CATEGORY_ICON_SHAPES
-   * below) — only the tint changes. Which vibe (or gold, for an overlap)
-   * each pin uses is driven by `activeVibes` below. */
+   * below) — only the tint changes, and only while a vibe is actually
+   * active (see NEUTRAL_PIN_COLOR above for every other state: "All",
+   * a classic category filter, or vibes mode with nothing picked yet).
+   * Which vibe (or gold, for an overlap) each pin uses is driven by
+   * `activeVibes` below. */
   useVibeIcons?: boolean;
-  /** The vibe chips currently selected in ExploreFilterBar ("All" = []).
-   * Multi-select: each pin is painted whichever *one* of these it matches
-   * (the spots on screen were already narrowed to ones matching at least
-   * one — see MapExplorerSection), except a spot matching more than one, which
-   * gets a distinct gold instead of picking one of its matches arbitrarily
-   * (see MULTI_VIBE_COLOR above). With vibes mode on but nothing selected,
-   * each pin instead falls back to its own first-tagged vibe, since there's
-   * no selection to match against. */
+  /** The vibe chip currently selected in ExploreFilterBar ("All"/none = []
+   * — single-select, so realistically 0 or 1 entries, but plural/array-typed
+   * to match ExploreFilterContext's shape). Each pin on screen is painted
+   * whichever of these it matches (the spots here were already narrowed to
+   * ones matching at least one — see MapExplorerSection), except a spot
+   * matching more than one, which gets a distinct gold instead of picking
+   * one of its matches arbitrarily (see MULTI_VIBE_COLOR above). Empty
+   * (nothing selected, "All") falls back to NEUTRAL_PIN_COLOR for every
+   * pin, same as classic mode — see `useVibeIcons` above. */
   activeVibes?: SpotVibe[];
   /** Fires whenever a pin becomes selected/deselected (i.e. the detail
    * panel/sheet opens or closes) — lets a parent hide its own floating UI
@@ -207,6 +224,7 @@ export function SpotMap({
   const tEventCategory = useTranslations("eventCategory");
   const tEvents = useTranslations("events");
   const tEmpty = useTranslations("empty");
+  const tHours = useTranslations("hours");
   const tMap = useTranslations("map");
   const tNav = useTranslations("nav");
   const locale = useLocale();
@@ -529,26 +547,23 @@ export function SpotMap({
       const bounds: [number, number][] = [];
 
       filteredSpots.forEach((spot) => {
-        // In vibes mode a spot pin recolors to a vibe instead of its
-        // category — with chips selected (activeVibes), each pin uses
-        // whichever *one* of them the spot matches, since everything on
-        // screen already matches at least one (see MapExplorerSection's
-        // filteredSpots). A spot matching more than one selected vibe gets
-        // a distinct gold rather than an arbitrary pick among its matches.
-        // On "All" (nothing selected) each pin falls back to its own
-        // first-tagged vibe instead. The glyph itself always stays the
-        // spot's category icon (a café pin still reads as a café) — only
-        // the color swaps, so vibes mode is a tint on the same map, not a
-        // different icon set.
+        // Neutral by default — "All", a classic category filter, or vibes
+        // mode with nothing picked yet all render every pin in the same
+        // NEUTRAL_PIN_COLOR, so the white glyph (always the spot's category
+        // icon, CATEGORY_ICON_SHAPES below) is the only thing telling pins
+        // apart. Only once a vibe chip is actually selected does color come
+        // back: each matching pin lights up in that vibe's hue, or gold for
+        // a spot matching more than one (everything on screen here already
+        // matches at least one — see MapExplorerSection's filteredSpots —
+        // so there's no "doesn't match" case left to fall back on).
         const matchingVibes = activeVibes.filter((v) => spot.vibes.includes(v));
         let color: string;
-        if (!useVibeIcons) {
-          color = CATEGORY_META[spot.category].color;
+        if (!useVibeIcons || matchingVibes.length === 0) {
+          color = NEUTRAL_PIN_COLOR;
         } else if (matchingVibes.length > 1) {
           color = isNight ? MULTI_VIBE_COLOR_NIGHT : MULTI_VIBE_COLOR;
         } else {
-          const pinVibe = matchingVibes[0] ?? spot.vibes[0];
-          color = VIBE_META[pinVibe].color;
+          color = VIBE_META[matchingVibes[0]].color;
         }
         const shapes = CATEGORY_ICON_SHAPES[spot.category];
         const icon = L.divIcon({
@@ -563,6 +578,7 @@ export function SpotMap({
 
         const marker = L.marker([spot.latitude, spot.longitude], { icon });
         marker.on("click", () => {
+          track("map_spot_click", { spot_id: spot.id, spot_slug: spot.slug });
           setSelectedEvent(null);
           setSelectedSpot(spot);
           revealSelection(spot.latitude, spot.longitude);
@@ -730,7 +746,19 @@ export function SpotMap({
     if (selectedSpot) {
       const meta = CATEGORY_META[selectedSpot.category];
       const Icon = meta.icon;
-      const metaItems: string[] = [];
+      // "Open now?" answered right in the pin popup, same as the badge on
+      // the card/detail page — without it this was the one "can I decide
+      // from the map" question the popup couldn't answer on its own.
+      const hoursStatus = getHoursStatus(selectedSpot);
+      const hoursLabel =
+        hoursStatus.state === "open"
+          ? tHours("openTill", { time: formatTime(hoursStatus.closesAt, locale) })
+          : hoursStatus.state === "closing-soon"
+            ? tHours("closingSoon", { time: formatTime(hoursStatus.closesAt, locale) })
+            : hoursStatus.state === "opens-later"
+              ? tHours("opensAt", { time: formatTime(hoursStatus.opensAt, locale) })
+              : tHours("closed");
+      const metaItems: string[] = [hoursLabel];
       if (selectedSpot.rating) metaItems.push(`★ ${selectedSpot.rating.toFixed(1)}`);
       if (selectedSpot.price_range) metaItems.push(selectedSpot.price_range);
 
@@ -742,7 +770,6 @@ export function SpotMap({
         // once there is real featured content.
         featuredLabel: undefined,
         categoryLabel: tCategory(selectedSpot.category),
-        categoryColor: meta.color,
         categoryIcon: <Icon size={13} />,
         title: selectedSpot.name,
         subtitle: selectedSpot.address,
@@ -776,7 +803,6 @@ export function SpotMap({
         photoUrl: selectedEvent.photo,
         photoFallback: <CalendarDays size={30} />,
         categoryLabel: tEventCategory(selectedEvent.category),
-        categoryColor: meta.color,
         categoryIcon: <Image src={meta.icon} alt="" width={13} height={13} />,
         title: selectedEvent.title,
         subtitle: `${dateLabel} · ${formatTime(selectedEvent.time_start, locale)}`,
@@ -795,6 +821,7 @@ export function SpotMap({
     tEventCategory,
     tSpot,
     tEvents,
+    tHours,
     handleOpenSpot,
     handleOpenEvent,
   ]);
@@ -810,10 +837,24 @@ export function SpotMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasSelection]);
 
+  // Same "one selected vibe or neutral" rule as the pins themselves (see the
+  // marker-color effect above), exposed as a CSS custom property so anything
+  // downstream in the tree that wants to track it — right now just
+  // MapDetailPanel's `.accent-cta` primary button — can read `var(--accent-color)`
+  // without this component threading a color prop through it explicitly.
+  // Undefined (not the neutral pin color) when there's nothing to override,
+  // so it falls through to globals.css's brand-teal default instead of
+  // fighting that fallback with an inline value.
+  const accentColor =
+    useVibeIcons && activeVibes.length === 1 ? VIBE_META[activeVibes[0]].color : undefined;
+
   return (
     <div
       className={cn(fullScreen ? "fixed inset-x-0 bottom-0 z-10" : "space-y-4", className)}
-      style={fullScreen ? { top: headerHeight ?? 56 } : undefined}
+      style={{
+        ...(fullScreen ? { top: headerHeight ?? 56 } : undefined),
+        ...(accentColor ? ({ "--accent-color": accentColor } as CSSProperties) : undefined),
+      }}
     >
       <div
         className={cn(

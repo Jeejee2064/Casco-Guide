@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowRight, BookOpen, MapIcon, MapPin } from "lucide-react";
+import { ArrowRight, BookOpen, MapIcon, MapPin, Users } from "lucide-react";
 // CalendarDays: only used by the events pill below, currently commented out.
 import { useTranslations } from "next-intl";
 import { HERO_IMAGE } from "@/lib/data/categoryImages";
@@ -79,7 +79,7 @@ export function Hero({
         src={HERO_IMAGE}
         alt=""
         fill
-        priority
+        preload
         sizes="100vw"
         className="object-cover"
       />
@@ -91,6 +91,18 @@ export function Hero({
         animate="show"
         className="relative mx-auto w-full max-w-6xl px-4 pb-10 pt-10 text-white sm:px-6 sm:pb-14 sm:pt-16"
       >
+        {/* Eyebrow badge — states the "made by locals, not an algorithm"
+            trust signal up front, in its own beat before the headline
+            (rather than folded into it), so it reads as a credential and
+            not just more headline copy. */}
+        <motion.span
+          variants={fadeUp}
+          className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white/90 backdrop-blur-md"
+        >
+          <Users size={13} className="shrink-0" />
+          {t("heroBadge")}
+        </motion.span>
+
         <motion.h1
           variants={fadeUp}
           className="font-heading max-w-2xl text-3xl font-extrabold leading-tight sm:text-5xl"

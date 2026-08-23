@@ -22,7 +22,7 @@ export function ArticleEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[220px] px-3.5 py-3 outline-none dark:prose-invert",
+          "prose prose-sm max-w-none min-h-[220px] px-3.5 py-3 outline-none",
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),

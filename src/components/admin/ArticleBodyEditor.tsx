@@ -68,7 +68,7 @@ export function ArticleBodyEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[220px] px-3.5 py-3 outline-none dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold",
+          "prose prose-sm max-w-none min-h-[220px] px-3.5 py-3 outline-none prose-a:text-aqua prose-a:no-underline prose-a:font-semibold",
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),

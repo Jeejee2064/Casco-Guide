@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import { X } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useRef, type ReactNode } from "react";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,6 @@ export interface DetailPanelContent {
   photoFallback: ReactNode;
   featuredLabel?: string;
   categoryLabel: string;
-  categoryColor: string;
   categoryIcon: ReactNode;
   title: string;
   subtitle?: string | null;
@@ -179,11 +179,19 @@ function PanelBody({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <div
-        className="relative h-44 w-full shrink-0 bg-gradient-to-br from-aqua/20 to-coral/20 bg-cover bg-center"
-        style={content.photoUrl ? { backgroundImage: `url('${content.photoUrl}')` } : undefined}
-      >
-        {!content.photoUrl && (
+      <div className="relative h-44 w-full shrink-0 bg-gradient-to-br from-aqua/20 to-coral/20">
+        {content.photoUrl ? (
+          // Sized/reformatted by the Next Image optimizer (AVIF/WebP, no
+          // longer the full-res original) — a raw CSS `background-image`
+          // bypasses that entirely, which is what this replaced.
+          <Image
+            src={content.photoUrl}
+            alt=""
+            fill
+            sizes="(max-width: 768px) 100vw, 380px"
+            className="object-cover"
+          />
+        ) : (
           <div className="flex h-full w-full items-center justify-center text-aqua-dark">
             {content.photoFallback}
           </div>
@@ -206,10 +214,9 @@ function PanelBody({
             ★ {content.featuredLabel}
           </span>
         )}
-        <span
-          className="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white"
-          style={{ background: content.categoryColor }}
-        >
+        {/* Neutral, same treatment as CategoryBadge on the grid cards —
+            category is identified by icon + label here, not color. */}
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-md">
           {content.categoryIcon}
           {content.categoryLabel}
         </span>
@@ -239,7 +246,12 @@ function PanelBody({
               className={cn(
                 "flex-1 rounded-[var(--radius-button)] border px-3 py-2.5 text-sm font-bold transition-colors",
                 action.primary
-                  ? "border-transparent bg-aqua text-white hover:bg-aqua-dark"
+                  ? // `--accent-color` defaults to the brand teal (globals.css)
+                    // and gets overridden by SpotMap whenever a single vibe
+                    // is selected — so this button tracks whatever's
+                    // currently "in focus" instead of always being the same
+                    // fixed color.
+                    "accent-cta border-transparent text-white"
                   : "border-border bg-transparent hover:bg-foreground/5",
               )}
             >

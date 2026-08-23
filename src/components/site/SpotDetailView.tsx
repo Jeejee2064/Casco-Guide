@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 import {
   ChevronLeft,
+  ChevronDown,
   Star,
   Phone,
   Globe,
   Mail,
+  MapPin,
   Navigation,
   CreditCard,
   CalendarCheck,
   Car,
+  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,12 +30,14 @@ import { NearbySection } from "./NearbySection";
 import { ArticleCard } from "./ArticleCard";
 import { Stagger, StaggerItem, fadeUp } from "./motion";
 import { Button } from "@/components/ui/Button";
-import { CATEGORY_META } from "@/lib/categories";
 import { VIBE_META } from "@/lib/vibes";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
 import { getSpotImage } from "@/lib/data/categoryImages";
+import { panamaWhatsAppUrl } from "@/lib/phone";
+import { track } from "@/lib/analytics/track";
+import { markContentEngaged } from "@/lib/pwaEngagement";
 import { cn } from "@/lib/utils";
 
 /** Full public detail page for a spot — gallery, story, hours, contact & directions.
@@ -84,11 +89,27 @@ export function SpotDetailView({
     window.scrollTo(0, 0);
   }, [spot.id]);
 
-  const directions = () =>
+  // Skip the admin form's live inline preview (`onBack` set — see the
+  // doc comment above) — an in-progress unsaved draft isn't a real visit.
+  useEffect(() => {
+    if (onBack) return;
+    track("spot_view", { spot_id: spot.id, spot_slug: spot.slug, category: spot.category });
+    markContentEngaged();
+  }, [spot.id, spot.slug, spot.category, onBack]);
+
+  const directions = () => {
+    track("directions_click", { entity: "spot", entity_id: spot.id, entity_slug: spot.slug });
     window.open(
       `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}`,
       "_blank",
     );
+  };
+
+  const whatsappUrl = panamaWhatsAppUrl(spot.phone);
+  const openWhatsApp = () => {
+    track("whatsapp_click", { spot_id: spot.id, spot_slug: spot.slug });
+    window.open(whatsappUrl!, "_blank");
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-10 sm:pb-10">
@@ -115,7 +136,7 @@ export function SpotDetailView({
           loading photo. */}
       <motion.div
         className={cn(
-          "relative aspect-[16/10] w-full overflow-hidden rounded-[var(--radius-card)] sm:aspect-[21/9]",
+          "relative aspect-[16/10] w-full overflow-hidden rounded-[var(--radius-card)] sm:aspect-[21/9] lg:aspect-auto lg:h-72",
           !heroLoaded && "animate-pulse bg-foreground/5",
         )}
         initial="hidden"
@@ -134,7 +155,7 @@ export function SpotDetailView({
             fill
             sizes="100vw"
             className="object-cover"
-            priority
+            preload
             onLoad={() => setHeroLoaded(true)}
           />
         </button>
@@ -174,11 +195,20 @@ export function SpotDetailView({
                     <span className="font-semibold text-foreground/60">{spot.price_range}</span>
                   )}
                   {spot.is_verified && (
-                    <span className="font-semibold text-lime-dark dark:text-lime">
+                    <span className="font-semibold text-lime-readable">
                       {t("verified")}
                     </span>
                   )}
                 </div>
+                {/* Surfaced here, not just in the sidebar map/CTA further
+                    down — "how do I get there" should read at a glance from
+                    the top of the page, same as price/rating/hours, instead
+                    of only after scrolling past the story and hours table. */}
+                {spot.address && (
+                  <p className="flex items-center gap-1.5 text-sm text-foreground/60">
+                    <MapPin size={14} className="shrink-0" /> {spot.address}
+                  </p>
+                )}
               </div>
               <HoursBadge spot={spot} className="shrink-0" />
             </div>
@@ -219,16 +249,26 @@ export function SpotDetailView({
           {spot.article && (
             <StaggerItem>
               <div
-                className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground/80 dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
+                className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground/80 prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
                 dangerouslySetInnerHTML={{ __html: spot.article }}
               />
             </StaggerItem>
           )}
 
           <StaggerItem>
-            <div className="grid gap-3 rounded-[var(--radius-card)] border border-border p-5 text-sm">
-              <h2 className="font-heading font-bold">{th("weekSchedule")}</h2>
-              <ul className="space-y-1.5">
+            {/* Collapsed by default — the HoursBadge up top already answers
+                "is it open right now", so the full 7-day table is detail
+                worth one tap to expand, not something everyone has to
+                scroll past to reach the map/contact info below. */}
+            <details className="group rounded-[var(--radius-card)] border border-border p-5 text-sm">
+              <summary className="font-heading flex cursor-pointer list-none items-center justify-between font-bold [&::-webkit-details-marker]:hidden">
+                {th("weekSchedule")}
+                <ChevronDown
+                  size={16}
+                  className="text-foreground/40 transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <ul className="mt-3 space-y-1.5">
                 {DAY_KEYS.map((day) => (
                   <li key={day} className="flex justify-between gap-4">
                     <span className="text-foreground/60">{th(`days.${day}`)}</span>
@@ -237,11 +277,11 @@ export function SpotDetailView({
                 ))}
               </ul>
               {spot.hours_note && (
-                <p className="border-t border-border pt-2 text-xs text-foreground/60">
+                <p className="mt-3 border-t border-border pt-2 text-xs text-foreground/60">
                   {th("note")}: {spot.hours_note}
                 </p>
               )}
-            </div>
+            </details>
           </StaggerItem>
 
           <StaggerItem>
@@ -275,12 +315,7 @@ export function SpotDetailView({
         <aside className="h-fit lg:sticky lg:top-24">
           <Stagger className="space-y-4" show={heroLoaded} delay={0.15}>
             <StaggerItem>
-              <MiniMap
-                name={spot.name}
-                latitude={spot.latitude}
-                longitude={spot.longitude}
-                color={CATEGORY_META[spot.category].color}
-              />
+              <MiniMap name={spot.name} latitude={spot.latitude} longitude={spot.longitude} />
             </StaggerItem>
 
             <StaggerItem>
@@ -315,28 +350,22 @@ export function SpotDetailView({
             )}
 
             <StaggerItem>
+              {/* No dedicated Call button — the phone (when there is one)
+                  is already a tap-to-call link in the contact card above;
+                  WhatsApp (when available) and Directions are the two
+                  actions people actually need here, so they get the full
+                  labeled, flex-1 treatment, with Share alongside as an
+                  icon-only utility. */}
               <div className="hidden gap-2 sm:flex">
-                {spot.phone && (
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className="flex-1"
-                    onClick={() => (window.location.href = `tel:${spot.phone}`)}
-                  >
-                    <Phone size={16} /> {t("call")}
+                {whatsappUrl && (
+                  <Button type="button" variant="whatsapp" className="flex-1" onClick={openWhatsApp}>
+                    <MessageCircle size={16} /> {t("whatsapp")}
                   </Button>
                 )}
-                <ShareMenu title={spot.name} variant="coral" showLabel className="flex-1" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={directions}
-                  aria-label={t("getDirections")}
-                  title={t("getDirections")}
-                >
-                  <Navigation size={16} />
+                <Button type="button" variant="outline" className="flex-1" onClick={directions}>
+                  <Navigation size={16} /> {t("getDirections")}
                 </Button>
+                <ShareMenu title={spot.name} variant="primary" size="icon" />
               </div>
             </StaggerItem>
           </Stagger>
@@ -374,29 +403,18 @@ export function SpotDetailView({
 
       <NearbySection nearbySpots={nearbySpots} nearbyEvents={nearbyEvents} />
 
-      {/* Mobile sticky action bar */}
+      {/* Mobile sticky action bar — same Directions/WhatsApp-first layout
+          as the desktop CTA row above. */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-border bg-surface p-3 sm:hidden">
-        {spot.phone && (
-          <Button
-            type="button"
-            variant="primary"
-            className="flex-1"
-            onClick={() => (window.location.href = `tel:${spot.phone}`)}
-          >
-            <Phone size={16} /> {t("call")}
+        {whatsappUrl && (
+          <Button type="button" variant="whatsapp" className="flex-1" onClick={openWhatsApp}>
+            <MessageCircle size={16} /> {t("whatsapp")}
           </Button>
         )}
-        <ShareMenu title={spot.name} direction="up" variant="coral" showLabel className="flex-1" />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={directions}
-          aria-label={t("getDirections")}
-          title={t("getDirections")}
-        >
-          <Navigation size={16} />
+        <Button type="button" variant="outline" className="flex-1" onClick={directions}>
+          <Navigation size={16} /> {t("getDirections")}
         </Button>
+        <ShareMenu title={spot.name} direction="up" variant="primary" size="icon" />
       </div>
     </div>
   );

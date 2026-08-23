@@ -14,10 +14,12 @@ import {
   Navigation,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   CreditCard,
   CalendarCheck,
   Car,
   ImageOff,
+  MessageCircle,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -26,11 +28,13 @@ import { HoursBadge } from "./HoursBadge";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { Button } from "@/components/ui/Button";
-import { CATEGORY_META } from "@/lib/categories";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
 import { getSpotImage } from "@/lib/data/categoryImages";
+import { panamaWhatsAppUrl } from "@/lib/phone";
+import { track } from "@/lib/analytics/track";
+import { markContentEngaged } from "@/lib/pwaEngagement";
 
 export function SpotDetailModal({
   spot,
@@ -49,6 +53,12 @@ export function SpotDetailModal({
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  // Opening a spot's detail modal (e.g. tapping a pin on the map) is just as
+  // much "consulting content" as visiting its full page — see SpotDetailView.
+  useEffect(() => {
+    markContentEngaged();
+  }, [spot.id]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -73,6 +83,20 @@ export function SpotDetailModal({
     if (!spot.address) return;
     navigator.clipboard.writeText(spot.address);
     toast.success(th("note") ? t("addressCopied") : "Copied");
+  };
+
+  const directions = () => {
+    track("directions_click", { entity: "spot", entity_id: spot.id, entity_slug: spot.slug });
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}`,
+      "_blank",
+    );
+  };
+
+  const whatsappUrl = panamaWhatsAppUrl(spot.phone);
+  const openWhatsApp = () => {
+    track("whatsapp_click", { spot_id: spot.id, spot_slug: spot.slug });
+    window.open(whatsappUrl!, "_blank");
   };
 
   return (
@@ -176,7 +200,7 @@ export function SpotDetailModal({
                     </span>
                   )}
                   {spot.is_verified && (
-                    <span className="text-lime-dark dark:text-lime font-semibold">
+                    <span className="text-lime-readable font-semibold">
                       {t("verified")}
                     </span>
                   )}
@@ -187,14 +211,24 @@ export function SpotDetailModal({
 
             {spot.article && (
               <div
-                className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground/80 dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
+                className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground/80 prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
                 dangerouslySetInnerHTML={{ __html: spot.article }}
               />
             )}
 
-            <div className="grid gap-3 rounded-xl border border-border p-4 text-sm">
-              <h4 className="font-heading font-bold">{th("weekSchedule")}</h4>
-              <ul className="space-y-1">
+            {/* Collapsed by default — the HoursBadge up top already answers
+                "is it open right now", so the full week table is one tap
+                away instead of pushing the map/address/contact below it
+                down inside an already-scrollable modal. */}
+            <details className="group rounded-xl border border-border p-4 text-sm">
+              <summary className="font-heading flex cursor-pointer list-none items-center justify-between font-bold [&::-webkit-details-marker]:hidden">
+                {th("weekSchedule")}
+                <ChevronDown
+                  size={16}
+                  className="text-foreground/40 transition-transform group-open:rotate-180"
+                />
+              </summary>
+              <ul className="mt-3 space-y-1">
                 {DAY_KEYS.map((day) => (
                   <li key={day} className="flex justify-between gap-4">
                     <span className="text-foreground/60">{th(`days.${day}`)}</span>
@@ -205,18 +239,13 @@ export function SpotDetailModal({
                 ))}
               </ul>
               {spot.hours_note && (
-                <p className="text-xs text-foreground/60 pt-1 border-t border-border">
+                <p className="text-xs text-foreground/60 mt-3 pt-1 border-t border-border">
                   {th("note")}: {spot.hours_note}
                 </p>
               )}
-            </div>
+            </details>
 
-            <MiniMap
-              name={spot.name}
-              latitude={spot.latitude}
-              longitude={spot.longitude}
-              color={CATEGORY_META[spot.category].color}
-            />
+            <MiniMap name={spot.name} latitude={spot.latitude} longitude={spot.longitude} />
 
             <div className="grid gap-2 text-sm">
               {spot.address && (
@@ -226,7 +255,7 @@ export function SpotDetailModal({
                   </span>
                   <button
                     onClick={copyAddress}
-                    className="text-aqua-dark dark:text-aqua text-xs font-semibold shrink-0"
+                    className="text-aqua-readable text-xs font-semibold shrink-0"
                   >
                     {t("copyAddress")}
                   </button>
@@ -295,28 +324,15 @@ export function SpotDetailModal({
         </div>
 
         <div className="flex gap-2 border-t border-border p-4">
-          {spot.phone && (
-            <Button
-              variant="primary"
-              className="flex-1"
-              onClick={() => (window.location.href = `tel:${spot.phone}`)}
-            >
-              <Phone size={16} /> {t("call")}
+          {whatsappUrl && (
+            <Button variant="whatsapp" className="flex-1" onClick={openWhatsApp}>
+              <MessageCircle size={16} /> {t("whatsapp")}
             </Button>
           )}
-          <Button
-            variant="coral"
-            className="flex-1"
-            onClick={() =>
-              window.open(
-                `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}`,
-                "_blank",
-              )
-            }
-          >
+          <Button variant="outline" className="flex-1" onClick={directions}>
             <Navigation size={16} /> {t("getDirections")}
           </Button>
-          <ShareMenu title={spot.name} direction="up" />
+          <ShareMenu title={spot.name} direction="up" variant="primary" size="icon" />
         </div>
       </motion.div>
     </motion.div>

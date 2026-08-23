@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
+import { AdminAnalyticsOptOut } from "@/components/admin/AdminAnalyticsOptOut";
 import type { Spot } from "@/lib/types/database";
 
 /**
@@ -29,5 +30,10 @@ export default function SpotPreviewFramePage() {
   }, []);
 
   if (!spot) return null;
-  return <SpotDetailView spot={spot} />;
+  return (
+    <>
+      <AdminAnalyticsOptOut />
+      <SpotDetailView spot={spot} />
+    </>
+  );
 }

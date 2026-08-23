@@ -20,6 +20,8 @@ export const MOCK_ARTICLES: ArticleRecord[] = [
       '<p>Este es un artículo de ejemplo. Empieza por <a href="/spots/sample-rooftop-bar" data-ref-type="spot" data-ref-id="mock-1">Sample Rooftop Bar</a> al atardecer, y de camino no te pierdas <a href="/spots/sample-cafe" data-ref-type="spot" data-ref-id="mock-2">Sample Café</a>.</p>',
     body_en:
       '<p>This is a placeholder article. Start at <a href="/spots/sample-rooftop-bar" data-ref-type="spot" data-ref-id="mock-1">Sample Rooftop Bar</a> at sunset, and on the way don\'t miss <a href="/spots/sample-cafe" data-ref-type="spot" data-ref-id="mock-2">Sample Café</a>.</p>',
+    duration_es: null,
+    duration_en: null,
     layout: "standard",
     blocks: [],
     cover_photo: null,
@@ -42,6 +44,8 @@ export const MOCK_ARTICLES: ArticleRecord[] = [
     excerpt_en: "Placeholder — a weekend itinerary draft.",
     body_es: "<p>Borrador — todavía no publicado.</p>",
     body_en: "<p>Draft — not published yet.</p>",
+    duration_es: null,
+    duration_en: null,
     layout: "standard",
     blocks: [],
     cover_photo: null,

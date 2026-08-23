@@ -288,7 +288,6 @@ export function ItineraryMap({
         // once there is real featured content.
         featuredLabel: undefined,
         categoryLabel: tCategory(spot.category),
-        categoryColor: meta.color,
         categoryIcon: <Icon size={13} />,
         title: spot.name,
         subtitle: spot.address,
@@ -319,7 +318,6 @@ export function ItineraryMap({
       photoUrl: event.photo,
       photoFallback: <CalendarDays size={30} />,
       categoryLabel: tEventCategory(event.category),
-      categoryColor: meta.color,
       categoryIcon: <Image src={meta.icon} alt="" width={13} height={13} />,
       title: event.title,
       subtitle: `${dateLabel} · ${formatTime(event.time_start, locale)}`,

@@ -12,6 +12,10 @@ export const buttonVariants = cva(
         magenta: "bg-magenta text-white hover:bg-magenta-dark shadow-sm hover:shadow-md",
         outline: "border border-border bg-transparent hover:bg-black/5 dark:hover:bg-white/5",
         ghost: "bg-transparent hover:bg-black/5 dark:hover:bg-white/5",
+        // WhatsApp's own brand green, not a design-system token — same
+        // hex ShareMenu already uses for its WhatsApp share tile, reused
+        // here so the two stay in sync instead of drifting apart.
+        whatsapp: "bg-[#25D366] text-white hover:bg-[#1fbc5c] shadow-sm hover:shadow-md",
       },
       size: {
         sm: "h-9 px-3",

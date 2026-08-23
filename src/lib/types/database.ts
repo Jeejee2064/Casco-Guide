@@ -204,6 +204,13 @@ export interface Article {
   layout: ArticleLayout;
   blocks: ArticleBlock[];
 
+  // Quick at-a-glance total time, rendered near the title (see
+  // ArticleDetailView) when set — free text, e.g. "3–4 hours", "Half day".
+  // Optional and independent of `layout`, though most useful for
+  // "itinerary" articles (per-stop walking time there is computed from
+  // coordinates instead, not stored — see ArticleDetailView).
+  duration: string | null;
+
   cover_photo: string | null;
 
   tags: string[];
@@ -222,13 +229,15 @@ export interface Article {
 }
 
 export interface ArticleRecord
-  extends Omit<Article, "title" | "excerpt" | "body" | "blocks"> {
+  extends Omit<Article, "title" | "excerpt" | "body" | "blocks" | "duration"> {
   title_es: string;
   title_en: string;
   excerpt_es: string | null;
   excerpt_en: string | null;
   body_es: string | null;
   body_en: string | null;
+  duration_es: string | null;
+  duration_en: string | null;
   blocks: ArticleBlockRecord[];
 }
 

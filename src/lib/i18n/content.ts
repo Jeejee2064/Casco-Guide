@@ -53,13 +53,15 @@ export function localizeEvent(record: EventRecord, locale: Locale): EventRow {
 }
 
 export function localizeArticle(record: ArticleRecord, locale: Locale): Article {
-  const { title_es, title_en, excerpt_es, excerpt_en, body_es, body_en, blocks, ...rest } = record;
+  const { title_es, title_en, excerpt_es, excerpt_en, body_es, body_en, duration_es, duration_en, blocks, ...rest } =
+    record;
 
   return {
     ...rest,
     title: pick(title_es, title_en, locale),
     excerpt: pickNullable(excerpt_es, excerpt_en, locale),
     body: pickNullable(body_es, body_en, locale),
+    duration: pickNullable(duration_es, duration_en, locale),
     blocks: blocks.map(({ title_es, title_en, text_es, text_en, ...block }) => ({
       ...block,
       title: pickNullable(title_es, title_en, locale),

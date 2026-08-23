@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, MapPin, Newspaper, LogOut, ExternalLink } from "lucide-react";
+import { LayoutDashboard, MapPin, Newspaper, LogOut, ExternalLink, BarChart3 } from "lucide-react";
 // CalendarDays: only used by the events link below, currently commented out.
 import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -19,6 +19,7 @@ export function Sidebar() {
     // Events temporarily hidden site-wide — uncomment to restore the admin link.
     // { href: "/admin/events" as const, label: t("events"), icon: CalendarDays },
     { href: "/admin/articles" as const, label: t("articles"), icon: Newspaper },
+    { href: "/admin/analytics" as const, label: t("analytics"), icon: BarChart3 },
   ];
 
   return (

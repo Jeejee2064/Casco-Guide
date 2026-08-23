@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/Button";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { formatTime } from "@/lib/hours";
 import { getSpotImage } from "@/lib/data/categoryImages";
+import { track } from "@/lib/analytics/track";
+import { markContentEngaged } from "@/lib/pwaEngagement";
 import type { EventRow, Spot } from "@/lib/types/database";
 
 /** Full public detail page for an event — gallery, story, ticketing & host venue.
@@ -62,13 +64,20 @@ export function EventDetailView({
     day: "numeric",
   }).format(new Date(`${event.date}T00:00:00`));
 
-  const directions = () =>
+  const directions = () => {
+    track("directions_click", { entity: "event", entity_id: event.id, entity_slug: event.slug });
     window.open(
       `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}`,
       "_blank",
     );
+  };
 
   const priceLabel = event.price && event.price > 0 ? `$${event.price}` : t("free");
+
+  const openBooking = () => {
+    track("event_booking_click", { event_id: event.id, event_slug: event.slug });
+    window.open(event.booking_url!, "_blank");
+  };
 
   // Next.js only scrolls to top on navigation when the new page isn't
   // already visible in the viewport — from a scrolled-down card in the
@@ -78,6 +87,14 @@ export function EventDetailView({
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [event.id]);
+
+  // Skip the admin form's live inline preview (`onBack` set — see the doc
+  // comment above) — an in-progress unsaved draft isn't a real visit.
+  useEffect(() => {
+    if (onBack) return;
+    track("event_view", { event_id: event.id, event_slug: event.slug });
+    markContentEngaged();
+  }, [event.id, event.slug, onBack]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-10 sm:pb-10">
@@ -161,7 +178,7 @@ export function EventDetailView({
 
           {event.article && (
             <div
-              className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground/80 dark:prose-invert prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
+              className="prose prose-sm max-w-none text-[15px] leading-relaxed text-foreground/80 prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
               dangerouslySetInnerHTML={{ __html: event.article }}
             />
           )}
@@ -189,7 +206,7 @@ export function EventDetailView({
           )}
 
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/70">
-            <span className="flex items-center gap-1.5 font-semibold text-lime-dark dark:text-lime">
+            <span className="flex items-center gap-1.5 font-semibold text-lime-readable">
               <Ticket size={15} /> {priceLabel}
             </span>
             {event.capacity != null && (
@@ -206,12 +223,7 @@ export function EventDetailView({
         </div>
 
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-          <MiniMap
-            name={event.title}
-            latitude={event.latitude}
-            longitude={event.longitude}
-            color={categoryMeta.color}
-          />
+          <MiniMap name={event.title} latitude={event.latitude} longitude={event.longitude} />
 
           <ExploreMapCard />
 
@@ -221,22 +233,15 @@ export function EventDetailView({
                 type="button"
                 variant="primary"
                 className="flex-1"
-                onClick={() => window.open(event.booking_url!, "_blank")}
+                onClick={openBooking}
               >
                 <ExternalLink size={16} /> {t("book")}
               </Button>
             )}
-            <ShareMenu title={event.title} variant="coral" showLabel className="flex-1" />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={directions}
-              aria-label={tSpot("getDirections")}
-              title={tSpot("getDirections")}
-            >
-              <Navigation size={16} />
+            <Button type="button" variant="outline" className="flex-1" onClick={directions}>
+              <Navigation size={16} /> {tSpot("getDirections")}
             </Button>
+            <ShareMenu title={event.title} variant="primary" size="icon" />
           </div>
         </aside>
       </div>
@@ -250,28 +255,15 @@ export function EventDetailView({
             type="button"
             variant="primary"
             className="flex-1"
-            onClick={() => window.open(event.booking_url!, "_blank")}
+            onClick={openBooking}
           >
             <ExternalLink size={16} /> {t("book")}
           </Button>
         )}
-        <ShareMenu
-          title={event.title}
-          direction="up"
-          variant="coral"
-          showLabel
-          className="flex-1"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={directions}
-          aria-label={tSpot("getDirections")}
-          title={tSpot("getDirections")}
-        >
-          <Navigation size={16} />
+        <Button type="button" variant="outline" className="flex-1" onClick={directions}>
+          <Navigation size={16} /> {tSpot("getDirections")}
         </Button>
+        <ShareMenu title={event.title} direction="up" variant="primary" size="icon" />
       </div>
     </div>
   );

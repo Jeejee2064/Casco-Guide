@@ -11,11 +11,18 @@ export function HoursBadge({ spot, className }: { spot: Spot; className?: string
   const locale = useLocale();
   const status = getHoursStatus(spot);
 
+  // `-readable` variants (globals.css) blend each brand color toward
+  // `--foreground` instead of swapping on Tailwind's `dark:` variant —
+  // that variant only fires on OS `prefers-color-scheme: dark`, never on
+  // the separately-toggled Night Mode (`[data-night]`), which used to
+  // leave this badge unreadably dark-on-dark there. `bg-foreground/*` for
+  // "closed" is the same fix applied to what used to be a
+  // `bg-black/5 dark:bg-white/10` swap.
   const styles: Record<string, string> = {
-    open: "bg-lime/15 text-lime-dark dark:text-lime",
-    "closing-soon": "bg-coral/15 text-coral-dark dark:text-coral",
-    "opens-later": "bg-aqua/15 text-aqua-dark dark:text-aqua",
-    closed: "bg-black/5 text-gray-500 dark:bg-white/10 dark:text-gray-400",
+    open: "bg-lime/15 text-lime-readable",
+    "closing-soon": "bg-coral/15 text-coral-readable",
+    "opens-later": "bg-aqua/15 text-aqua-readable",
+    closed: "bg-foreground/5 text-foreground/45",
   };
 
   const dot: Record<string, string> = {

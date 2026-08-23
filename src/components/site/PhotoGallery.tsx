@@ -76,7 +76,7 @@ export function PhotoGallery({
                   fill
                   sizes="100vw"
                   className="object-cover"
-                  priority={i === 0}
+                  preload={i === 0}
                 />
               </button>
             ))}
@@ -128,7 +128,7 @@ export function PhotoGallery({
               fill
               sizes="(max-width: 1024px) 50vw, 33vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
-              priority={i === 0}
+              preload={i === 0}
             />
             <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
           </button>

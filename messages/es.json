@@ -1,8 +1,9 @@
 {
   "site": {
     "name": "Casco Viejo Guide",
-    "title": "Explora Casco Viejo",
-    "subtitle": "Restaurantes, bares y sitios seleccionados, próximos eventos y guías locales — todo lo que necesitas para explorar Casco Viejo como si vivieras aquí.",
+    "heroBadge": "Hecho y actualizado por locales de verdad",
+    "title": "Tu guía local de Casco Viejo",
+    "subtitle": "Restaurantes, bares, cafés y sitios seleccionados — curados por personas que realmente viven y trabajan en el barrio, actualizados todo el año.",
     "searchPlaceholder": "Busca lugares, etiquetas, cocina…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Cuadrícula",
@@ -95,6 +96,7 @@
   },
   "spot": {
     "call": "Llamar",
+    "whatsapp": "WhatsApp",
     "visitWebsite": "Visitar sitio web",
     "getDirections": "Cómo llegar",
     "share": "Compartir",
@@ -193,7 +195,8 @@
       "events": "Eventos",
       "logout": "Cerrar sesión",
       "viewSite": "Ver sitio",
-      "articles": "Artículos"
+      "articles": "Artículos",
+      "analytics": "Analítica"
     },
     "login": {
       "title": "Bienvenido de nuevo",
@@ -212,6 +215,57 @@
       "lastUpdated": "Última actualización",
       "addSpot": "+ Agregar lugar",
       "addEvent": "+ Agregar evento"
+    },
+    "analytics": {
+      "title": "Analítica",
+      "subtitle": "Tráfico del sitio público, con PostHog",
+      "windowLabel": "Últimos 30 días",
+      "uniqueVisitors": "Visitantes únicos",
+      "pageviews": "Vistas de página",
+      "searches": "Búsquedas",
+      "pwaInstalls": "Instalaciones de la app",
+      "empty": "Todavía no hay datos para este período.",
+      "notConfigured": "Configura POSTHOG_PERSONAL_API_KEY en tu entorno para activar esta pestaña.",
+      "error": "No se pudo cargar la analítica. Intenta de nuevo en un momento.",
+
+      "trafficTrend": "Tráfico",
+      "trafficTrendSubtitle": "Vistas de página por día",
+
+      "contentSection": "Más visto",
+      "topSpots": "Lugares más vistos",
+      "topArticles": "Artículos más vistos",
+      "topEvents": "Eventos más vistos",
+
+      "engagementSection": "Interacción",
+      "engagementSubtitle": "Qué hace la gente al llegar a un lugar o evento",
+      "whatsappClicks": "Clics en WhatsApp",
+      "directionsClicks": "Clics en cómo llegar",
+      "bookingClicks": "Clics en reservar",
+      "mapPinClicks": "Toques en el mapa",
+
+      "discoverySection": "Descubrimiento",
+      "discoverySubtitle": "Qué busca y filtra la gente",
+      "topCategories": "Categorías más filtradas",
+      "topVibes": "Vibes más filtradas",
+      "searchesTotal": "Búsquedas",
+      "searchesNoResults": "Sin resultados",
+      "searchesNoResultsSub": "{pct}% de las búsquedas no encontraron nada",
+
+      "audienceSection": "Audiencia",
+      "deviceBreakdown": "Dispositivos",
+      "languageSplit": "Idioma",
+      "referrers": "De dónde viene el tráfico",
+      "direct": "Directo",
+
+      "nightModeSection": "Modo noche",
+      "nightModeAdoption": "Visitantes que lo activaron",
+      "nightModeSub": "{pct}% de los visitantes únicos",
+
+      "pwaSection": "Embudo de instalación de la app",
+      "pwaShown": "Aviso mostrado",
+      "pwaAccepted": "Instalada",
+      "pwaDismissed": "Descartado",
+      "pwaConversionSub": "{pct}% de los avisos convierten"
     },
     "spots": {
       "title": "Lugares",
@@ -455,6 +509,9 @@
       "excerpt": "Resumen corto",
       "excerptHint": "1–2 frases, se muestra en la tarjeta",
       "author": "Autor",
+      "duration": "Duración",
+      "durationPlaceholder": "ej. 3–4 horas",
+      "durationHint": "Opcional — se muestra como una insignia justo debajo del título en la página pública. Para itinerarios, el tiempo de caminata entre paradas se calcula automáticamente.",
       "body": "Cuerpo del artículo",
       "intro": "Introducción (opcional)",
       "bodyHint": "Selecciona texto y usa el botón de enlace para citar un lugar, evento o artículo ya existente.",

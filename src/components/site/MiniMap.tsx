@@ -20,6 +20,12 @@ const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.pn
 const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
 
+// --color-aqua — same fixed blue as ItineraryMap's ROUTE_COLOR/pins, kept
+// consistent across every detail-page mini map instead of the per-category
+// color this used to take as a prop (which made this one map read
+// differently from every other pin in the app).
+const PIN_COLOR = "#146b8c";
+
 /**
  * Small, non-interactive map showing "you are here" → the spot/event pin,
  * with a live distance + walk-time badge underneath. Sits above the existing
@@ -29,14 +35,11 @@ export function MiniMap({
   name,
   latitude,
   longitude,
-  color,
   className,
 }: {
   name: string;
   latitude: number;
   longitude: number;
-  /** Category accent color, e.g. CATEGORY_META[spot.category].color. */
-  color: string;
   className?: string;
 }) {
   const tMap = useTranslations("map");
@@ -99,7 +102,7 @@ export function MiniMap({
 
       const icon = L.divIcon({
         className: "spot-pin-marker",
-        html: `<span class="spot-pin" style="background:${color}"></span>`,
+        html: `<span class="spot-pin" style="background:${PIN_COLOR}"></span>`,
         iconSize: [26, 26],
         iconAnchor: [13, 26],
       });
@@ -200,8 +203,8 @@ export function MiniMap({
           className={cn(
             "flex items-center justify-center gap-1.5 rounded-[var(--radius-card)] border px-3 py-2.5 text-sm font-bold",
             isClose
-              ? "border-lime/30 bg-lime/10 text-lime-dark dark:text-lime"
-              : "border-gold/30 bg-gold/10 text-gold-dark dark:text-gold",
+              ? "border-lime/30 bg-lime/10 text-lime-readable"
+              : "border-gold/30 bg-gold/10 text-gold-readable",
           )}
         >
           <Ruler size={15} />
