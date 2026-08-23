@@ -61,8 +61,10 @@ export default async function HomePage({
             grid and map themselves moved out to their own /spots and /map
             pages (see AGENTS-adjacent commit) so this page reads as
             substantial, crawlable text rather than mostly an app shell. */}
-        <AboutIntro />
 
+        <div className="border-t border-border">
+          <VibeTeaserSection />
+        </div>
         <div className="border-t border-border">
           <FeaturedSpotsSection
             spots={ratedSpots.slice(0, FEATURED_SPOTS_COUNT)}
@@ -74,9 +76,7 @@ export default async function HomePage({
           <MapTeaserSection spots={ratedSpots.slice(0, MAP_TEASER_SPOTS_COUNT)} />
         </div>
 
-        <div className="border-t border-border">
-          <VibeTeaserSection />
-        </div>
+        <AboutIntro />
 
         <div className="border-t border-border">
           <AboutFaq />

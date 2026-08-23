@@ -72,7 +72,7 @@ export function Header() {
             <Image
               src="/logoletters.png"
               alt={t("name")}
-              width={200}
+              width={250}
               height={50}
               className="header-logotype hidden object-contain sm:block"
             />
