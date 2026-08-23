@@ -187,7 +187,7 @@ export function ArticleDetailView({
             </div>
             <ShareMenu
               title={article.title}
-              variant="coral"
+              variant="primary"
               entity={{ type: "article", id: article.id, slug: article.slug }}
             />
           </div>
@@ -275,9 +275,20 @@ export function ArticleDetailView({
         </Stagger>
       )}
 
+      {/* `flex flex-col gap-3` rather than `space-y-6`: Tailwind v4's
+          space-y only ever pushes children apart via margin-bottom (a
+          zero-specificity `:where()` rule), so the walk indicator's old
+          `-my-3` didn't trim the gap on both sides the way it looks like it
+          should — it fully overrode that margin-bottom into a negative
+          value, which margin-collapsed with the *next* stop card's own
+          (unset, so 0) margin-top into a net negative gap. That let the
+          next card's opaque background paint over the walk text, hiding it.
+          `gap` on a flex container never collapses or goes negative, so
+          every item — stop card or walk indicator alike — gets a
+          consistent, guaranteed-positive gap with no risk of overlap. */}
       {article.layout === "itinerary" && article.blocks.length > 0 && (
         <motion.ol
-          className="relative mt-8 space-y-6 border-l-2 border-dashed border-aqua/30 pl-6"
+          className="relative mt-8 flex flex-col gap-3 border-l-2 border-dashed border-aqua/30 pl-6"
           variants={staggerContainer}
           initial="hidden"
           whileInView="show"
@@ -305,7 +316,7 @@ export function ArticleDetailView({
                   </div>
                 </motion.li>
                 {walk && (
-                  <motion.li variants={fadeUp} className="relative -my-3 flex items-center gap-1.5 text-xs font-semibold text-foreground/45">
+                  <motion.li variants={fadeUp} className="relative flex items-center gap-1.5 text-xs font-semibold text-foreground/45">
                     <Footprints size={13} className="shrink-0 text-aqua/60" />
                     {tMap("walkTime", { mins: walk.mins })} · {formatDistance(walk.km)}
                   </motion.li>
