@@ -28,22 +28,30 @@ const nextConfig: NextConfig = {
     const posthogHost = process.env.POSTHOG_HOST;
     const posthogAssetsHost = process.env.POSTHOG_ASSETS_HOST;
 
-    if (!posthogHost || !posthogAssetsHost) return [];
+    if (!posthogHost || !posthogAssetsHost) return { beforeFiles: [] };
 
-    return [
-      {
-        source: "/ingest/static/:path*",
-        destination: `${posthogAssetsHost}/static/:path*`,
-      },
-      {
-        source: "/ingest/array/:path*",
-        destination: `${posthogAssetsHost}/array/:path*`,
-      },
-      {
-        source: "/ingest/:path*",
-        destination: `${posthogHost}/:path*`,
-      },
-    ];
+    // `beforeFiles`, not a plain array — a plain array's rewrites are
+    // checked *after* Next's own routing/redirects, and next-intl's locale
+    // prefixing (see src/i18n/routing.ts's localePrefix: "always") was
+    // redirecting /ingest/* to /es/ingest/* before this rewrite ever got a
+    // chance to run, silently sending every PostHog request into a 404 and
+    // dropping 100% of events. `beforeFiles` runs ahead of that redirect.
+    return {
+      beforeFiles: [
+        {
+          source: "/ingest/static/:path*",
+          destination: `${posthogAssetsHost}/static/:path*`,
+        },
+        {
+          source: "/ingest/array/:path*",
+          destination: `${posthogAssetsHost}/array/:path*`,
+        },
+        {
+          source: "/ingest/:path*",
+          destination: `${posthogHost}/:path*`,
+        },
+      ],
+    };
   },
   skipTrailingSlashRedirect: true,
 };

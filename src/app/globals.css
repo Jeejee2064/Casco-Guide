@@ -2,11 +2,15 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --background: #faf8f4;
+  /* Flat fallback for anything that reads --background as a solid color
+     (color-mix() calls, non-body surfaces) — the actual day-mode backdrop
+     is the soft blue→turquoise gradient on `body` below; this is just its
+     base tone, picked to match the gradient's own hues so nothing seams. */
+  --background: #f6fbfc;
   --foreground: #201a2e;
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --border: #eae5db;
+  --border: #e3eef1;
 
   /* Sober editorial palette — muted, confident accents rather than saturated
      tropical brights. Kept as the same variable names throughout the app so
@@ -248,11 +252,31 @@ html {
      (Header's logo button) already passes `behavior: "smooth"` itself. */
 }
 
+/* Day mode's backdrop — a barely-there diagonal wash from very light blue
+   into very light turquoise, not a flat fill. `in oklch` keeps the hue
+   shift smooth (no visible banding fading toward transparent-ish pale
+   tones — see the Night Mode gradient below for the same technique at a
+   much bolder saturation). `fixed` attachment so it reads as one
+   continuous backdrop at any scroll position on a long page, rather than
+   the % stops being relative to the full page height. */
 body {
-  background: var(--background);
+  background: linear-gradient(165deg, #f8fcfd 0%, #f4fbf9 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), Inter, Arial, sans-serif;
   overscroll-behavior-y: none;
+}
+
+/* OS dark mode gets its own (navy) --background instead — cancel the
+   light-mode gradient rather than letting it show through. Night Mode's
+   own `html[data-night] body` rule (above, "Night Mode" section) already
+   outranks both this and the plain rule above via its higher-specificity
+   attribute selector, so it's unaffected by any of this. */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: var(--background);
+    background-attachment: scroll;
+  }
 }
 
 h1, h2, h3, h4, .font-heading {
