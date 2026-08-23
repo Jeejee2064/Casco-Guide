@@ -185,7 +185,11 @@ export function ArticleDetailView({
                 </span>
               )}
             </div>
-            <ShareMenu title={article.title} variant="coral" />
+            <ShareMenu
+              title={article.title}
+              variant="coral"
+              entity={{ type: "article", id: article.id, slug: article.slug }}
+            />
           </div>
 
           {article.tags.length > 0 && (
@@ -235,9 +239,9 @@ export function ArticleDetailView({
               </span>
               <div className="min-w-0 flex-1 space-y-2">
                 {block.photo && (
-                  <div className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
+                  <BlockPhotoLink block={block} className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
                     <Image src={block.photo} alt={block.title ?? ""} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
-                  </div>
+                  </BlockPhotoLink>
                 )}
                 {block.title && <h3 className="font-heading text-lg font-bold">{block.title}</h3>}
                 {block.text && <p className="text-[15px] leading-relaxed text-foreground/80">{block.text}</p>}
@@ -254,9 +258,9 @@ export function ArticleDetailView({
             <StaggerItem key={block.id}>
               <figure>
                 {block.photo && (
-                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-card)]">
+                  <BlockPhotoLink block={block} className="relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-card)]">
                     <Image src={block.photo} alt={block.title ?? ""} fill sizes="100vw" className="object-cover" />
-                  </div>
+                  </BlockPhotoLink>
                 )}
                 {(block.title || block.text) && (
                   <figcaption className="mt-2.5 space-y-1">
@@ -367,21 +371,26 @@ export function ArticleDetailView({
   );
 }
 
-function BlockRefLink({
-  block,
-}: {
-  block: { ref_type: "spot" | "event" | null; ref_slug: string | null };
-}) {
-  const t = useTranslations("articleDetail");
+type RefBlock = { ref_type: "spot" | "event" | null; ref_slug: string | null };
+
+/** Same spot/event target `BlockRefLink` below links to, shared so the
+ * block's photo (BlockPhotoLink) and its "View spot"/"View event" link
+ * always agree on where a click goes. */
+function blockRefHref(block: RefBlock) {
   if (!block.ref_type || !block.ref_slug) return null;
+  return block.ref_type === "spot"
+    ? ({ pathname: "/spots/[slug]", params: { slug: block.ref_slug } } as const)
+    : ({ pathname: "/events/[slug]", params: { slug: block.ref_slug } } as const);
+}
+
+function BlockRefLink({ block }: { block: RefBlock }) {
+  const t = useTranslations("articleDetail");
+  const href = blockRefHref(block);
+  if (!href) return null;
 
   return (
     <Link
-      href={
-        block.ref_type === "spot"
-          ? { pathname: "/spots/[slug]", params: { slug: block.ref_slug } }
-          : { pathname: "/events/[slug]", params: { slug: block.ref_slug } }
-      }
+      href={href}
       className={cn(
         "inline-flex items-center gap-1.5 text-xs font-bold",
         block.ref_type === "spot" ? "text-aqua" : "text-coral",
@@ -389,6 +398,34 @@ function BlockRefLink({
     >
       {block.ref_type === "spot" ? <MapPin size={12} /> : <CalendarDays size={12} />}
       {block.ref_type === "spot" ? t("viewSpot") : t("viewEvent")}
+    </Link>
+  );
+}
+
+/** Wraps a "list"/"photo-story" block's photo in a link to the same spot/
+ * event `BlockRefLink` points to, so clicking the image itself navigates
+ * too — not just the explicit "View spot"/"View event" link below it.
+ * Renders a plain, non-interactive div when the block has no ref. */
+function BlockPhotoLink({
+  block,
+  className,
+  children,
+}: {
+  block: RefBlock;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations("articleDetail");
+  const href = blockRefHref(block);
+  if (!href) return <div className={className}>{children}</div>;
+
+  return (
+    <Link
+      href={href}
+      aria-label={block.ref_type === "spot" ? t("viewSpot") : t("viewEvent")}
+      className={cn(className, "block transition-opacity hover:opacity-90")}
+    >
+      {children}
     </Link>
   );
 }

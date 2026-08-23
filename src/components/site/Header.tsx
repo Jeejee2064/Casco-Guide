@@ -5,14 +5,27 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { NightModeToggle } from "./NightModeToggle";
 import { EASE_OUT } from "./motion";
+import { cn } from "@/lib/utils";
+
+// Top-level sections that get the "you are here" nav treatment. Deliberately
+// exact-match only (see `active` below) — a spot/article detail page or an
+// article reader is "somewhere else" in the site, not a state of the
+// /spots or /articles list, so it should show no indicator at all rather
+// than a misleadingly-lit tab.
+const NAV_LINKS = [
+  { href: "/spots", key: "spots" },
+  { href: "/articles", key: "articles" },
+  { href: "/map", key: "map" },
+] as const;
 
 export function Header() {
   const t = useTranslations("site");
   const tNav = useTranslations("nav");
+  const pathname = usePathname();
 
   // Night mode + locale live inline from `sm` up; below that they'd crowd
   // the bar next to branding/nav, so they move into this burger instead.
@@ -80,12 +93,32 @@ export function Header() {
         </div>
 
         <nav className="flex items-center gap-1 text-sm font-semibold text-foreground/60">
-          <Link
-            href="/spots"
-            className="pill-lift rounded-full px-3 py-1.5 hover:bg-gradient-to-r hover:from-aqua/10 hover:to-coral/10 hover:text-foreground"
-          >
-            {tNav("spots")}
-          </Link>
+          {NAV_LINKS.map(({ href, key }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "pill-lift relative rounded-full px-3 py-1.5 hover:bg-aqua/10 hover:text-foreground",
+                  active && "text-foreground",
+                )}
+              >
+                {tNav(key)}
+                {/* Shared-layout underline rather than a static one: it
+                    slides between tabs on navigation instead of just
+                    popping, which reads as "you moved" rather than a new
+                    element appearing — classy, not a UI change. */}
+                {active && (
+                  <motion.span
+                    layoutId="nav-active-indicator"
+                    transition={{ duration: 0.35, ease: EASE_OUT }}
+                    className="absolute inset-x-3 -bottom-[3px] h-[2px] rounded-full bg-aqua/70"
+                  />
+                )}
+              </Link>
+            );
+          })}
           {/* Events temporarily hidden site-wide — see AGENTS note in this
               PR/commit. Uncomment to bring the nav link back. */}
           {/* <Link
@@ -94,18 +127,6 @@ export function Header() {
           >
             {tNav("events")}
           </Link> */}
-          <Link
-            href="/articles"
-            className="pill-lift rounded-full px-3 py-1.5 hover:bg-gradient-to-r hover:from-aqua/10 hover:to-coral/10 hover:text-foreground"
-          >
-            {tNav("articles")}
-          </Link>
-          <Link
-            href="/map"
-            className="pill-lift rounded-full px-3 py-1.5 hover:bg-gradient-to-r hover:from-aqua/10 hover:to-coral/10 hover:text-foreground"
-          >
-            {tNav("map")}
-          </Link>
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">

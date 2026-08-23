@@ -179,13 +179,13 @@
     "next": "Next photo"
   },
   "spotDetail": {
-    "back": "Back to Casco Guide",
+    "back": "Back",
     "amenities": "Amenities",
     "gallery": "Gallery",
     "featuredIn": "Featured in"
   },
   "eventDetail": {
-    "back": "Back to Casco Guide",
+    "back": "Back",
     "hostedAt": "Hosted at"
   },
   "admin": {
@@ -195,8 +195,7 @@
       "events": "Events",
       "logout": "Log out",
       "viewSite": "View site",
-      "articles": "Articles",
-      "analytics": "Analytics"
+      "articles": "Articles"
     },
     "login": {
       "title": "Welcome back",
@@ -214,7 +213,8 @@
       "totalArticles": "Total articles",
       "lastUpdated": "Last updated",
       "addSpot": "+ Add spot",
-      "addEvent": "+ Add event"
+      "addEvent": "+ Add event",
+      "addArticle": "+ Add article"
     },
     "analytics": {
       "title": "Analytics",
@@ -230,18 +230,34 @@
 
       "trafficTrend": "Traffic",
       "trafficTrendSubtitle": "Pageviews per day",
+      "rangeToday": "Today",
+      "rangeLast7": "Last 7 days",
+      "rangeLast30": "Last 30 days",
+
+      "interactionsSection": "Interactions by spot",
+      "interactionsSubtitle": "Every spot, ranked by total interactions — use this to show a business exactly where they stand",
+      "interactionsCount": "{count, plural, one {# spot ranked} other {# spots ranked}}",
+      "interactionsSearch": "Search spots…",
+      "interactionsFeaturedOnly": "Featured only",
+      "interactionsColSpot": "Spot",
+      "interactionsColCategory": "Category",
+      "interactionsColViews": "Views",
+      "interactionsColWhatsapp": "WhatsApp",
+      "interactionsColDirections": "Directions",
+      "interactionsColMap": "Map",
+      "interactionsColShare": "Share",
+      "interactionsColTotal": "Total",
 
       "contentSection": "Most viewed",
       "topSpots": "Top spots",
       "topArticles": "Top articles",
-      "topEvents": "Top events",
 
       "engagementSection": "Engagement",
       "engagementSubtitle": "What people do once they land on a spot or event",
       "whatsappClicks": "WhatsApp clicks",
       "directionsClicks": "Directions clicks",
-      "bookingClicks": "Booking clicks",
       "mapPinClicks": "Map pin taps",
+      "shareClicks": "Share clicks",
 
       "discoverySection": "Discovery",
       "discoverySubtitle": "What people search and filter for",
@@ -442,6 +458,14 @@
       "message": "The {target} text hasn't been touched. Do you want to update it too before saving?",
       "switchTo": "Switch to {target}",
       "saveAnyway": "Save without editing {target}",
+      "close": "Close"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved changes",
+      "message": "You have unsaved changes on this page. What would you like to do?",
+      "saveAndLeave": "Save and leave",
+      "leaveWithoutSaving": "Leave without saving",
+      "stay": "Cancel",
       "close": "Close"
     },
     "articles": {

@@ -179,13 +179,13 @@
     "next": "Foto siguiente"
   },
   "spotDetail": {
-    "back": "Volver a Casco Guide",
+    "back": "Volver",
     "amenities": "Comodidades",
     "gallery": "Galería",
     "featuredIn": "Aparece en"
   },
   "eventDetail": {
-    "back": "Volver a Casco Guide",
+    "back": "Volver",
     "hostedAt": "Se realiza en"
   },
   "admin": {
@@ -195,8 +195,7 @@
       "events": "Eventos",
       "logout": "Cerrar sesión",
       "viewSite": "Ver sitio",
-      "articles": "Artículos",
-      "analytics": "Analítica"
+      "articles": "Artículos"
     },
     "login": {
       "title": "Bienvenido de nuevo",
@@ -214,7 +213,8 @@
       "totalArticles": "Total de artículos",
       "lastUpdated": "Última actualización",
       "addSpot": "+ Agregar lugar",
-      "addEvent": "+ Agregar evento"
+      "addEvent": "+ Agregar evento",
+      "addArticle": "+ Agregar artículo"
     },
     "analytics": {
       "title": "Analítica",
@@ -230,18 +230,34 @@
 
       "trafficTrend": "Tráfico",
       "trafficTrendSubtitle": "Vistas de página por día",
+      "rangeToday": "Hoy",
+      "rangeLast7": "Últimos 7 días",
+      "rangeLast30": "Últimos 30 días",
+
+      "interactionsSection": "Interacciones por lugar",
+      "interactionsSubtitle": "Cada lugar, ordenado por interacciones totales — úsalo para mostrarle a un negocio exactamente dónde está parado",
+      "interactionsCount": "{count, plural, one {# lugar clasificado} other {# lugares clasificados}}",
+      "interactionsSearch": "Buscar lugares…",
+      "interactionsFeaturedOnly": "Solo destacados",
+      "interactionsColSpot": "Lugar",
+      "interactionsColCategory": "Categoría",
+      "interactionsColViews": "Vistas",
+      "interactionsColWhatsapp": "WhatsApp",
+      "interactionsColDirections": "Cómo llegar",
+      "interactionsColMap": "Mapa",
+      "interactionsColShare": "Compartir",
+      "interactionsColTotal": "Total",
 
       "contentSection": "Más visto",
       "topSpots": "Lugares más vistos",
       "topArticles": "Artículos más vistos",
-      "topEvents": "Eventos más vistos",
 
       "engagementSection": "Interacción",
       "engagementSubtitle": "Qué hace la gente al llegar a un lugar o evento",
       "whatsappClicks": "Clics en WhatsApp",
       "directionsClicks": "Clics en cómo llegar",
-      "bookingClicks": "Clics en reservar",
       "mapPinClicks": "Toques en el mapa",
+      "shareClicks": "Clics en compartir",
 
       "discoverySection": "Descubrimiento",
       "discoverySubtitle": "Qué busca y filtra la gente",
@@ -442,6 +458,14 @@
       "message": "El texto en {target} no se tocó. ¿Quieres actualizarlo también antes de guardar?",
       "switchTo": "Cambiar a {target}",
       "saveAnyway": "Guardar sin editar {target}",
+      "close": "Cerrar"
+    },
+    "unsavedChanges": {
+      "title": "Cambios sin guardar",
+      "message": "Tienes cambios sin guardar en esta página. ¿Qué quieres hacer?",
+      "saveAndLeave": "Guardar y salir",
+      "leaveWithoutSaving": "Salir sin guardar",
+      "stay": "Cancelar",
       "close": "Cerrar"
     },
     "articles": {

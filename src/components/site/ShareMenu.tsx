@@ -5,14 +5,23 @@ import { Check, Link2, Mail, MessageCircle, Send, Share2, X as XIcon } from "luc
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/Button";
+import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
+
+type ShareChannel = "native" | "whatsapp" | "facebook" | "twitter" | "telegram" | "email" | "copy_link";
 
 /** Share sheet: native share on mobile when available, plus direct links for
  * WhatsApp, Facebook, X and Telegram, email, and copy-link — all of which
  * work without any app installed since they open each network's own share
  * URL in a new tab/window. `variant`/`size`/`showLabel` let a caller promote
- * the trigger from its default small icon button to a full, labelled CTA. */
+ * the trigger from its default small icon button to a full, labelled CTA.
+ * `entity`, when given, tags every share action with what was being shared
+ * (`share_click` — see track.ts) so the admin's per-spot interaction table
+ * can attribute shares back to a specific spot/event/article, not just a
+ * site-wide total. Omit it for callers that don't need that attribution
+ * (there currently are none, but the prop stays optional rather than
+ * required so a future caller isn't forced to invent one). */
 export function ShareMenu({
   title,
   text,
@@ -23,6 +32,7 @@ export function ShareMenu({
   size = "icon",
   showLabel = false,
   className,
+  entity,
 }: {
   title: string;
   text?: string;
@@ -33,6 +43,7 @@ export function ShareMenu({
   size?: VariantProps<typeof buttonVariants>["size"];
   showLabel?: boolean;
   className?: string;
+  entity?: { type: "spot" | "event" | "article"; id: string; slug: string };
 }) {
   const t = useTranslations("share");
   const [open, setOpen] = useState(false);
@@ -101,12 +112,24 @@ export function ShareMenu({
     },
   ] as const;
 
-  const openLink = (href: string) => {
+  const trackShare = (channel: ShareChannel) => {
+    if (!entity) return;
+    track("share_click", {
+      entity: entity.type,
+      entity_id: entity.id,
+      entity_slug: entity.slug,
+      channel,
+    });
+  };
+
+  const openLink = (href: string, channel: ShareChannel) => {
+    trackShare(channel);
     window.open(href, "_blank", "noopener,noreferrer,width=600,height=640");
     setOpen(false);
   };
 
   const copyLink = async () => {
+    trackShare("copy_link");
     await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     toast.success(t("linkCopied"));
@@ -117,6 +140,9 @@ export function ShareMenu({
   const nativeShare = async () => {
     try {
       await navigator.share({ title, text: shareText, url: shareUrl });
+      // Only counted on a resolved share — a dismissed native sheet throws
+      // and is caught below, so it never reaches this line.
+      trackShare("native");
     } catch {
       // user dismissed the native sheet — nothing to do
     }
@@ -166,7 +192,7 @@ export function ShareMenu({
               key={key}
               type="button"
               role="menuitem"
-              onClick={() => openLink(href)}
+              onClick={() => openLink(href, key)}
               className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
             >
               <span

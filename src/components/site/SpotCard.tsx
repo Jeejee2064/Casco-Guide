@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Star, MapPin, Phone } from "lucide-react";
+import { Star, MapPin, Phone, Footprints } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { TAP_SPRING } from "./motion";
@@ -15,6 +16,7 @@ export function SpotCard({
   spot,
   onClick,
   activeVibes = [],
+  walkMinutes,
 }: {
   spot: Spot;
   onClick: () => void;
@@ -24,7 +26,12 @@ export function SpotCard({
    * you're seeing this" reads without adding to the image's visual noise —
    * the single category badge stays the only mark on the photo itself. */
   activeVibes?: SpotVibe[];
+  /** Walking time in minutes from whatever origin the caller measured
+   * against (see NearbySection) — omitted outside that "nearby" context, so
+   * the badge only ever shows where "nearby" actually means something. */
+  walkMinutes?: number;
 }) {
+  const tMap = useTranslations("map");
   const priceLabel = spot.price_range ?? "";
   const matchedVibe = spot.vibes.find((v) => activeVibes.includes(v));
   const accentColor = matchedVibe ? VIBE_META[matchedVibe].color : undefined;
@@ -70,6 +77,12 @@ export function SpotCard({
                 {t("featured")}
               </div>
             )} */}
+        {walkMinutes != null && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-1 text-xs font-semibold text-white">
+            <Footprints size={12} />
+            {tMap("walkTime", { mins: walkMinutes })}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col space-y-2.5 p-4">

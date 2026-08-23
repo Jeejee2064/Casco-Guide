@@ -14,6 +14,8 @@ import { ArticleBlocksEditor } from "./ArticleBlocksEditor";
 import { LangTabs } from "./LangTabs";
 import { TranslationSyncModal } from "./TranslationSyncModal";
 import { useTranslationSyncGuard } from "./useTranslationSyncGuard";
+import { useUnsavedChangesGuard } from "./useUnsavedChangesGuard";
+import { useUnsavedChanges } from "./UnsavedChangesContext";
 import { PreviewModeTabs, type PreviewMode } from "./PreviewModeTabs";
 import type { LinkablePlace } from "./PlaceLinkPicker";
 import { ArticleDetailView } from "@/components/site/ArticleDetailView";
@@ -130,6 +132,8 @@ export function ArticleForm({
   const [slugTouched, setSlugTouched] = useState(Boolean(article));
   const [lang, setLang] = useState<Lang>("es");
   const syncGuard = useTranslationSyncGuard(article ? fromArticle(article) : emptyValues());
+  const unsavedGuard = useUnsavedChangesGuard(article ? fromArticle(article) : emptyValues(), values);
+  const { registerSave } = useUnsavedChanges();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [pending, startTransition] = useTransition();
@@ -192,8 +196,23 @@ export function ArticleForm({
   const localized = (field: LocalizedField) => values[`${field}_${lang}` as keyof ArticleFormValues] as string;
   const setLocalized = (field: LocalizedField, val: string) => setValues((v) => ({ ...v, [`${field}_${lang}`]: val }));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveNow = () => {
+    startTransition(async () => {
+      const res = await upsertArticle(locale, { ...values, id: article?.id });
+      if (res?.error) toast.error(res.error);
+      else {
+        toast.success(t("saved"));
+        syncGuard.markSaved(values);
+        unsavedGuard.markSaved(values);
+      }
+    });
+  };
+
+  // Factored out of handleSubmit so the leave-confirmation modal's "Save
+  // and leave" option (see UnsavedChangesContext) can trigger the exact
+  // same validate → sync-guard → save flow as the Save button itself,
+  // without needing a fake FormEvent to hand it.
+  const attemptSave = () => {
     if (!values.title_es.trim()) {
       toast.error(t("missingTitle", { lang: "ES" }));
       setLang("es");
@@ -208,16 +227,18 @@ export function ArticleForm({
     saveNow();
   };
 
-  const saveNow = () => {
-    startTransition(async () => {
-      const res = await upsertArticle(locale, { ...values, id: article?.id });
-      if (res?.error) toast.error(res.error);
-      else {
-        toast.success(t("saved"));
-        syncGuard.markSaved(values);
-      }
-    });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    attemptSave();
   };
+
+  // Keeps the shared guard pointed at *this* form's save flow for as long
+  // as it's mounted — re-registering every render is cheap (a ref write)
+  // and keeps attemptSave's closure over `values`/`lang` always current.
+  useEffect(() => {
+    registerSave(attemptSave);
+    return () => registerSave(null);
+  });
 
   const titleIncomplete = { es: !values.title_es.trim(), en: !values.title_en.trim() };
 

@@ -277,7 +277,13 @@ export function EventDetailModal({
           >
             <Navigation size={16} /> {tSpot("getDirections")}
           </Button>
-          <ShareMenu title={event.title} direction="up" variant="primary" size="icon" />
+          <ShareMenu
+            title={event.title}
+            direction="up"
+            variant="primary"
+            size="icon"
+            entity={{ type: "event", id: event.id, slug: event.slug }}
+          />
         </div>
       </motion.div>
     </motion.div>

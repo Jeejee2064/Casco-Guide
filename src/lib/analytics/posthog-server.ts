@@ -96,11 +96,13 @@ export async function getAnalyticsSummary(
 }
 
 // ---------------------------------------------------------------------------
-// Traffic trend — one point per day, zero-filled so the chart never shows a
-// gap where a day simply had no traffic (HogQL only returns days that
-// happened at all).
+// Traffic trend — one point per day (or per hour for "today"), zero-filled
+// so the chart never shows a gap where a bucket simply had no traffic
+// (HogQL only returns buckets that actually happened).
 // ---------------------------------------------------------------------------
 
+// ISO date (daily points) or ISO hour-start (hourly, "today" points) — the
+// chart tells them apart by string length, see PageviewTrendChart.
 export type TrendPoint = { date: string; count: number };
 
 export async function getPageviewTrend(days = ANALYTICS_WINDOW_DAYS): Promise<TrendPoint[]> {
@@ -118,6 +120,30 @@ export async function getPageviewTrend(days = ANALYTICS_WINDOW_DAYS): Promise<Tr
     d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().slice(0, 10);
     points.push({ date: key, count: byDay.get(key) ?? 0 });
+  }
+  return points;
+}
+
+// Hour-by-hour for the current UTC calendar day, zero-filled from
+// 00:00 through the current hour (no future hours — there's nothing to
+// zero-fill them with that wouldn't be misleading).
+export async function getPageviewTrendToday(): Promise<TrendPoint[]> {
+  const response = await runHogQLQuery(
+    `SELECT toStartOfHour(timestamp) AS hour, count() AS n
+     FROM events
+     WHERE event = '$pageview' AND toDate(timestamp) = today()
+     GROUP BY hour ORDER BY hour`,
+  );
+  const byHour = new Map(
+    response.results.map(([hour, n]) => [String(hour).slice(0, 13), Number(n)]),
+  );
+
+  const now = new Date();
+  const currentHour = now.getUTCHours();
+  const points: TrendPoint[] = [];
+  for (let h = 0; h <= currentHour; h++) {
+    const key = `${now.toISOString().slice(0, 10)}T${String(h).padStart(2, "0")}`;
+    points.push({ date: `${key}:00:00`, count: byHour.get(key) ?? 0 });
   }
   return points;
 }
@@ -153,8 +179,70 @@ export function getTopArticles(days = ANALYTICS_WINDOW_DAYS, limit = 8) {
   return topByProperty("article_view", "article_slug", days, limit);
 }
 
-export function getTopEvents(days = ANALYTICS_WINDOW_DAYS, limit = 8) {
-  return topByProperty("event_view", "event_slug", days, limit);
+// ---------------------------------------------------------------------------
+// Per-spot engagement — every spot's own interaction count, not just a
+// top-8 list. This is what actually answers "how does spot X compare to
+// everyone else" (for a sales conversation about featured placement,
+// support, etc.), which a top-N list can't.
+// ---------------------------------------------------------------------------
+
+async function countsBySlug(
+  event: string,
+  slugProperty: string,
+  days: number,
+  extraWhere = "",
+): Promise<Record<string, number>> {
+  const response = await runHogQLQuery(
+    `SELECT properties.${slugProperty} AS slug, count() AS n
+     FROM events
+     WHERE event = '${event}' AND timestamp >= now() - INTERVAL ${days} DAY AND slug IS NOT NULL ${extraWhere}
+     GROUP BY slug
+     LIMIT 1000`,
+  );
+  return Object.fromEntries(response.results.map(([slug, n]) => [String(slug), Number(n)]));
+}
+
+export type SpotInteractionCounts = {
+  views: number;
+  whatsapp: number;
+  directions: number;
+  mapClicks: number;
+  shares: number;
+};
+
+// Keyed by spot_slug. `directions_click` and `share_click` are both shared
+// with other entity types (their `entity` prop says which), so those two
+// need the extra filter — the other three events only ever fire for spots.
+export async function getSpotInteractionCounts(
+  days = ANALYTICS_WINDOW_DAYS,
+): Promise<Record<string, SpotInteractionCounts>> {
+  const [views, whatsapp, directions, mapClicks, shares] = await Promise.all([
+    countsBySlug("spot_view", "spot_slug", days),
+    countsBySlug("whatsapp_click", "spot_slug", days),
+    countsBySlug("directions_click", "entity_slug", days, "AND properties.entity = 'spot'"),
+    countsBySlug("map_spot_click", "spot_slug", days),
+    countsBySlug("share_click", "entity_slug", days, "AND properties.entity = 'spot'"),
+  ]);
+
+  const slugs = new Set([
+    ...Object.keys(views),
+    ...Object.keys(whatsapp),
+    ...Object.keys(directions),
+    ...Object.keys(mapClicks),
+    ...Object.keys(shares),
+  ]);
+
+  const result: Record<string, SpotInteractionCounts> = {};
+  for (const slug of slugs) {
+    result[slug] = {
+      views: views[slug] ?? 0,
+      whatsapp: whatsapp[slug] ?? 0,
+      directions: directions[slug] ?? 0,
+      mapClicks: mapClicks[slug] ?? 0,
+      shares: shares[slug] ?? 0,
+    };
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,15 +253,22 @@ export function getTopEvents(days = ANALYTICS_WINDOW_DAYS, limit = 8) {
 export type EngagementCounts = {
   whatsappClicks: number;
   directionsClicks: number;
-  bookingClicks: number;
   mapPinClicks: number;
+  shareClicks: number;
 };
 
+// event_booking_click isn't queried here — the Book CTA it tracks lives on
+// Event detail pages, and Events are currently hidden site-wide (see the
+// admin dashboard/Sidebar), so this would just be a permanently-0 tile.
+// The event itself still fires and lands in PostHog either way, ready to
+// wire back in whenever Events comes back. `share_click` here is every
+// share (spot + event + article) — the per-spot breakdown below is where
+// that gets narrowed to spots only.
 const ENGAGEMENT_EVENTS = [
   "whatsapp_click",
   "directions_click",
-  "event_booking_click",
   "map_spot_click",
+  "share_click",
 ] as const;
 
 export async function getEngagementCounts(
@@ -191,8 +286,8 @@ export async function getEngagementCounts(
   return {
     whatsappClicks: byEvent.get("whatsapp_click") ?? 0,
     directionsClicks: byEvent.get("directions_click") ?? 0,
-    bookingClicks: byEvent.get("event_booking_click") ?? 0,
     mapPinClicks: byEvent.get("map_spot_click") ?? 0,
+    shareClicks: byEvent.get("share_click") ?? 0,
   };
 }
 

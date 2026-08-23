@@ -28,6 +28,7 @@ import { formatTime } from "@/lib/hours";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
+import { useSmartBack } from "@/lib/useSmartBack";
 import type { EventRow, Spot } from "@/lib/types/database";
 
 /** Full public detail page for an event — gallery, story, ticketing & host venue.
@@ -54,6 +55,7 @@ export function EventDetailView({
   const tSpot = useTranslations("spot");
   const tCat = useTranslations("eventCategory");
   const locale = useLocale();
+  const goBack = useSmartBack();
   const categoryMeta = EVENT_CATEGORY_META[event.category];
 
   const photos = event.photos.length > 0 ? event.photos : event.photo ? [{ url: event.photo }] : [];
@@ -112,12 +114,13 @@ export function EventDetailView({
             <ChevronLeft size={16} /> {td("back")}
           </button>
         ) : (
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={goBack}
             className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
           >
             <ChevronLeft size={16} /> {td("back")}
-          </Link>
+          </button>
         )}
 
         <PhotoGallery
@@ -241,12 +244,21 @@ export function EventDetailView({
             <Button type="button" variant="outline" className="flex-1" onClick={directions}>
               <Navigation size={16} /> {tSpot("getDirections")}
             </Button>
-            <ShareMenu title={event.title} variant="primary" size="icon" />
+            <ShareMenu
+              title={event.title}
+              variant="primary"
+              size="icon"
+              entity={{ type: "event", id: event.id, slug: event.slug }}
+            />
           </div>
         </aside>
       </div>
 
-      <NearbySection nearbySpots={nearbySpots} nearbyEvents={nearbyEvents} />
+      <NearbySection
+        nearbySpots={nearbySpots}
+        nearbyEvents={nearbyEvents}
+        origin={{ lat: event.latitude, lng: event.longitude }}
+      />
 
       {/* Mobile sticky action bar */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-border bg-surface p-3 sm:hidden">
@@ -263,7 +275,13 @@ export function EventDetailView({
         <Button type="button" variant="outline" className="flex-1" onClick={directions}>
           <Navigation size={16} /> {tSpot("getDirections")}
         </Button>
-        <ShareMenu title={event.title} direction="up" variant="primary" size="icon" />
+        <ShareMenu
+          title={event.title}
+          direction="up"
+          variant="primary"
+          size="icon"
+          entity={{ type: "event", id: event.id, slug: event.slug }}
+        />
       </div>
     </div>
   );

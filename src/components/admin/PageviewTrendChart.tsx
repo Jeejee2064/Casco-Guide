@@ -3,48 +3,82 @@
 import { useId, useState } from "react";
 
 type TrendPoint = { date: string; count: number };
+type RangeKey = "today" | "last7" | "last30";
 
 const WIDTH = 600;
-const HEIGHT = 160;
-const PAD_TOP = 12;
-const PAD_BOTTOM = 24;
-const PAD_X = 4;
+const HEIGHT = 220;
+const PAD_TOP = 16;
+const PAD_BOTTOM = 28;
+const PAD_LEFT = 34;
+const PAD_RIGHT = 8;
+const Y_TICKS = 4;
 
-/**
- * Daily pageviews over the window — single series, so no legend (the title
- * above it in the page already names it). Thin 2px line, a soft area fill
- * under it for readability, recessive day-of-month ticks, and a hover
- * crosshair + tooltip on the nearest point (see the dataviz interaction
- * guidance this project follows: any SVG/HTML chart ships with a hover
- * layer by default).
- */
-export function PageviewTrendChart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string }) {
+// A "nice" round step for the requested tick count — 1/2/5/10/20/50/100...
+// rather than whatever ugly fraction `max / tickCount` lands on, so the
+// y-axis reads 0/10/20/30 instead of 0/8.5/17/25.5.
+function niceStep(max: number, tickCount: number): number {
+  const raw = max / tickCount || 1;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const normalized = raw / magnitude;
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return niceNormalized * magnitude;
+}
+
+function isHourly(point: TrendPoint) {
+  return point.date.length > 10;
+}
+
+function formatAxisLabel(point: TrendPoint, locale: string | undefined) {
+  const d = new Date(point.date + (isHourly(point) ? "Z" : "T00:00:00Z"));
+  return isHourly(point)
+    ? d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
+    : d.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+function formatTooltipLabel(point: TrendPoint, locale: string | undefined) {
+  const d = new Date(point.date + (isHourly(point) ? "Z" : "T00:00:00Z"));
+  return isHourly(point)
+    ? d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
+    : d.toLocaleDateString(locale, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      });
+}
+
+function Chart({ data, emptyLabel }: { data: TrendPoint[]; emptyLabel: string }) {
   const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  const max = Math.max(...data.map((d) => d.count), 1);
-  const innerWidth = WIDTH - PAD_X * 2;
-  const innerHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
-  const stepX = data.length > 1 ? innerWidth / (data.length - 1) : 0;
-
-  const xAt = (i: number) => PAD_X + i * stepX;
-  const yAt = (count: number) => PAD_TOP + innerHeight - (count / max) * innerHeight;
-
-  const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(d.count)}`).join(" ");
-  const areaPath = `${linePath} L ${xAt(data.length - 1)} ${PAD_TOP + innerHeight} L ${xAt(0)} ${PAD_TOP + innerHeight} Z`;
-
   const totalCount = data.reduce((sum, d) => sum + d.count, 0);
-  if (totalCount === 0) {
+  if (totalCount === 0 || data.length === 0) {
     return (
-      <div className="flex h-[160px] items-center justify-center text-sm text-foreground/50">
+      <div className="flex h-[220px] items-center justify-center text-sm text-foreground/50">
         {emptyLabel}
       </div>
     );
   }
 
-  // A handful of evenly-spaced day-of-month ticks — enough to orient
-  // without cluttering a 30-point axis with 30 labels.
-  const tickEvery = Math.max(1, Math.round(data.length / 6));
+  const rawMax = Math.max(...data.map((d) => d.count));
+  const step = niceStep(rawMax, Y_TICKS);
+  const axisMax = step * Y_TICKS;
+
+  const innerWidth = WIDTH - PAD_LEFT - PAD_RIGHT;
+  const innerHeight = HEIGHT - PAD_TOP - PAD_BOTTOM;
+  const stepX = data.length > 1 ? innerWidth / (data.length - 1) : 0;
+
+  const xAt = (i: number) => PAD_LEFT + i * stepX;
+  const yAt = (count: number) => PAD_TOP + innerHeight - (count / axisMax) * innerHeight;
+
+  const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"} ${xAt(i)} ${yAt(d.count)}`).join(" ");
+  const areaPath = `${linePath} L ${xAt(data.length - 1)} ${PAD_TOP + innerHeight} L ${xAt(0)} ${PAD_TOP + innerHeight} Z`;
+
+  // A handful of evenly-spaced x ticks — enough to orient (which day/hour
+  // this is) without crowding a 24- or 30-point axis with a label per point.
+  const xTickEvery = Math.max(1, Math.round(data.length / 6));
+  const yTickValues = Array.from({ length: Y_TICKS + 1 }, (_, i) => i * step);
+
   const hovered = hoverIndex != null ? data[hoverIndex] : null;
 
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -70,6 +104,34 @@ export function PageviewTrendChart({ data, emptyLabel }: { data: TrendPoint[]; e
           </linearGradient>
         </defs>
 
+        {/* Y-axis gridlines + labels — recessive, text tokens only (never
+            the series color), so they orient without competing with the
+            line itself. */}
+        {yTickValues.map((value) => (
+          <g key={value}>
+            <line
+              x1={PAD_LEFT}
+              x2={WIDTH - PAD_RIGHT}
+              y1={yAt(value)}
+              y2={yAt(value)}
+              stroke="currentColor"
+              className="text-foreground/10"
+              strokeWidth={1}
+            />
+            <text
+              x={PAD_LEFT - 8}
+              y={yAt(value)}
+              dy={3}
+              fontSize={10}
+              textAnchor="end"
+              fill="currentColor"
+              className="text-foreground/45 tabular-nums"
+            >
+              {value.toLocaleString()}
+            </text>
+          </g>
+        ))}
+
         <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
         <path
           d={linePath}
@@ -80,20 +142,19 @@ export function PageviewTrendChart({ data, emptyLabel }: { data: TrendPoint[]; e
           strokeLinejoin="round"
         />
 
-        {/* Day-of-month ticks — recessive, text tokens only (never the
-            series color, per this project's chart convention). */}
+        {/* X-axis ticks */}
         {data.map((d, i) =>
-          i % tickEvery === 0 ? (
+          i % xTickEvery === 0 || i === data.length - 1 ? (
             <text
               key={d.date}
               x={xAt(i)}
-              y={HEIGHT - 6}
-              fontSize={9}
-              textAnchor="middle"
+              y={HEIGHT - 8}
+              fontSize={10}
+              textAnchor={i === data.length - 1 ? "end" : i === 0 ? "start" : "middle"}
               fill="currentColor"
-              className="text-foreground/40"
+              className="text-foreground/45"
             >
-              {new Date(d.date + "T00:00:00Z").getUTCDate()}
+              {formatAxisLabel(d, undefined)}
             </text>
           ) : null,
         )}
@@ -129,14 +190,53 @@ export function PageviewTrendChart({ data, emptyLabel }: { data: TrendPoint[]; e
           }}
         >
           <p className="font-bold tabular-nums">{hovered.count.toLocaleString()}</p>
-          <p className="text-foreground/50">
-            {new Date(hovered.date + "T00:00:00Z").toLocaleDateString(undefined, {
-              day: "numeric",
-              month: "short",
-            })}
-          </p>
+          <p className="text-foreground/50">{formatTooltipLabel(hovered, undefined)}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Daily pageviews (or hourly, for "today") with a range switch above it.
+ * All three ranges are fetched once server-side (see the analytics page)
+ * and handed to this client component together, so switching range is
+ * instant — no round trip.
+ */
+export function PageviewTrendChart({
+  series,
+  labels,
+}: {
+  series: { today: TrendPoint[]; last7: TrendPoint[]; last30: TrendPoint[] };
+  labels: { today: string; last7: string; last30: string; empty: string };
+}) {
+  const [range, setRange] = useState<RangeKey>("last30");
+
+  const options: { key: RangeKey; label: string }[] = [
+    { key: "today", label: labels.today },
+    { key: "last7", label: labels.last7 },
+    { key: "last30", label: labels.last30 },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="inline-flex rounded-full border border-border bg-background p-1 text-xs font-semibold">
+        {options.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setRange(key)}
+            aria-pressed={range === key}
+            className={`rounded-full px-3 py-1.5 transition-colors ${
+              range === key ? "bg-aqua text-white" : "text-foreground/60 hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <Chart data={series[range]} emptyLabel={labels.empty} />
     </div>
   );
 }

@@ -5,8 +5,6 @@ import {
   ChevronLeft,
   ChevronDown,
   Star,
-  Phone,
-  Globe,
   Mail,
   MapPin,
   Navigation,
@@ -18,7 +16,7 @@ import {
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { PhotoGallery } from "./PhotoGallery";
@@ -38,6 +36,7 @@ import { getSpotImage } from "@/lib/data/categoryImages";
 import { panamaWhatsAppUrl } from "@/lib/phone";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
+import { useSmartBack } from "@/lib/useSmartBack";
 import { cn } from "@/lib/utils";
 
 /** Full public detail page for a spot — gallery, story, hours, contact & directions.
@@ -68,6 +67,7 @@ export function SpotDetailView({
   const tVibe = useTranslations("vibe");
   const locale = useLocale();
   const router = useRouter();
+  const goBack = useSmartBack();
 
   const photos =
     spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
@@ -122,12 +122,13 @@ export function SpotDetailView({
           <ChevronLeft size={16} /> {td("back")}
         </button>
       ) : (
-        <Link
-          href="/"
+        <button
+          type="button"
+          onClick={goBack}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
         >
           <ChevronLeft size={16} /> {td("back")}
-        </Link>
+        </button>
       )}
 
       {/* The hero fades in only once it's actually loaded, and everything
@@ -322,40 +323,22 @@ export function SpotDetailView({
               <ExploreMapCard />
             </StaggerItem>
 
-            {(spot.phone || spot.website || spot.email) && (
+            {spot.email && (
               <StaggerItem>
                 <div className="space-y-3 rounded-[var(--radius-card)] border border-border bg-surface p-5">
-                  {spot.phone && (
-                    <a href={`tel:${spot.phone}`} className="flex items-center gap-2 text-sm text-foreground/70">
-                      <Phone size={15} /> {spot.phone}
-                    </a>
-                  )}
-                  {spot.website && (
-                    <a
-                      href={spot.website.startsWith("http") ? spot.website : `https://${spot.website}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-2 text-sm text-foreground/70"
-                    >
-                      <Globe size={15} /> {spot.website}
-                    </a>
-                  )}
-                  {spot.email && (
-                    <a href={`mailto:${spot.email}`} className="flex items-center gap-2 text-sm text-foreground/70">
-                      <Mail size={15} /> {spot.email}
-                    </a>
-                  )}
+                  <a href={`mailto:${spot.email}`} className="flex items-center gap-2 text-sm text-foreground/70">
+                    <Mail size={15} /> {spot.email}
+                  </a>
                 </div>
               </StaggerItem>
             )}
 
             <StaggerItem>
-              {/* No dedicated Call button — the phone (when there is one)
-                  is already a tap-to-call link in the contact card above;
-                  WhatsApp (when available) and Directions are the two
-                  actions people actually need here, so they get the full
-                  labeled, flex-1 treatment, with Share alongside as an
-                  icon-only utility. */}
+              {/* Phone/website intentionally not displayed here — WhatsApp
+                  (when available) and Directions are the two actions
+                  people actually need, so they get the full labeled,
+                  flex-1 treatment, with Share alongside as an icon-only
+                  utility. */}
               <div className="hidden gap-2 sm:flex">
                 {whatsappUrl && (
                   <Button type="button" variant="whatsapp" className="flex-1" onClick={openWhatsApp}>
@@ -365,7 +348,12 @@ export function SpotDetailView({
                 <Button type="button" variant="outline" className="flex-1" onClick={directions}>
                   <Navigation size={16} /> {t("getDirections")}
                 </Button>
-                <ShareMenu title={spot.name} variant="primary" size="icon" />
+                <ShareMenu
+                  title={spot.name}
+                  variant="primary"
+                  size="icon"
+                  entity={{ type: "spot", id: spot.id, slug: spot.slug }}
+                />
               </div>
             </StaggerItem>
           </Stagger>
@@ -401,7 +389,11 @@ export function SpotDetailView({
         </div>
       )}
 
-      <NearbySection nearbySpots={nearbySpots} nearbyEvents={nearbyEvents} />
+      <NearbySection
+        nearbySpots={nearbySpots}
+        nearbyEvents={nearbyEvents}
+        origin={{ lat: spot.latitude, lng: spot.longitude }}
+      />
 
       {/* Mobile sticky action bar — same Directions/WhatsApp-first layout
           as the desktop CTA row above. */}
@@ -414,7 +406,13 @@ export function SpotDetailView({
         <Button type="button" variant="outline" className="flex-1" onClick={directions}>
           <Navigation size={16} /> {t("getDirections")}
         </Button>
-        <ShareMenu title={spot.name} direction="up" variant="primary" size="icon" />
+        <ShareMenu
+          title={spot.name}
+          direction="up"
+          variant="primary"
+          size="icon"
+          entity={{ type: "spot", id: spot.id, slug: spot.slug }}
+        />
       </div>
     </div>
   );

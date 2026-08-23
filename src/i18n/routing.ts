@@ -31,6 +31,5 @@ export const routing = defineRouting({
     "/admin/articles": "/admin/articles",
     "/admin/articles/new": "/admin/articles/new",
     "/admin/articles/[id]": "/admin/articles/[id]",
-    "/admin/analytics": "/admin/analytics",
   },
 });

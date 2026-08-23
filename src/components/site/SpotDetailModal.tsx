@@ -7,8 +7,6 @@ import useEmblaCarousel from "embla-carousel-react";
 import {
   X,
   Star,
-  Phone,
-  Globe,
   Mail,
   MapPin,
   Navigation,
@@ -261,21 +259,6 @@ export function SpotDetailModal({
                   </button>
                 </div>
               )}
-              {spot.phone && (
-                <a href={`tel:${spot.phone}`} className="flex items-center gap-2 text-foreground/70">
-                  <Phone size={15} /> {spot.phone}
-                </a>
-              )}
-              {spot.website && (
-                <a
-                  href={spot.website.startsWith("http") ? spot.website : `https://${spot.website}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-foreground/70"
-                >
-                  <Globe size={15} /> {spot.website}
-                </a>
-              )}
               {spot.email && (
                 <a href={`mailto:${spot.email}`} className="flex items-center gap-2 text-foreground/70">
                   <Mail size={15} /> {spot.email}
@@ -332,7 +315,13 @@ export function SpotDetailModal({
           <Button variant="outline" className="flex-1" onClick={directions}>
             <Navigation size={16} /> {t("getDirections")}
           </Button>
-          <ShareMenu title={spot.name} direction="up" variant="primary" size="icon" />
+          <ShareMenu
+            title={spot.name}
+            direction="up"
+            variant="primary"
+            size="icon"
+            entity={{ type: "spot", id: spot.id, slug: spot.slug }}
+          />
         </div>
       </motion.div>
     </motion.div>

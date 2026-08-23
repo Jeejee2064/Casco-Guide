@@ -5,6 +5,7 @@ import { useRouter } from "@/i18n/navigation";
 import { SpotCard } from "./SpotCard";
 import { EventCard } from "./EventCard";
 import { Stagger, StaggerItem } from "./motion";
+import { haversineKm, walkingMinutes } from "@/lib/geo";
 import type { EventRow, Spot } from "@/lib/types/database";
 
 /**
@@ -13,13 +14,21 @@ import type { EventRow, Spot } from "@/lib/types/database";
  * lives right under the MiniMap in the aside instead — see ExploreMapCard.
  * Either rail can be empty and just doesn't render; if both are empty there's
  * nothing to show at all.
+ *
+ * `origin` is the coordinate of the page being viewed (the spot or event
+ * itself) — each nearby spot card gets its own walking-time badge computed
+ * straight-line from there, same math as the MiniMap/itinerary walk times
+ * (see lib/geo.ts). It's the page's own coordinate, not the visitor's, so
+ * unlike MiniMap's distance badge it never needs geolocation permission.
  */
 export function NearbySection({
   nearbySpots = [],
   nearbyEvents = [],
+  origin,
 }: {
   nearbySpots?: Spot[];
   nearbyEvents?: EventRow[];
+  origin: { lat: number; lng: number };
 }) {
   const t = useTranslations("discover");
   const router = useRouter();
@@ -49,6 +58,9 @@ export function NearbySection({
               <StaggerItem key={spot.id} className="w-[240px] shrink-0 sm:w-[260px]">
                 <SpotCard
                   spot={spot}
+                  walkMinutes={walkingMinutes(
+                    haversineKm(origin.lat, origin.lng, spot.latitude, spot.longitude),
+                  )}
                   onClick={() =>
                     router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
                   }

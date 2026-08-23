@@ -15,6 +15,8 @@ import { LangTabs } from "./LangTabs";
 import { LocationPickerModal } from "./LocationPickerModal";
 import { TranslationSyncModal } from "./TranslationSyncModal";
 import { useTranslationSyncGuard } from "./useTranslationSyncGuard";
+import { useUnsavedChangesGuard } from "./useUnsavedChangesGuard";
+import { useUnsavedChanges } from "./UnsavedChangesContext";
 import { ImportFromScreenshot } from "./ImportFromScreenshot";
 import { PreviewModeTabs, type PreviewMode } from "./PreviewModeTabs";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
@@ -178,6 +180,8 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
   const syncGuard = useTranslationSyncGuard(spot ? fromSpot(spot) : emptyValues());
+  const unsavedGuard = useUnsavedChangesGuard(spot ? fromSpot(spot) : emptyValues(), values);
+  const { registerSave } = useUnsavedChanges();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [pending, startTransition] = useTransition();
@@ -256,8 +260,23 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveNow = () => {
+    startTransition(async () => {
+      const res = await upsertSpot(locale, { ...values, id: spot?.id });
+      if (res?.error) toast.error(res.error);
+      else {
+        toast.success(t("saved"));
+        syncGuard.markSaved(values);
+        unsavedGuard.markSaved(values);
+      }
+    });
+  };
+
+  // Factored out of handleSubmit so the leave-confirmation modal's "Save
+  // and leave" option (see UnsavedChangesContext) can trigger the exact
+  // same validate → sync-guard → save flow as the Save button itself,
+  // without needing a fake FormEvent to hand it.
+  const attemptSave = () => {
     if (!values.name_es.trim()) {
       toast.error(t("missingName", { lang: "ES" }));
       setLang("es");
@@ -272,16 +291,18 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
     saveNow();
   };
 
-  const saveNow = () => {
-    startTransition(async () => {
-      const res = await upsertSpot(locale, { ...values, id: spot?.id });
-      if (res?.error) toast.error(res.error);
-      else {
-        toast.success(t("saved"));
-        syncGuard.markSaved(values);
-      }
-    });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    attemptSave();
   };
+
+  // Keeps the shared guard pointed at *this* form's save flow for as long
+  // as it's mounted — re-registering every render is cheap (a ref write)
+  // and keeps attemptSave's closure over `values`/`lang` always current.
+  useEffect(() => {
+    registerSave(attemptSave);
+    return () => registerSave(null);
+  });
 
   const nameIncomplete = { es: !values.name_es.trim(), en: !values.name_en.trim() };
 

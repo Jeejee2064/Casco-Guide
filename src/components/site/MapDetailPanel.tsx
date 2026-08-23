@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, type PanInfo } from "framer-motion";
+import { AnimatePresence, motion, useDragControls, type PanInfo } from "framer-motion";
 import { X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, type ReactNode } from "react";
@@ -64,6 +64,17 @@ export function MapDetailPanel({
 }) {
   const desktopRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  // The mobile sheet's whole body (photo included — see PanelBody) sits
+  // inside a scrollable `overflow-y-auto` div, which on touch devices wins
+  // the gesture over Framer Motion's own pointer-based drag detection: a
+  // swipe anywhere in that content area gets read as "scroll this", not
+  // "drag the sheet", so `drag="y"` alone never actually triggers from a
+  // real finger swipe (only from a mouse drag in a desktop browser's
+  // touch-emulation devtools, which don't have that conflict). Routing
+  // drag start through a dedicated handle — `dragListener={false}` below,
+  // paired with this handle's own `onPointerDown` — sidesteps the
+  // scrollable area entirely instead of fighting it.
+  const sheetDragControls = useDragControls();
 
   useEffect(() => {
     if (!content) return;
@@ -146,6 +157,8 @@ export function MapDetailPanel({
             exit={{ y: "100%" }}
             transition={{ duration: 0.28, ease: EASE_OUT }}
             drag="y"
+            dragListener={false}
+            dragControls={sheetDragControls}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={(_, info: PanInfo) => {
@@ -158,6 +171,16 @@ export function MapDetailPanel({
               content.featuredLabel && "map-detail-panel--featured",
             )}
           >
+            {/* Dedicated drag handle — not inside PanelBody's scrollable
+                content, so a swipe here always reaches Framer Motion's drag
+                detection instead of possibly being read as a scroll. */}
+            <div
+              onPointerDown={(e) => sheetDragControls.start(e)}
+              className="flex shrink-0 touch-none justify-center py-2.5"
+              aria-hidden="true"
+            >
+              <span className="h-1.5 w-10 rounded-full bg-foreground/20" />
+            </div>
             <PanelBody content={content} onClose={onClose} closeLabel={closeLabel} compact={compact} />
           </motion.div>
         )}
@@ -179,7 +202,15 @@ function PanelBody({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <div className="relative h-44 w-full shrink-0 bg-gradient-to-br from-aqua/20 to-coral/20">
+      {/* Shorter on mobile (h-28 vs h-44) — a full-height photo plus the
+          subtitle/meta/description block below it could push the actions
+          row, or even the close button above it, out of the visible sheet
+          on a short phone screen. The gradient at its foot blends the
+          photo into `--surface` (the card's own background, mobile only)
+          so the badge/title can sit right up against it instead of a hard
+          seam, which is what makes the shorter photo read as a deliberate
+          crop rather than just "less photo". */}
+      <div className="relative h-28 w-full shrink-0 bg-gradient-to-br from-aqua/20 to-coral/20 md:h-44">
         {content.photoUrl ? (
           // Sized/reformatted by the Next Image optimizer (AVIF/WebP, no
           // longer the full-res original) — a raw CSS `background-image`
@@ -196,6 +227,7 @@ function PanelBody({
             {content.photoFallback}
           </div>
         )}
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface to-transparent md:hidden" />
         <motion.button
           type="button"
           onClick={onClose}
@@ -221,21 +253,33 @@ function PanelBody({
           {content.categoryLabel}
         </span>
         <h3 className="font-heading text-lg font-extrabold leading-tight">{content.title}</h3>
+        {/* Address/date (subtitle) and the fuller description read fine on
+            the roomier desktop side panel, but on the mobile sheet they're
+            exactly what used to push the close button out of view — mobile
+            keeps only the title, the status/rating-style meta line below,
+            and the Read more action; the rest is one tap away on the full
+            page instead of duplicated here. */}
         {!compact && content.subtitle && (
-          <p className="text-sm text-foreground/60">{content.subtitle}</p>
+          <p className="hidden text-sm text-foreground/60 md:block">{content.subtitle}</p>
         )}
         {!compact && content.metaItems.length > 0 && (
           <div className="flex flex-wrap gap-3 text-sm font-semibold opacity-80">
-            {content.metaItems.map((item) => (
-              <span key={item}>{item}</span>
+            {/* First item is always the "is it open right now" status (see
+                SpotMap/ItineraryMap's `metaItems` — hours status first,
+                rating/price after) — the one line mobile keeps; anything
+                past it is desktop-only. */}
+            {content.metaItems.map((item, i) => (
+              <span key={item} className={i > 0 ? "hidden md:inline" : undefined}>
+                {item}
+              </span>
             ))}
           </div>
         )}
         {!compact && content.description && (
-          <p className="text-sm leading-relaxed text-foreground/70">{content.description}</p>
+          <p className="hidden text-sm leading-relaxed text-foreground/70 md:block">{content.description}</p>
         )}
 
-        <div className={cn("flex gap-2", !compact && content.description ? "pt-3" : "pt-1")}>
+        <div className={cn("flex gap-2 pt-1", !compact && content.description && "md:pt-3")}>
           {content.actions.map((action) => (
             <motion.button
               key={action.label}

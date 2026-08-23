@@ -20,6 +20,22 @@ type AnalyticsEvent =
     }
   | { name: "whatsapp_click"; props: { spot_id: string; spot_slug: string } }
   | { name: "event_booking_click"; props: { event_id: string; event_slug: string } }
+  | {
+      name: "share_click";
+      props: {
+        entity: "spot" | "event" | "article";
+        entity_id: string;
+        entity_slug: string;
+        channel:
+          | "native"
+          | "whatsapp"
+          | "facebook"
+          | "twitter"
+          | "telegram"
+          | "email"
+          | "copy_link";
+      };
+    }
   | { name: "pwa_install_prompt_shown"; props: { variant: "ios" | "installable" } }
   | { name: "pwa_install_accepted"; props: Record<string, never> }
   | { name: "pwa_install_dismissed"; props: { variant: "ios" | "installable" } };
