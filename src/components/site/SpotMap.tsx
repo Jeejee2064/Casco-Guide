@@ -19,53 +19,35 @@ import {
   MapPin,
   Search,
   SearchX,
-  SlidersHorizontal,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { EASE_OUT, TAP_SPRING } from "./motion";
+import { TAP_SPRING } from "./motion";
 import { MapDetailPanel, type DetailPanelContent } from "./MapDetailPanel";
 import { useHeaderHeight } from "./useHeaderHeight";
 import { useNightMode } from "./NightModeContext";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META } from "@/lib/categories";
-import { EVENT_CATEGORIES, EVENT_CATEGORY_META } from "@/lib/eventCategories";
+import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
+import { VIBE_META } from "@/lib/vibes";
 import { getSpotImage } from "@/lib/data/categoryImages";
-import { isOpenNow, formatTime } from "@/lib/hours";
-import type { EventCategory, EventRow, PriceRange, Spot, SpotCategory } from "@/lib/types/database";
+import { formatTime } from "@/lib/hours";
+import type { EventRow, Spot, SpotCategory, SpotVibe } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
 type MapMode = "spots" | "events";
 
-const PRICE_LEVELS: PriceRange[] = ["$", "$$", "$$$", "$$$$"];
-type EventPriceFilter = "free" | "paid";
-const EVENT_PRICE_FILTERS: EventPriceFilter[] = ["free", "paid"];
-type EventDateFilter = "all" | "today" | "week" | "weekend";
-
 // Casco Viejo, Panama City — used when there's nothing to fit bounds to.
 const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
 const DEFAULT_ZOOM = 15;
-const PANAMA_TZ = "America/Panama"; // UTC-5, no DST — same convention as lib/hours.ts
 
-/** "YYYY-MM-DD" for `date`, evaluated in Panama's timezone — matches the
- * plain date strings events are stored with, so it's safe to compare directly. */
-function panamaDateKey(date: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: PANAMA_TZ }).format(date);
-}
-
-function matchesEventDateFilter(event: EventRow, filter: EventDateFilter): boolean {
-  if (filter === "all") return true;
-  const today = new Date(`${panamaDateKey(new Date())}T00:00:00`);
-  const eventDate = new Date(`${event.date}T00:00:00`);
-  const diffDays = Math.round((eventDate.getTime() - today.getTime()) / 86_400_000);
-  if (diffDays < 0) return false;
-
-  if (filter === "today") return diffDays === 0;
-  if (filter === "week") return diffDays <= 6;
-  // weekend: the coming Saturday/Sunday, within the next week
-  const dow = eventDate.getDay(); // 0=Sun..6=Sat
-  return diffDays <= 7 && (dow === 0 || dow === 6);
-}
+// Gold marks a pin whose spot matches *more than one* of the currently
+// selected vibe chips — same warm gold as --color-gold/--night-gold in
+// globals.css (ratings, featured picks), reused here so "this spot is an
+// overlap" reads as premium rather than picking one of its matching vibes'
+// colors arbitrarily (which would look inconsistent and jump around as the
+// filter changes).
+const MULTI_VIBE_COLOR = "#d4a24c";
+const MULTI_VIBE_COLOR_NIGHT = "#ffcf6b";
 
 const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
@@ -145,13 +127,13 @@ function iconSvg(shapes: IconShape[], size = 15): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 }
 
-function pinHtml(color: string, category: SpotCategory, featured: boolean): string {
+function pinHtml(color: string, shapes: IconShape[], featured: boolean): string {
   // `color` (not just `background`) is set here so Night Mode's glow rule
   // (globals.css) can pick it up via `currentColor` — one box-shadow rule
-  // then matches whichever category a pin belongs to, no per-category CSS.
+  // then matches whichever category/vibe a pin belongs to, no per-category CSS.
   return `
     <span class="spot-pin" style="background:${color};color:${color}">
-      <span class="spot-pin__icon">${iconSvg(CATEGORY_ICON_SHAPES[category])}</span>
+      <span class="spot-pin__icon">${iconSvg(shapes)}</span>
       ${featured ? '<span class="spot-pin__star">★</span>' : ""}
     </span>
   `;
@@ -177,6 +159,9 @@ export function SpotMap({
   className,
   heightClassName = "h-[65vh] min-h-[420px]",
   fullScreen = false,
+  useVibeIcons = false,
+  activeVibes = [],
+  onSelectionChange,
 }: {
   spots: Spot[];
   /** Optional — rendered as a second pin layer using the /public/icons badges. */
@@ -190,8 +175,33 @@ export function SpotMap({
   /** Breaks out of the page flow to fill the viewport below the header,
    * instead of the usual rounded, height-limited widget. */
   fullScreen?: boolean;
+  /** Mirrors ExploreFilterBar's Classic↔Vibes mode — when true, spot pins
+   * recolor to a vibe's color (VIBE_META, the same palette as the vibe
+   * chips/VibesModal cards) instead of its category's color. The glyph
+   * itself stays the category icon either way (see CATEGORY_ICON_SHAPES
+   * below) — only the tint changes. Which vibe (or gold, for an overlap)
+   * each pin uses is driven by `activeVibes` below. */
+  useVibeIcons?: boolean;
+  /** The vibe chips currently selected in ExploreFilterBar ("All" = []).
+   * Multi-select: each pin is painted whichever *one* of these it matches
+   * (the spots on screen were already narrowed to ones matching at least
+   * one — see MapExplorerSection), except a spot matching more than one, which
+   * gets a distinct gold instead of picking one of its matches arbitrarily
+   * (see MULTI_VIBE_COLOR above). With vibes mode on but nothing selected,
+   * each pin instead falls back to its own first-tagged vibe, since there's
+   * no selection to match against. */
+  activeVibes?: SpotVibe[];
+  /** Fires whenever a pin becomes selected/deselected (i.e. the detail
+   * panel/sheet opens or closes) — lets a parent hide its own floating UI
+   * that would otherwise overlap the mobile bottom sheet. The sheet is
+   * `position: fixed` inside *this* component's own stacking context (see
+   * the outer `fixed z-10` wrapper below), so no z-index in here can ever
+   * put it above a sibling fixed element outside that context — hiding
+   * that sibling is the fix, hence this callback instead of "just raise
+   * the sheet's z-index further". Currently unused (no page has floating UI
+   * left that would overlap), kept for the next thing that does. */
+  onSelectionChange?: (hasSelection: boolean) => void;
 }) {
-  const t = useTranslations("filters");
   const tSpot = useTranslations("spot");
   const tCategory = useTranslations("category");
   const tEventCategory = useTranslations("eventCategory");
@@ -199,7 +209,6 @@ export function SpotMap({
   const tEmpty = useTranslations("empty");
   const tMap = useTranslations("map");
   const tNav = useTranslations("nav");
-  const tNight = useTranslations("night");
   const locale = useLocale();
   const router = useRouter();
   const { isNight } = useNightMode();
@@ -219,12 +228,6 @@ export function SpotMap({
   // `query` here only powers the (currently dormant, hasEvents-gated)
   // events-mode search, which that shared bar doesn't cover.
   const [query, setQuery] = useState("");
-  const [prices, setPrices] = useState<PriceRange[]>([]);
-  const [openNow, setOpenNow] = useState(false);
-  const [eventCategories, setEventCategories] = useState<EventCategory[]>([]);
-  const [eventPrices, setEventPrices] = useState<EventPriceFilter[]>([]);
-  const [eventDate, setEventDate] = useState<EventDateFilter>("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [locating, setLocating] = useState(false);
 
@@ -303,21 +306,6 @@ export function SpotMap({
     [onOpenEvent, router],
   );
 
-  const toggle = <T,>(list: T[], value: T, setter: (v: T[]) => void) =>
-    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
-
-  const resetFilters = () => {
-    if (mode === "spots") {
-      setPrices([]);
-      setOpenNow(false);
-    } else {
-      setQuery("");
-      setEventCategories([]);
-      setEventPrices([]);
-      setEventDate("all");
-    }
-  };
-
   // Fullscreen mode covers the whole viewport — lock the page behind it so
   // there's nothing to accidentally scroll past.
   useEffect(() => {
@@ -329,28 +317,16 @@ export function SpotMap({
     };
   }, [fullScreen]);
 
-  // `spots` is already filtered by search/category/vibe (see ExploreSection)
-  // — this only layers price/openNow on top of that.
+  // `spots` is already filtered by search/category/vibe (see
+  // MapExplorerSection) — this only drops any without coordinates.
   const filteredSpots = useMemo(() => {
-    return spots.filter((spot) => {
-      if (spot.latitude == null || spot.longitude == null) return false;
-      if (prices.length && (!spot.price_range || !prices.includes(spot.price_range)))
-        return false;
-      if (openNow && !isOpenNow(spot)) return false;
-      return true;
-    });
-  }, [spots, prices, openNow]);
+    return spots.filter((spot) => spot.latitude != null && spot.longitude != null);
+  }, [spots]);
 
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
     return events.filter((event) => {
       if (event.latitude == null || event.longitude == null) return false;
-      if (eventCategories.length && !eventCategories.includes(event.category)) return false;
-      if (eventPrices.length) {
-        const isFree = !event.price || event.price <= 0;
-        if (!eventPrices.includes(isFree ? "free" : "paid")) return false;
-      }
-      if (!matchesEventDateFilter(event, eventDate)) return false;
       if (q) {
         const haystack = [event.title, event.description, event.organizer, ...(event.tags ?? [])]
           .filter(Boolean)
@@ -360,20 +336,69 @@ export function SpotMap({
       }
       return true;
     });
-  }, [events, query, eventCategories, eventPrices, eventDate]);
+  }, [events, query]);
 
-  const hasQuery = query.trim().length > 0;
-  const hasActiveFilters =
-    mode === "spots"
-      ? prices.length > 0 || openNow
-      : hasQuery || eventCategories.length > 0 || eventPrices.length > 0 || eventDate !== "all";
-  const activeFilterCount =
-    mode === "spots"
-      ? prices.length + (openNow ? 1 : 0)
-      : eventCategories.length +
-        eventPrices.length +
-        (eventDate !== "all" ? 1 : 0) +
-        (hasQuery ? 1 : 0);
+  // Autocomplete dropdown under the events search — title matches only (not
+  // the broader description/organizer/tags haystack `filteredEvents` above
+  // matches on), a "jump straight to an event you already have in mind"
+  // shortcut alongside the live-filtered pin layer. Same pattern as
+  // ExploreFilterBar's spot-name autocomplete.
+  const [isEventSearchFocused, setIsEventSearchFocused] = useState(false);
+  const [activeEventSuggestion, setActiveEventSuggestion] = useState(-1);
+  const eventSearchWrapperRef = useRef<HTMLDivElement>(null);
+
+  const eventSuggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const startsWith: EventRow[] = [];
+    const contains: EventRow[] = [];
+    for (const event of events) {
+      const title = event.title.toLowerCase();
+      if (title.startsWith(q)) startsWith.push(event);
+      else if (title.includes(q)) contains.push(event);
+    }
+    return [...startsWith, ...contains].slice(0, 6);
+  }, [query, events]);
+
+  const showEventSuggestions = isEventSearchFocused && eventSuggestions.length > 0;
+
+  const selectEventSuggestion = useCallback(
+    (event: EventRow) => {
+      setIsEventSearchFocused(false);
+      setSelectedSpot(null);
+      setSelectedEvent(event);
+      revealSelection(event.latitude, event.longitude);
+    },
+    [revealSelection],
+  );
+
+  const handleEventSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showEventSuggestions) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveEventSuggestion((i) => Math.min(i + 1, eventSuggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveEventSuggestion((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && activeEventSuggestion >= 0) {
+      e.preventDefault();
+      selectEventSuggestion(eventSuggestions[activeEventSuggestion]);
+    } else if (e.key === "Escape") {
+      setIsEventSearchFocused(false);
+    }
+  };
+
+  // Closes the dropdown on an outside click — see ExploreFilterBar's
+  // identical pattern for why not a plain onBlur.
+  useEffect(() => {
+    if (!isEventSearchFocused) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (!eventSearchWrapperRef.current?.contains(e.target as Node)) setIsEventSearchFocused(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isEventSearchFocused]);
+
   const visibleCount = mode === "spots" ? filteredSpots.length : filteredEvents.length;
 
   // Init the map once, client-side only.
@@ -389,8 +414,6 @@ export function SpotMap({
         zoom: DEFAULT_ZOOM,
         zoomControl: false,
       });
-      // top-right, not bottom-right — keeps clear of the fixed floating
-      // filters button pinned to the viewport's bottom-right.
       L.control.zoom({ position: "topright" }).addTo(map);
 
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
@@ -506,10 +529,33 @@ export function SpotMap({
       const bounds: [number, number][] = [];
 
       filteredSpots.forEach((spot) => {
-        const meta = CATEGORY_META[spot.category];
+        // In vibes mode a spot pin recolors to a vibe instead of its
+        // category — with chips selected (activeVibes), each pin uses
+        // whichever *one* of them the spot matches, since everything on
+        // screen already matches at least one (see MapExplorerSection's
+        // filteredSpots). A spot matching more than one selected vibe gets
+        // a distinct gold rather than an arbitrary pick among its matches.
+        // On "All" (nothing selected) each pin falls back to its own
+        // first-tagged vibe instead. The glyph itself always stays the
+        // spot's category icon (a café pin still reads as a café) — only
+        // the color swaps, so vibes mode is a tint on the same map, not a
+        // different icon set.
+        const matchingVibes = activeVibes.filter((v) => spot.vibes.includes(v));
+        let color: string;
+        if (!useVibeIcons) {
+          color = CATEGORY_META[spot.category].color;
+        } else if (matchingVibes.length > 1) {
+          color = isNight ? MULTI_VIBE_COLOR_NIGHT : MULTI_VIBE_COLOR;
+        } else {
+          const pinVibe = matchingVibes[0] ?? spot.vibes[0];
+          color = VIBE_META[pinVibe].color;
+        }
+        const shapes = CATEGORY_ICON_SHAPES[spot.category];
         const icon = L.divIcon({
           className: "spot-pin-marker",
-          html: pinHtml(meta.color, spot.category, spot.is_featured),
+          // Featured star hidden site-wide for now — swap back to
+          // `spot.is_featured` once there is real featured content.
+          html: pinHtml(color, shapes, false),
           iconSize: [34, 34],
           iconAnchor: [17, 34],
           popupAnchor: [0, -32],
@@ -537,7 +583,7 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [ready, filteredSpots, mode, revealSelection]);
+  }, [ready, filteredSpots, mode, revealSelection, useVibeIcons, activeVibes, isNight]);
 
   // Render event pins on their own layer, using the /public/icons badges.
   useEffect(() => {
@@ -558,7 +604,9 @@ export function SpotMap({
         const meta = EVENT_CATEGORY_META[event.category];
         const icon = L.divIcon({
           className: "event-pin-marker",
-          html: eventPinHtml(meta.icon, event.is_featured),
+          // Featured star hidden site-wide for now — swap back to
+          // `event.is_featured` once there is real featured content.
+          html: eventPinHtml(meta.icon, false),
           iconSize: [36, 36],
           iconAnchor: [18, 36],
           popupAnchor: [0, -32],
@@ -689,7 +737,10 @@ export function SpotMap({
       return {
         photoUrl: getSpotImage(selectedSpot),
         photoFallback: <Icon size={30} />,
-        featuredLabel: selectedSpot.is_featured ? tNight("featuredBadge") : undefined,
+        // Featured badge hidden site-wide for now — swap back to
+        // `selectedSpot.is_featured ? useTranslations("night")("featuredBadge") : undefined`
+        // once there is real featured content.
+        featuredLabel: undefined,
         categoryLabel: tCategory(selectedSpot.category),
         categoryColor: meta.color,
         categoryIcon: <Icon size={13} />,
@@ -744,12 +795,20 @@ export function SpotMap({
     tEventCategory,
     tSpot,
     tEvents,
-    tNight,
     handleOpenSpot,
     handleOpenEvent,
   ]);
 
   const hasSelection = panelContent !== null;
+  // Also fires once on unmount with `false` — otherwise a parent using this
+  // to gate its own floating UI would keep whatever the last selection
+  // state was and never show that UI again after a map session that ended
+  // with a pin selected.
+  useEffect(() => {
+    onSelectionChange?.(hasSelection);
+    return () => onSelectionChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSelection]);
 
   return (
     <div
@@ -794,9 +853,9 @@ export function SpotMap({
             hasSelection && "md:hidden",
           )}
         >
-          {/* TODO: ExploreFilterBar (rendered by ExploreSection, above this
-              component) now also occupies this top strip — reconsider this
-              pill's position together with that bar when events are
+          {/* TODO: ExploreFilterBar (rendered by MapExplorerSection, above
+              this component) now also occupies this top strip — reconsider
+              this pill's position together with that bar when events are
               re-enabled, rather than rediscovering the overlap from scratch. */}
           {hasEvents && (
             <div className="glass relative inline-flex rounded-full border border-border p-1 shadow-lg">
@@ -839,17 +898,81 @@ export function SpotMap({
               component — only the (dormant, hasEvents-gated) events mode
               still needs its own search here. */}
           {mode === "events" && (
-            <div className="relative w-full">
+            <div ref={eventSearchWrapperRef} className="relative w-full">
               <Search
                 size={17}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40"
               />
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  // Stale highlight from a previous query shouldn't linger
+                  // once the list underneath it has changed.
+                  setActiveEventSuggestion(-1);
+                }}
+                onFocus={() => setIsEventSearchFocused(true)}
+                onKeyDown={handleEventSearchKeyDown}
                 placeholder={tEvents("searchPlaceholder")}
+                role="combobox"
+                aria-expanded={showEventSuggestions}
+                aria-controls="map-event-search-suggestions"
+                aria-autocomplete="list"
+                aria-activedescendant={
+                  activeEventSuggestion >= 0
+                    ? `map-event-search-suggestion-${activeEventSuggestion}`
+                    : undefined
+                }
+                autoComplete="off"
                 className="glass h-11 w-full rounded-full border border-border pl-10 pr-4 text-sm shadow-lg outline-none focus:ring-2 focus:ring-aqua"
               />
+
+              {/* Autocomplete dropdown — title matches only (see
+                  eventSuggestions above); selecting one opens the same
+                  detail panel a marker click would, panned into view. */}
+              <AnimatePresence>
+                {showEventSuggestions && (
+                  <motion.div
+                    id="map-event-search-suggestions"
+                    role="listbox"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className="glass absolute inset-x-0 top-full z-10 mt-1.5 overflow-hidden rounded-2xl border border-border py-1.5 shadow-lg"
+                  >
+                    {eventSuggestions.map((event, i) => {
+                      const meta = EVENT_CATEGORY_META[event.category];
+                      return (
+                        <button
+                          key={event.id}
+                          id={`map-event-search-suggestion-${i}`}
+                          role="option"
+                          aria-selected={i === activeEventSuggestion}
+                          type="button"
+                          onClick={() => selectEventSuggestion(event)}
+                          onMouseEnter={() => setActiveEventSuggestion(i)}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors",
+                            i === activeEventSuggestion ? "bg-foreground/5" : "hover:bg-foreground/5",
+                          )}
+                        >
+                          <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                            style={{ background: `${meta.color}26` }}
+                          >
+                            <Image src={meta.icon} alt="" width={14} height={14} />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate font-semibold">{event.title}</span>
+                          <span className="shrink-0 text-xs text-foreground/45">
+                            {tEventCategory(event.category)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -887,194 +1010,6 @@ export function SpotMap({
           </div>
         )}
       </div>
-
-      {/* Floating, always-reachable filters trigger — bottom-right thumb zone, survives scroll. */}
-      <div className="safe-bottom fixed bottom-4 right-4 z-[1200]">
-        <motion.button
-          onClick={() => setFiltersOpen((v) => !v)}
-          whileTap={{ scale: 0.94 }}
-          transition={TAP_SPRING}
-          className={cn(
-            "flex h-12 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold shadow-lg transition-colors",
-            hasActiveFilters ? "border-transparent bg-magenta text-white" : "glass border-border",
-          )}
-        >
-          <SlidersHorizontal size={16} />
-          {t("title")}
-          {hasActiveFilters && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 text-[10px] text-white">
-              {activeFilterCount}
-            </span>
-          )}
-        </motion.button>
-      </div>
-
-      <AnimatePresence>
-        {filtersOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setFiltersOpen(false)}
-              className="fixed inset-0 z-[1300] bg-black/30 backdrop-blur-[2px]"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={{ duration: 0.22, ease: EASE_OUT }}
-              className="safe-bottom fixed inset-x-4 bottom-20 z-[1300] mx-auto max-w-md space-y-4 rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-2xl sm:p-5"
-            >
-              {/* The mode toggle up on the map gets covered by this sheet's own
-                  backdrop, so restate scope here — otherwise it's ambiguous
-                  which layer these chips are about to filter. */}
-              {hasEvents && (
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/50">
-                  {mode === "spots" ? <MapPin size={13} /> : <CalendarDays size={13} />}
-                  {tNav(mode)}
-                </div>
-              )}
-
-              {mode === "spots" ? (
-                <>
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                      {t("price")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {PRICE_LEVELS.map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => toggle(prices, p, setPrices)}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-xs font-bold",
-                            prices.includes(p)
-                              ? "border-aqua bg-aqua text-white"
-                              : "border-border bg-transparent",
-                          )}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <label className="flex items-center gap-2 text-sm font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={openNow}
-                        onChange={(e) => setOpenNow(e.target.checked)}
-                        className="h-4 w-4 accent-lime"
-                      />
-                      {t("openNow")}
-                    </label>
-
-                    {hasActiveFilters && (
-                      <button
-                        onClick={resetFilters}
-                        className="flex items-center gap-1 text-xs font-semibold text-coral"
-                      >
-                        <X size={13} /> {t("reset")}
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                      {t("category")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {EVENT_CATEGORIES.map((cat) => {
-                        const meta = EVENT_CATEGORY_META[cat];
-                        const isActive = eventCategories.includes(cat);
-                        return (
-                          <button
-                            key={cat}
-                            onClick={() => toggle(eventCategories, cat, setEventCategories)}
-                            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all"
-                            style={{
-                              backgroundColor: isActive ? meta.color : `${meta.color}1A`,
-                              color: isActive ? "white" : meta.color,
-                            }}
-                          >
-                            <Image src={meta.icon} alt="" width={14} height={14} />
-                            {tEventCategory(cat)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                      {t("price")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {EVENT_PRICE_FILTERS.map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => toggle(eventPrices, p, setEventPrices)}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-xs font-bold",
-                            eventPrices.includes(p)
-                              ? "border-aqua bg-aqua text-white"
-                              : "border-border bg-transparent",
-                          )}
-                        >
-                          {p === "free" ? tEvents("free") : tEvents("paid")}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-foreground/50">
-                      {t("date")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        [
-                          ["today", t("dateToday")],
-                          ["week", t("dateWeek")],
-                          ["weekend", t("dateWeekend")],
-                        ] satisfies [EventDateFilter, string][]
-                      ).map(([value, label]) => (
-                        <button
-                          key={value}
-                          onClick={() => setEventDate((current) => (current === value ? "all" : value))}
-                          className={cn(
-                            "rounded-full border px-3 py-1.5 text-xs font-bold",
-                            eventDate === value
-                              ? "border-aqua bg-aqua text-white"
-                              : "border-border bg-transparent",
-                          )}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {hasActiveFilters && (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={resetFilters}
-                        className="flex items-center gap-1 text-xs font-semibold text-coral"
-                      >
-                        <X size={13} /> {t("reset")}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

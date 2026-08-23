@@ -164,7 +164,7 @@ export interface EventRecord extends Omit<EventRow, "title" | "description" | "a
 // and "itinerary" additionally render `blocks` as, respectively, a numbered
 // ranking (e.g. "Top 5 vegan spots"), a full-bleed photo sequence, or a
 // chronological day plan (e.g. "48h in Casco Viejo") — each block's `title`
-// doubles as its time-of-day label (e.g. "9:00 AM" or "Morning").
+// doubles as its time-of-day label, derived from `time` (see below).
 export type ArticleLayout = "standard" | "list" | "photo-story" | "itinerary";
 
 /** One structured item inside a "list"/"photo-story"/"itinerary" article —
@@ -177,6 +177,12 @@ export interface ArticleBlock {
   ref_type: "spot" | "event" | null;
   ref_id: string | null;
   ref_slug: string | null;
+  /** "itinerary" layout only — 24h "HH:MM" picked via a native time input
+   * (ArticleBlocksEditor), the source of truth `title_es`/`title_en` are
+   * formatted from on every change. Not locale-split — a time of day reads
+   * the same regardless of language, only its rendered label differs.
+   * `null` for every other layout, or a block whose time hasn't been set. */
+  time: string | null;
 }
 
 export interface ArticleBlockRecord extends Omit<ArticleBlock, "title" | "text"> {

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Sun/moon switch that flips the whole site into Night Mode (see
- * NightModeContext + the `.night` rules in globals.css). Deliberately its
+ * NightModeContext + the `html[data-night]` rules in globals.css). Deliberately its
  * own control rather than folded into the Classic/Vibes segmented control
  * next to it — this toggles a site-wide theme, not a filter.
  */

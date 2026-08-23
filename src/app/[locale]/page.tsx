@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { ExploreSection } from "@/components/site/ExploreSection";
-import { ExploreViewProvider } from "@/components/site/ExploreViewContext";
-import { ExploreFilterProvider } from "@/components/site/ExploreFilterContext";
-// Events temporarily hidden site-wide — see the commented block below.
-// import { EventCard } from "@/components/site/EventCard";
-import { AboutCascoViejo } from "@/components/site/AboutCascoViejo";
+import { AboutIntro } from "@/components/site/AboutIntro";
+import { AboutFaq } from "@/components/site/AboutFaq";
+import { FeaturedSpotsSection } from "@/components/site/FeaturedSpotsSection";
+import { MapTeaserSection } from "@/components/site/MapTeaserSection";
+import { VibeTeaserSection } from "@/components/site/VibeTeaserSection";
 import { Hero } from "@/components/site/Hero";
 import { InstallPwaPrompt } from "@/components/site/InstallPwaPrompt";
-// import { Stagger, StaggerItem } from "@/components/site/motion";
 import { getSpots } from "@/lib/data/spots";
-// import { getEvents } from "@/lib/data/events";
 import { getArticles } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
 import type { Locale } from "@/i18n/routing";
@@ -21,6 +17,10 @@ import type { Locale } from "@/i18n/routing";
 // How many of the latest published articles to feature on the home page —
 // the rest are one click away via the "see all articles" link to /articles.
 const HOME_ARTICLES_COUNT = 3;
+// How many (highest-rated) spots each homepage teaser leads with — the full
+// set lives one click away on /spots (grid) and /map.
+const FEATURED_SPOTS_COUNT = 6;
+const MAP_TEASER_SPOTS_COUNT = 12;
 
 export async function generateMetadata({
   params,
@@ -42,61 +42,48 @@ export default async function HomePage({
   const { locale } = (await params) as { locale: Locale };
   setRequestLocale(locale);
 
-  const [spots, articles] = await Promise.all([
-    getSpots(locale),
-    // getEvents(locale),
-    getArticles(locale),
-  ]);
-  // const tEvents = await getTranslations("events");
+  const [spots, articles] = await Promise.all([getSpots(locale), getArticles(locale)]);
+
+  // Highest-rated first — powers both spot-facing teasers below.
+  // `is_featured` is currently unset for every spot (see the SpotCard/
+  // SpotMap comments this mirrors), so rating is the only real "which
+  // spots to lead with" signal available today.
+  const ratedSpots = [...spots].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 
   return (
-    // ExploreViewProvider reads the `?view=map` query client-side (via
-    // useSearchParams) so both Header and ExploreSection can open straight
-    // into the map when arriving from the "explore the full map" CTA — a
-    // Suspense boundary is required since this route is statically
-    // prerendered. It wraps Header too: Header hides its own nav and shows a
-    // back button while the map's open, which needs the same state.
-    <Suspense>
-      <ExploreViewProvider>
-        <Header />
-        <main className="flex-1">
-          <Hero
-            spotsCount={spots.length}
-            eventsCount={0}
-            articlesCount={articles.length}
-            articles={articles.slice(0, HOME_ARTICLES_COUNT)}
+    <>
+      <Header />
+      <main className="flex-1">
+        <Hero eventsCount={0} articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
+
+        {/* Content-forward homepage: history/context, then a teaser into
+            each of the three real ways to browse (grid, map, vibes) — the
+            grid and map themselves moved out to their own /spots and /map
+            pages (see AGENTS-adjacent commit) so this page reads as
+            substantial, crawlable text rather than mostly an app shell. */}
+        <AboutIntro />
+
+        <div className="border-t border-border">
+          <FeaturedSpotsSection
+            spots={ratedSpots.slice(0, FEATURED_SPOTS_COUNT)}
+            totalCount={spots.length}
           />
+        </div>
 
-          <div id="explore" className="scroll-mt-20">
-            {/* events prop intentionally omitted — events hidden site-wide, see AGENTS note */}
-            <ExploreFilterProvider>
-              <ExploreSection spots={spots} />
-            </ExploreFilterProvider>
-          </div>
+        <div className="border-t border-border">
+          <MapTeaserSection spots={ratedSpots.slice(0, MAP_TEASER_SPOTS_COUNT)} />
+        </div>
 
-          {/* Events section hidden site-wide — keep in sync with the fetch above
-              and with Header/Hero's events links when re-enabling.
-          {events.length > 0 && (
-            <div id="events" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-16 sm:px-6">
-              <h2 className="font-heading mb-4 text-2xl font-extrabold">{tEvents("title")}</h2>
-              <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2" amount={0.05}>
-                {events.map((event) => (
-                  <StaggerItem key={event.id}>
-                    <EventCard event={event} />
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            </div>
-          )}
-          */}
+        <div className="border-t border-border">
+          <VibeTeaserSection />
+        </div>
 
-          <div className="border-t border-border">
-            <AboutCascoViejo />
-          </div>
-        </main>
-        <Footer />
-        <InstallPwaPrompt />
-      </ExploreViewProvider>
-    </Suspense>
+        <div className="border-t border-border">
+          <AboutFaq />
+        </div>
+      </main>
+      <Footer />
+      <InstallPwaPrompt />
+    </>
   );
 }

@@ -73,14 +73,16 @@
 /* Night Mode — a deliberate, manually-toggled "going out tonight" theme, */
 /* separate from the OS-level prefers-color-scheme dark mode above. That  */
 /* one is a quiet tonal shift for readability; this is a saturated neon   */
-/* mood the user opts into via NightModeToggle, which stamps `night` on   */
-/* <html> (see NightModeContext). `html.night` has specificity (0,1,1),   */
-/* just above bare `:root`'s (0,1,0), so it wins over both the light      */
-/* defaults and the dark media query above regardless of the visitor's OS */
-/* setting or source order.                                               */
+/* mood the user opts into via NightModeToggle, which stamps `data-night` */
+/* on <html> (see NightModeContext — a data attribute rather than a class */
+/* deliberately, so switching locale can't wipe it out from under this    */
+/* toggle). `html[data-night]` has specificity (0,1,1), just above bare   */
+/* `:root`'s (0,1,0), so it wins over both the light defaults and the     */
+/* dark media query above regardless of the visitor's OS setting or      */
+/* source order.                                                         */
 /* ---------------------------------------------------------------------- */
 
-html.night {
+html[data-night] {
   --background: #0a0818;
   --foreground: #f5f1ff;
   --surface: #140f28;
@@ -94,64 +96,93 @@ html.night {
   --night-gold: #ffcf6b;
 }
 
-html.night body {
+/* `in oklch` (rather than the default srgb) plus a middle stop is what
+   kills the visible banding here: fading a saturated color straight to
+   `transparent` in srgb dips through a muddy grey and steps in noticeable
+   8-bit bands over a large area — oklch keeps hue/lightness moving evenly
+   the whole way, and the extra stop spreads the falloff over more of the
+   gradient instead of front-loading it before a hard-looking cutoff.
+
+   `background-attachment: fixed` is what keeps this from ever going flat:
+   without it, the gradient's % position/size is relative to the whole
+   <body> box — which is as tall as the entire page (hero + grid + about +
+   footer). The two blooms below only cover roughly the first viewport or
+   two, then the rest of a long page falls back to plain --background,
+   reading as a hard seam once you scroll past them. Fixing the attachment
+   makes the percentages relative to the viewport instead and keeps the
+   gradient anchored in place as you scroll, so it's the same continuous
+   backdrop at every scroll position rather than fading out partway down. */
+html[data-night] body {
   background:
-    radial-gradient(55% 45% at 12% -5%, color-mix(in srgb, var(--night-purple) 20%, transparent) 0%, transparent 70%),
-    radial-gradient(45% 35% at 92% 5%, color-mix(in srgb, var(--night-cyan) 14%, transparent) 0%, transparent 70%),
+    radial-gradient(
+      60% 50% at 12% -5% in oklch,
+      color-mix(in oklch, var(--night-purple) 20%, transparent) 0%,
+      color-mix(in oklch, var(--night-purple) 7%, transparent) 40%,
+      transparent 85%
+    ),
+    radial-gradient(
+      50% 40% at 92% 5% in oklch,
+      color-mix(in oklch, var(--night-cyan) 14%, transparent) 0%,
+      color-mix(in oklch, var(--night-cyan) 5%, transparent) 40%,
+      transparent 85%
+    ),
     var(--background);
+  background-attachment: fixed, fixed, fixed;
 }
 
-html.night .glass {
+html[data-night] .glass {
   background: color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
 /* Map tiles — dim and cool the CARTO tiles down rather than swap tilesets,
    so the glow on pins/popups (below) has something moody to sit on top of. */
-html.night .leaflet-container {
+html[data-night] .leaflet-container {
   background: var(--background);
 }
 
-html.night .leaflet-tile-pane {
-  filter: brightness(0.72) saturate(1.35) hue-rotate(-8deg);
+html[data-night] .leaflet-tile-pane {
+  filter: brightness(1.15) saturate(1.35) hue-rotate(-8deg);
 }
 
 /* Pins — pinHtml() (SpotMap.tsx) stamps both `background` and `color`
    inline to the category color, so `currentColor` here always matches
    whichever category a pin belongs to without a rule per category. */
-html.night .spot-pin {
+html[data-night] .spot-pin {
   box-shadow:
     0 0 0 2px color-mix(in srgb, currentColor 40%, white 60%),
     0 0 4px 1px white inset,
     0 0 18px 3px currentColor;
 }
 
-html.night .spot-pin--active {
+html[data-night] .spot-pin--active {
   box-shadow:
     0 0 0 2px white,
     0 0 4px 1px white inset,
     0 0 28px 6px currentColor;
 }
 
-html.night .event-pin__icon {
+html[data-night] .event-pin__icon {
   filter: drop-shadow(0 0 8px var(--night-cyan)) brightness(1.1);
 }
 
-html.night .me-marker {
+html[data-night] .itinerary-pin {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-aqua) 40%, white 60%),
+    0 0 4px 1px white inset,
+    0 0 18px 3px var(--color-aqua);
+}
+
+html[data-night] .me-marker {
   filter: drop-shadow(0 0 3px white) drop-shadow(0 0 10px var(--night-cyan));
 }
 
 /* Map detail panel (side panel on desktop, bottom sheet on mobile) — see
-   MapDetailPanel.tsx. Same cyan glow the pins get, purple instead for a
-   featured spot (`--featured`, matching CATEGORY_META/is_featured). */
-html.night .map-detail-panel {
-  border-color: color-mix(in srgb, var(--night-cyan) 55%, var(--border));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--night-cyan) 25%, transparent),
-    0 0 32px -6px color-mix(in srgb, var(--night-cyan) 80%, transparent),
-    var(--shadow-lg);
-}
-
-html.night .map-detail-panel--featured {
+   MapDetailPanel.tsx. Purple glow for a featured spot only (`--featured`,
+   matching CATEGORY_META/is_featured) — the plain cyan glow every panel used
+   to get (matching the pins) read as a stray blob over the photo's rounded
+   top corner, so it's gone; a non-featured panel now just gets its normal
+   border/shadow. */
+html[data-night] .map-detail-panel--featured {
   border-color: color-mix(in srgb, var(--night-purple) 60%, var(--border));
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--night-purple) 30%, transparent),
@@ -159,7 +190,7 @@ html.night .map-detail-panel--featured {
     var(--shadow-lg);
 }
 
-html.night .map-detail-panel__featured-badge {
+html[data-night] .map-detail-panel__featured-badge {
   box-shadow: 0 0 12px -2px var(--night-purple);
 }
 
@@ -203,6 +234,57 @@ h1, h2, h3, h4, .font-heading {
   display: none;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Scrollbars — thin, on-brand track/thumb instead of each OS's default   */
+/* chrome, applied globally so every scrolling surface (page, modals,     */
+/* admin tables, filter bars) matches the design system. Firefox reads    */
+/* scrollbar-color (inherited from html); WebKit/Chromium/Edge read the   */
+/* ::-webkit-scrollbar pseudo-elements, which apply per scrollable box.   */
+/* ---------------------------------------------------------------------- */
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-aqua) 45%, var(--border)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--color-aqua) 45%, var(--border));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 200ms ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-aqua) 70%, var(--border));
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html[data-night] {
+  scrollbar-color: color-mix(in srgb, var(--night-cyan) 45%, var(--border)) transparent;
+}
+
+html[data-night] ::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--night-cyan) 45%, var(--border));
+}
+
+html[data-night] ::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--night-cyan) 75%, var(--border));
+  box-shadow: 0 0 8px 0 color-mix(in srgb, var(--night-cyan) 60%, transparent);
+}
+
 .safe-top {
   padding-top: max(0.75rem, env(safe-area-inset-top));
 }
@@ -243,7 +325,7 @@ h1, h2, h3, h4, .font-heading {
 }
 
 .gradient-text {
-  background: linear-gradient(100deg, #ffe8b8 0%, var(--color-gold) 100%);
+  background: linear-gradient(100deg, #bfe6f2 0%, var(--color-aqua) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -292,12 +374,33 @@ h1, h2, h3, h4, .font-heading {
   );
 }
 
-html.night .bar-surface {
+html[data-night] .bar-surface {
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--surface) 100%, white 3%) 0%,
     var(--surface) 100%
   );
+}
+
+/* logoletters.png (Header's wordmark) ships as a white mark on transparent
+   — made for a dark surface. Inverted to black by default so it stays
+   legible on the default light theme's white `.bar-surface`; undone for OS
+   dark mode and for the manual Night Mode toggle, both of which already
+   put the header on a dark surface where the white original is correct
+   as-is. Order matters here: the dark-mode override below must come after
+   the base rule to win on equal specificity. */
+.header-logotype {
+  filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .header-logotype {
+    filter: none;
+  }
+}
+
+html[data-night] .header-logotype {
+  filter: none;
 }
 
 /* Soft focus glow for search/text inputs — a gradient-tinted halo instead
@@ -460,5 +563,28 @@ html.night .bar-surface {
 
 .spot-pin-marker--me {
   z-index: 1100 !important;
+}
+
+/* Numbered route pins — ItineraryMap.tsx, one per "itinerary"-layout
+   article stop, in day-plan order. A plain circle (not the teardrop
+   .spot-pin shape) so the number stays upright and legible. */
+.itinerary-pin {
+  display: flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-aqua);
+  border: 2px solid white;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.35);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+}
+
+.itinerary-pin-marker {
+  z-index: 500 !important;
 }
 

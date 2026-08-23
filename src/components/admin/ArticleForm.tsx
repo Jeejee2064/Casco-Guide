@@ -48,6 +48,7 @@ function toPreviewArticle(values: ArticleFormValues, lang: Lang, existing?: Arti
       ref_type: b.ref_type,
       ref_id: b.ref_id,
       ref_slug: b.ref_slug,
+      time: b.time,
     })),
     cover_photo: values.cover_photo || null,
     tags: values.tags,

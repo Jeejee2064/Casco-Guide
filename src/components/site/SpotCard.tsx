@@ -8,11 +8,27 @@ import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { TAP_SPRING } from "./motion";
 import { getSpotImage } from "@/lib/data/categoryImages";
-import type { Spot } from "@/lib/types/database";
+import { VIBE_META } from "@/lib/vibes";
+import type { Spot, SpotVibe } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
-export function SpotCard({ spot, onClick }: { spot: Spot; onClick: () => void }) {
-  const t = useTranslations("spot");
+export function SpotCard({
+  spot,
+  onClick,
+  activeVibes = [],
+}: {
+  spot: Spot;
+  onClick: () => void;
+  /** The vibes currently driving the filter/sort (see SpotExplorer) — when
+   * this spot carries one, its badge below gets the full labeled treatment
+   * instead of just an icon, so it reads as "this is why you're seeing
+   * this" (several matches can be labeled at once). Independent of that,
+   * every one of the spot's own vibes shows up here too (icon-only) in
+   * every mode, category included — not just while a vibe filter is
+   * active. */
+  activeVibes?: SpotVibe[];
+}) {
+  const tVibe = useTranslations("vibe");
   const priceLabel = spot.price_range ?? "";
 
   return (
@@ -21,7 +37,7 @@ export function SpotCard({ spot, onClick }: { spot: Spot; onClick: () => void })
       onClick={onClick}
       whileTap={{ scale: 0.97 }}
       transition={TAP_SPRING}
-      className="card-lift group w-full text-left rounded-[var(--radius-card)] bg-surface border border-border overflow-hidden shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-aqua"
+      className="card-lift group flex h-full w-full flex-col text-left rounded-[var(--radius-card)] bg-surface border border-border overflow-hidden shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-aqua"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-aqua/20 to-coral/20">
         <Image
@@ -33,17 +49,51 @@ export function SpotCard({ spot, onClick }: { spot: Spot; onClick: () => void })
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-black/0" />
 
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 right-3 flex flex-wrap items-center gap-1.5">
           <CategoryBadge category={spot.category} />
+          {spot.vibes.slice(0, 3).map((v) => {
+            const meta = VIBE_META[v];
+            const Icon = meta.icon;
+            const gradient = `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`;
+            // Any vibe actually driving the current filter/sort gets called
+            // out with its label — every other vibe the spot carries still
+            // shows, just as a plain icon chip, so category mode isn't
+            // vibe-blind the way it used to be.
+            if (activeVibes.includes(v)) {
+              return (
+                <span
+                  key={v}
+                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm"
+                  style={{ background: gradient }}
+                >
+                  <Icon size={11} /> {tVibe(v)}
+                </span>
+              );
+            }
+            return (
+              <span
+                key={v}
+                title={tVibe(v)}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+                style={{ background: gradient }}
+              >
+                <Icon size={12} strokeWidth={2.5} />
+              </span>
+            );
+          })}
         </div>
-        {spot.is_featured && (
-          <div className="absolute top-3 right-3 rounded-full bg-gradient-to-br from-white/95 to-white/80 px-2.5 py-1 text-xs font-semibold text-gold-dark shadow-sm dark:from-black/70 dark:to-black/50 dark:text-gold">
-            {t("featured")}
-          </div>
-        )}
+        {/* "Featured" badge hidden site-wide for now — no spot is currently
+            promoted this way. Re-enable by restoring this block (and
+            `const t = useTranslations("spot")` above) once there is real
+            featured content:
+            {spot.is_featured && (
+              <div className="absolute top-3 right-3 rounded-full bg-gradient-to-br from-white/95 to-white/80 px-2.5 py-1 text-xs font-semibold text-gold-dark shadow-sm dark:from-black/70 dark:to-black/50 dark:text-gold">
+                {t("featured")}
+              </div>
+            )} */}
       </div>
 
-      <div className="p-4 space-y-2.5">
+      <div className="flex flex-1 flex-col space-y-2.5 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-heading text-lg font-bold leading-tight line-clamp-1">
             {spot.name}
@@ -56,34 +106,48 @@ export function SpotCard({ spot, onClick }: { spot: Spot; onClick: () => void })
           )}
         </div>
 
-        {spot.description && (
-          <p className="text-sm text-foreground/70 line-clamp-2">{spot.description}</p>
-        )}
+        {/* Fixed 2-line reservation, not conditional — a spot with no
+            description (or a one-liner) must leave the same gap a two-line
+            one does, or its card ends up shorter than its row-mates. Same
+            reasoning for the tags row and the address row below: every
+            optional bit of content gets a fixed-height slot regardless of
+            whether it actually has anything in it, so every card in the
+            grid comes out exactly the same height (bento-style), not just
+            the ones that happen to have full copy. */}
+        <p className="line-clamp-2 min-h-[2.5rem] text-sm text-foreground/70">
+          {spot.description}
+        </p>
 
-        {spot.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {spot.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-foreground/5 text-foreground/60 px-2 py-0.5 text-[11px] font-medium"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Fixed height + no wrap + clipped, not flex-wrap — 3 short tags fit
+            one line but 3 long ones (e.g. "#performing-arts") don't, and a
+            wrapped 2nd line is exactly the kind of per-card height drift
+            this whole component is trying to avoid. A tag or two getting
+            clipped off is a fine trade for every card staying the same
+            height — the edge mask fades it out instead of hard-cutting a
+            pill mid-word. */}
+        <div className="flex h-[1.375rem] gap-1.5 overflow-hidden [mask-image:linear-gradient(to_right,black_88%,transparent_100%)]">
+          {spot.tags?.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="shrink-0 rounded-full bg-foreground/5 text-foreground/60 px-2 py-0.5 text-[11px] font-medium"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
 
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <HoursBadge spot={spot} />
+        <div className="flex h-7 items-center gap-2 overflow-hidden pt-1">
+          <HoursBadge spot={spot} className="shrink-0" />
           {priceLabel && (
-            <span className="text-xs font-semibold text-foreground/60">{priceLabel}</span>
+            <span className="shrink-0 text-xs font-semibold text-foreground/60">{priceLabel}</span>
           )}
         </div>
 
-        <div className="flex items-center gap-3 pt-1.5 text-xs text-foreground/60">
+        <div className="flex min-h-[1rem] items-center gap-3 pt-1.5 text-xs text-foreground/60">
           {spot.address && (
-            <span className="flex items-center gap-1 line-clamp-1">
-              <MapPin size={12} /> {spot.address}
+            <span className="flex min-w-0 items-center gap-1">
+              <MapPin size={12} className="shrink-0" />
+              <span className="truncate">{spot.address}</span>
             </span>
           )}
           {spot.phone && (

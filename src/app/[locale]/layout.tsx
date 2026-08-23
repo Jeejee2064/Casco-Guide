@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins, Inter } from "next/font/google";
+import { Poppins, Inter, Montserrat } from "next/font/google";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -86,6 +86,12 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin"],
+  weight: ["600"],
+});
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -108,12 +114,18 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      // The night-mode init script below stamps `night` on this element
+      // The night-mode init script below stamps `data-night` on this element
       // before hydration (to avoid a flash back to day mode on load), which
       // React never sees coming — suppress the resulting one-attribute
-      // hydration warning rather than the whole tree's.
+      // hydration warning rather than the whole tree's. It's a `data-*`
+      // attribute rather than a class in `className` above on purpose: this
+      // layout is keyed by the `[locale]` segment, so switching locale makes
+      // it re-render server-side and React reconciles `className`'s literal
+      // value (never "night") back onto this same real DOM node — wiping
+      // out a class added outside of React. `data-night` is never mentioned
+      // in any prop React renders here, so reconciliation never touches it.
       suppressHydrationWarning
-      className={`${poppins.variable} ${inter.variable} h-full antialiased`}
+      className={`${poppins.variable} ${inter.variable} ${montserrat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {/* Site-wide identity — emitted once here rather than per-page so
@@ -124,7 +136,7 @@ export default async function LocaleLayout({
             on doesn't see a flash of the day theme first. Kept tiny and
             defensive (storage can be unavailable in private browsing). */}
         <Script id="night-mode-init" strategy="beforeInteractive">
-          {`try{if(localStorage.getItem(${JSON.stringify(NIGHT_MODE_STORAGE_KEY)})==="night"){document.documentElement.classList.add("night")}}catch(e){}`}
+          {`try{if(localStorage.getItem(${JSON.stringify(NIGHT_MODE_STORAGE_KEY)})==="night"){document.documentElement.setAttribute("data-night","")}}catch(e){}`}
         </Script>
         <NextIntlClientProvider messages={messages}>
           <MotionProvider>

@@ -11,15 +11,16 @@ import {
 } from "lucide-react";
 import type { SpotCategory } from "@/lib/types/database";
 
+// 8-swatch brand palette, one color per category, no repeats.
 export const CATEGORY_META: Record<SpotCategory, { color: string; icon: LucideIcon }> = {
-  restaurant: { color: "#B5573A", icon: Utensils },
-  bar: { color: "#8B4A6B", icon: Martini },
-  cafe: { color: "#3A6EA5", icon: Coffee },
-  attraction: { color: "#3F7D5C", icon: Landmark },
-  museum: { color: "#5B5A8C", icon: Building2 },
-  shop: { color: "#B8862E", icon: ShoppingBag },
-  gallery: { color: "#A14B42", icon: Palette },
-  hotel: { color: "#1F6F6B", icon: Bed },
+  restaurant: { color: "#f44336", icon: Utensils }, // red
+  bar: { color: "#ad1457", icon: Martini }, // deep pink
+  cafe: { color: "#ffc107", icon: Coffee }, // amber
+  attraction: { color: "#8bc34a", icon: Landmark }, // light green
+  museum: { color: "#1565c0", icon: Building2 }, // dark blue
+  shop: { color: "#ff9800", icon: ShoppingBag }, // orange
+  gallery: { color: "#009688", icon: Palette }, // teal
+  hotel: { color: "#448aff", icon: Bed }, // blue
 };
 
 export const SPOT_CATEGORIES = Object.keys(CATEGORY_META) as SpotCategory[];

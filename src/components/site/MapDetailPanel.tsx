@@ -47,6 +47,7 @@ export function MapDetailPanel({
   closeLabel,
   onClose,
   desktopTopOffsetPx,
+  compact = false,
 }: {
   content: DetailPanelContent | null;
   closeLabel: string;
@@ -55,6 +56,11 @@ export function MapDetailPanel({
    * ExploreFilterBar in fullScreen mode) already occupies the map's top
    * edge — defaults to the panel's own `top-4`/16px when omitted. */
   desktopTopOffsetPx?: number;
+  /** Trims the panel to photo/badge/title/actions only, no subtitle/meta/
+   * description — for ItineraryMap's in-article pins, where the article text
+   * around the map already carries that detail. The main SpotMap leaves this
+   * off so its pin popup keeps the full info. */
+  compact?: boolean;
 }) {
   const desktopRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
@@ -96,11 +102,16 @@ export function MapDetailPanel({
               // Sized to content (capped, not stretched) — a short
               // description shouldn't leave a card full of empty space the
               // way `top-4 bottom-4` would.
-              "map-detail-panel glass safe-top absolute left-4 top-4 z-[1250] hidden max-h-[calc(100%-2rem)] w-[380px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-[var(--radius-card)] border border-border shadow-2xl outline-none md:flex",
+              // No `safe-top` here (unlike Header/the mobile sheet's
+              // `safe-bottom`) — this panel already floats inset from the
+              // viewport edge (`top-4`), so the safe-area padding just
+              // pushed the photo down, leaving a visible band of card
+              // background above it instead of the photo starting flush.
+              "map-detail-panel glass absolute left-4 top-4 z-[1250] hidden max-h-[calc(100%-2rem)] w-[380px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-[var(--radius-card)] border border-border shadow-2xl outline-none md:flex",
               content.featuredLabel && "map-detail-panel--featured",
             )}
           >
-            <PanelBody content={content} onClose={onClose} closeLabel={closeLabel} />
+            <PanelBody content={content} onClose={onClose} closeLabel={closeLabel} compact={compact} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -147,11 +158,7 @@ export function MapDetailPanel({
               content.featuredLabel && "map-detail-panel--featured",
             )}
           >
-            {/* Drag handle — purely visual, the whole sheet is draggable. */}
-            <div className="flex shrink-0 justify-center pb-1 pt-2.5">
-              <span className="h-1.5 w-10 rounded-full bg-foreground/15" />
-            </div>
-            <PanelBody content={content} onClose={onClose} closeLabel={closeLabel} />
+            <PanelBody content={content} onClose={onClose} closeLabel={closeLabel} compact={compact} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -163,10 +170,12 @@ function PanelBody({
   content,
   onClose,
   closeLabel,
+  compact,
 }: {
   content: DetailPanelContent;
   onClose: () => void;
   closeLabel: string;
+  compact: boolean;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -205,19 +214,21 @@ function PanelBody({
           {content.categoryLabel}
         </span>
         <h3 className="font-heading text-lg font-extrabold leading-tight">{content.title}</h3>
-        {content.subtitle && <p className="text-sm text-foreground/60">{content.subtitle}</p>}
-        {content.metaItems.length > 0 && (
+        {!compact && content.subtitle && (
+          <p className="text-sm text-foreground/60">{content.subtitle}</p>
+        )}
+        {!compact && content.metaItems.length > 0 && (
           <div className="flex flex-wrap gap-3 text-sm font-semibold opacity-80">
             {content.metaItems.map((item) => (
               <span key={item}>{item}</span>
             ))}
           </div>
         )}
-        {content.description && (
+        {!compact && content.description && (
           <p className="text-sm leading-relaxed text-foreground/70">{content.description}</p>
         )}
 
-        <div className={cn("flex gap-2", content.description ? "pt-3" : "pt-1")}>
+        <div className={cn("flex gap-2", !compact && content.description ? "pt-3" : "pt-1")}>
           {content.actions.map((action) => (
             <motion.button
               key={action.label}

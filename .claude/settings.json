@@ -7,7 +7,12 @@
       "Bash(npm run *)",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('messages/en.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('messages/es.json','utf8'\\)\\); console.log\\('OK both valid JSON'\\)\")",
       "Bash(node --check /home/yerom/Desktop/WEB/PanamaCityGuide/scripts/seed-casco-viejo.mjs)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('messages/en.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('messages/es.json','utf8'\\)\\); console.log\\('OK'\\)\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"TSC_EXIT:$?\")",
+      "Bash(timeout 300 npx next build)",
+      "Bash(echo \"TSC:$?\")"
     ]
   }
 }

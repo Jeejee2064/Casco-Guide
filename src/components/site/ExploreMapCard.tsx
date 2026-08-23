@@ -5,15 +5,16 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 /**
- * CTA card back to the full map. Sits directly under a MiniMap (spot/event
- * detail aside) so it's reachable without scrolling to the bottom of the page.
+ * CTA card to the dedicated /map page. Sits directly under a MiniMap
+ * (spot/event detail aside, and the homepage's map teaser) so it's
+ * reachable without scrolling to the bottom of the page.
  */
 export function ExploreMapCard() {
   const t = useTranslations("discover");
 
   return (
     <Link
-      href={{ pathname: "/", query: { view: "map" }, hash: "explore" }}
+      href="/map"
       className="card-lift flex items-center gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-5"
     >
       <div className="brand-accent flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white">

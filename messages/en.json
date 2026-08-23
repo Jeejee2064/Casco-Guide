@@ -6,20 +6,20 @@
     "searchPlaceholder": "Search spots, tags, cuisine…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Grid",
-    "viewMap": "Map"
+    "viewMap": "Map",
+    "menu": "Menu"
   },
   "nav": {
     "spots": "Spots",
     "events": "Events",
     "admin": "Admin",
-    "articles": "Guides"
+    "articles": "Guides",
+    "map": "Map"
   },
   "night": {
     "toggle": "Day / Night mode",
     "dayMode": "Day",
     "nightMode": "Night",
-    "bannerTitle": "Night mode on",
-    "bannerSubtitle": "The best spots to go out right now!",
     "featuredBadge": "Featured · Exclusive"
   },
   "filters": {
@@ -27,7 +27,6 @@
     "all": "All",
     "classic": "Classic",
     "vibes": "Vibes",
-    "category": "Category",
     "price": "Price range",
     "openNow": "Open now",
     "sort": "Sort by",
@@ -40,10 +39,9 @@
     "resultsCount": "{count, plural, =0 {No spots found} one {# spot} other {# spots}}",
     "showMore": "{count, plural, one {Show # more spot} other {Show # more spots}}",
     "showLess": "Show less",
-    "date": "Date",
-    "dateToday": "Today",
-    "dateWeek": "This week",
-    "dateWeekend": "This weekend"
+    "close": "Close",
+    "vibesModalTitle": "What's your vibe in Casco today?",
+    "vibesHint": "Try exploring by vibe!"
   },
   "category": {
     "restaurant": "Restaurant",
@@ -56,12 +54,20 @@
     "hotel": "Hotel"
   },
   "vibe": {
-    "rooftop_party": "Rooftops & Party",
+    "rooftop_party": "Rooftops & Nightlife",
     "nomad_work": "Work & Coffee",
-    "romantic_sunset": "Romantic / Sunset",
-    "local_heritage": "Local & Heritage",
-    "gastro_trendy": "Gastro & Trendy",
-    "chill_coffee": "Chill & Cafe"
+    "romantic_sunset": "Romantic & Sunset",
+    "local_heritage": "Local & Authentic",
+    "gastro_trendy": "Foodie & Gastro",
+    "chill_coffee": "Arts & Culture"
+  },
+  "vibeDescriptors": {
+    "rooftop_party": "Bars • Clubs • Late-night energy",
+    "nomad_work": "WiFi • Coworking • Quiet • Good coffee",
+    "romantic_sunset": "Candlelit • Sunset views • Proposals",
+    "local_heritage": "Street food • Real Panama • No tourists",
+    "gastro_trendy": "Fine dining • Chefs • Culinary",
+    "chill_coffee": "Galleries • Museums • Live music"
   },
   "price": {
     "$": "Budget",
@@ -144,7 +150,6 @@
     "viewDetails": "View details",
     "capacity": "Capacity: {count}",
     "organizer": "Organized by {name}",
-    "paid": "Paid",
     "searchPlaceholder": "Search events, categories…"
   },
   "empty": {
@@ -479,7 +484,7 @@
         "item": "Item #{n}",
         "step": "Step #{n}",
         "titlePlaceholder": "Title",
-        "timePlaceholder": "Time (e.g. 9:00 AM or Morning)",
+        "time": "Time",
         "textPlaceholder": "Short text…",
         "linkPlace": "Link a spot/event",
         "addRank": "+ Add rank",
@@ -519,6 +524,14 @@
     "articles": {
       "title": "Casco Viejo Guides & Recommendations",
       "description": "In-depth guides, top picks and stories about the best restaurants, bars, sights and hidden corners of Casco Viejo, Panama City."
+    },
+    "spots": {
+      "title": "Casco Viejo Spots — Restaurants, Bars, Cafés, Museums & More",
+      "description": "Browse every restaurant, bar, café, museum, shop and hotel in Casco Viejo, Panama City. Filter by category or by vibe — romantic sunset, rooftop party, local heritage and more — to find exactly what you're after."
+    },
+    "map": {
+      "title": "Casco Viejo Map — Every Spot, Plotted",
+      "description": "An interactive map of every restaurant, bar, café, sight and hotel in Casco Viejo, Panama City. Filter by category or vibe and find your way around the old town on foot."
     },
     "spotTitle": "{name} — {category} in Casco Viejo",
     "spotDescriptionFallback": "{name} — {category} in Casco Viejo, Panama City. See hours, address, photos and everything you need to visit.",
@@ -563,6 +576,21 @@
         "q": "What's the best time to visit Casco Viejo?",
         "a": "Panama's dry season, mid-December through April, brings the least rain. Within a day, late afternoon into the evening is the best window — the heat eases, the light is great for photos, and rooftop bars fill up for sunset over Panama Bay."
       }
+    }
+  },
+  "home": {
+    "featuredSpots": {
+      "title": "Must-visit spots",
+      "subtitle": "A handful of local favorites to start with — top-rated restaurants, bars, cafés and sights.",
+      "cta": "Explore all {count} spots"
+    },
+    "mapTeaser": {
+      "title": "See everything on the map"
+    },
+    "vibeTeaser": {
+      "title": "Find your vibe",
+      "subtitle": "Skip the categories — pick a vibe and we'll match you with spots that fit it.",
+      "cta": "Discover your vibe"
     }
   },
   "installPwa": {

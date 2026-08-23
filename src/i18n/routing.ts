@@ -11,7 +11,9 @@ export const routing = defineRouting({
   localePrefix: "always",
   pathnames: {
     "/": "/",
+    "/spots": "/spots",
     "/spots/[slug]": "/spots/[slug]",
+    "/map": "/map",
     "/events/[slug]": "/events/[slug]",
     "/articles": "/articles",
     "/articles/[slug]": "/articles/[slug]",

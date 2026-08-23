@@ -1,0 +1,22 @@
+-- ═══════════════════════════════════════════════════════════════
+-- Spot vibes — backfill spots added since 0006_spot_vibes.sql that
+-- still have no vibes tagged. The `spot_vibe` enum itself is
+-- unchanged (still rooftop_party / nomad_work / romantic_sunset /
+-- local_heritage / gastro_trendy / chill_coffee) — only the
+-- vibe/vibeDescriptors labels shown in the UI were reworded
+-- (messages/en.json, messages/es.json) to:
+--   rooftop_party    → Rooftops & Nightlife
+--   nomad_work       → Work & Coffee (unchanged)
+--   romantic_sunset  → Romantic & Sunset
+--   local_heritage   → Local & Authentic
+--   gastro_trendy    → Foodie & Gastro
+--   chill_coffee     → Chill & Relax
+-- so no enum/schema migration is needed for that, just this data
+-- backfill. Safe to re-run.
+-- ═══════════════════════════════════════════════════════════════
+
+-- Kaandela: fire-driven, chef-led (Top Chef Panama finalist) tasting
+-- menu reinventing Panamanian tradition inside a restored colonial
+-- home — same gastro_trendy + local_heritage pairing already used for
+-- similar chef-driven/heritage-building spots (e.g. la-compania-boutique-hotel).
+update spots set vibes = '{gastro_trendy,local_heritage}' where slug = 'kaandela-restaurant';

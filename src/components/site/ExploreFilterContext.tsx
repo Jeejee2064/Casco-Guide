@@ -10,33 +10,45 @@ interface ExploreFilterContextValue {
   setMode: (mode: ExploreFilterMode) => void;
   query: string;
   setQuery: (q: string) => void;
-  category: SpotCategory | null; // null = "All"
-  setCategory: (c: SpotCategory | null) => void;
-  vibe: SpotVibe | null; // null = "All"
-  setVibe: (v: SpotVibe | null) => void;
+  // Single-select ([] = "All", otherwise exactly one) — still array-typed
+  // (rather than `SpotCategory | null`) since SpotExplorer/SpotMap's
+  // matching logic (`categories.includes(...)`) is written against a set,
+  // and vibeRelevanceScore/activeVibes elsewhere already expect an array.
+  categories: SpotCategory[];
+  setCategories: (c: SpotCategory[]) => void;
+  vibes: SpotVibe[]; // Same deal: [] = "All", otherwise exactly one.
+  setVibes: (v: SpotVibe[]) => void;
 }
 
 const ExploreFilterContext = createContext<ExploreFilterContextValue | null>(null);
 
 /**
- * Shared search/category/vibe filter state for the explore screen —
- * same reasoning as ExploreViewContext (isMapView): SpotExplorer and
- * SpotMap are fully unmounted/remounted by ExploreSection's grid/map
- * AnimatePresence switch, so local useState in either wouldn't survive
- * a List↔Map toggle. Lifting the filter state here, above ExploreSection,
- * is what lets the top filter bar's selection stay "locked" across that
- * toggle. `category` and `vibe` are independent and both persist across
- * Classic↔Vibes mode switches — only `mode` decides which one is active.
+ * Shared search/category/vibe filter state for the /spots and /map pages —
+ * lifted above ExploreFilterBar so it and SpotExplorer/SpotMap (siblings,
+ * not parent/child) both read the same selection. `categories` and `vibes`
+ * are independent and both persist across Classic↔Vibes mode switches —
+ * only `mode` decides which one is active.
  */
-export function ExploreFilterProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<ExploreFilterMode>("classic");
+export function ExploreFilterProvider({
+  children,
+  initialMode = "classic",
+  initialVibes = [],
+}: {
+  children: ReactNode;
+  /** Seeds the page open directly into vibes mode — used by /spots's
+   * `?vibe=`/`?mode=vibes` deep links (the homepage's vibe teaser cards). */
+  initialMode?: ExploreFilterMode;
+  /** Seeds the initially-selected vibe(s) — same deep-link use as above. */
+  initialVibes?: SpotVibe[];
+}) {
+  const [mode, setMode] = useState<ExploreFilterMode>(initialMode);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<SpotCategory | null>(null);
-  const [vibe, setVibe] = useState<SpotVibe | null>(null);
+  const [categories, setCategories] = useState<SpotCategory[]>([]);
+  const [vibes, setVibes] = useState<SpotVibe[]>(initialVibes);
 
   return (
     <ExploreFilterContext.Provider
-      value={{ mode, setMode, query, setQuery, category, setCategory, vibe, setVibe }}
+      value={{ mode, setMode, query, setQuery, categories, setCategories, vibes, setVibes }}
     >
       {children}
     </ExploreFilterContext.Provider>
@@ -46,7 +58,7 @@ export function ExploreFilterProvider({ children }: { children: ReactNode }) {
 const noop = () => {};
 
 /** Falls back to "classic, nothing selected, can't be changed" outside the
- * provider — mirrors useExploreView's fallback for the same reason. */
+ * provider, so a stray consumer degrades quietly instead of throwing. */
 export function useExploreFilter(): ExploreFilterContextValue {
   const ctx = useContext(ExploreFilterContext);
   return (
@@ -55,10 +67,10 @@ export function useExploreFilter(): ExploreFilterContextValue {
       setMode: noop,
       query: "",
       setQuery: noop,
-      category: null,
-      setCategory: noop,
-      vibe: null,
-      setVibe: noop,
+      categories: [],
+      setCategories: noop,
+      vibes: [],
+      setVibes: noop,
     }
   );
 }

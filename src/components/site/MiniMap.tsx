@@ -2,9 +2,16 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
-import type { CircleMarker, Map as LeafletMap, Marker as LeafletMarker, Polyline } from "leaflet";
+import type {
+  CircleMarker,
+  Map as LeafletMap,
+  Marker as LeafletMarker,
+  Polyline,
+  TileLayer,
+} from "leaflet";
 import { Ruler } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useNightMode } from "./NightModeContext";
 import { cn } from "@/lib/utils";
 import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
 
@@ -33,14 +40,24 @@ export function MiniMap({
   className?: string;
 }) {
   const tMap = useTranslations("map");
+  const { isNight } = useNightMode();
   const [ready, setReady] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const tileLayerRef = useRef<TileLayer | null>(null);
   const spotMarkerRef = useRef<LeafletMarker | null>(null);
   const meMarkerRef = useRef<CircleMarker | null>(null);
   const lineRef = useRef<Polyline | null>(null);
+
+  // Mirrors SpotMap's isNightRef — the init effect below only runs once
+  // (mount), so it needs a live read of the latest `isNight` at that
+  // instant rather than whatever it closed over at first render.
+  const isNightRef = useRef(isNight);
+  useEffect(() => {
+    isNightRef.current = isNight;
+  }, [isNight]);
 
   // Ask for geolocation once, silently — this is a background enhancement, so
   // a denial/error just leaves the map centered on the spot (no toast/nag).
@@ -75,10 +92,10 @@ export function MiniMap({
       });
 
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      L.tileLayer(prefersDark ? DARK_TILES : LIGHT_TILES, {
-        attribution: TILE_ATTRIBUTION,
-        maxZoom: 20,
-      }).addTo(map);
+      tileLayerRef.current = L.tileLayer(
+        isNightRef.current || prefersDark ? DARK_TILES : LIGHT_TILES,
+        { attribution: TILE_ATTRIBUTION, maxZoom: 20 },
+      ).addTo(map);
 
       const icon = L.divIcon({
         className: "spot-pin-marker",
@@ -98,6 +115,7 @@ export function MiniMap({
       cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
+      tileLayerRef.current = null;
       spotMarkerRef.current = null;
       meMarkerRef.current = null;
       lineRef.current = null;
@@ -106,6 +124,14 @@ export function MiniMap({
     // fresh MiniMap instance (key'd by the caller), not a re-init here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Swaps the tile set live if Night Mode is toggled after mount — the init
+  // effect above only reads isNight once, at creation.
+  useEffect(() => {
+    if (!ready) return;
+    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    tileLayerRef.current?.setUrl(isNight || prefersDark ? DARK_TILES : LIGHT_TILES);
+  }, [ready, isNight]);
 
   // Once we know where the user is, drop their pin, draw the line, and fit
   // the map to both points.

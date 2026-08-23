@@ -8,16 +8,14 @@ import { faqSchema } from "@/lib/seo/schema";
 const FAQ_IDS = ["q1", "q2", "q3", "q4", "q5"] as const;
 
 /**
- * Long-form "About Casco Viejo" copy + FAQ on the home page. Two jobs at
- * once: gives visitors real answers before they even open a spot, and gives
- * Google substantial, crawlable on-page text about the neighborhood itself
- * (the homepage otherwise being mostly a spots/events app shell) — plus a
- * FAQPage JSON-LD block that's eligible for FAQ rich results.
+ * Casco Viejo FAQ, near the bottom of the homepage — real answers to the
+ * questions visitors actually have, plus a FAQPage JSON-LD block that's
+ * eligible for FAQ rich results. Split out of the old AboutCascoViejo — see
+ * AboutIntro for its other half (history/eat/see/stay, right under the
+ * Hero).
  */
-export async function AboutCascoViejo() {
+export async function AboutFaq() {
   const t = await getTranslations("about");
-
-  const sections = ["eat", "see", "stay"] as const;
   const faqItems = FAQ_IDS.map((id) => ({
     q: t(`faq.${id}.q`),
     a: t(`faq.${id}.a`),
@@ -28,22 +26,6 @@ export async function AboutCascoViejo() {
       <JsonLd data={faqSchema(faqItems)} />
 
       <div className="max-w-3xl">
-        <h2 className="font-heading text-2xl font-extrabold sm:text-3xl">{t("title")}</h2>
-        <p className="mt-4 text-foreground/70 leading-relaxed">{t("intro")}</p>
-      </div>
-
-      <div className="mt-10 grid gap-8 sm:grid-cols-3">
-        {sections.map((key) => (
-          <div key={key}>
-            <h3 className="font-heading text-lg font-bold">{t(`sections.${key}.title`)}</h3>
-            <p className="mt-2 text-sm text-foreground/65 leading-relaxed">
-              {t(`sections.${key}.body`)}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-12 max-w-3xl">
         <h2 className="font-heading text-xl font-extrabold sm:text-2xl">{t("faqTitle")}</h2>
         <dl className="mt-6 divide-y divide-border">
           {faqItems.map((item) => (

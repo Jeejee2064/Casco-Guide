@@ -72,7 +72,7 @@ function linkArticle(locale, article, label) {
   return `<a href="/${locale}/articles/${article.slug}" data-ref-type="article" data-ref-id="${article.id}">${label}</a>`;
 }
 
-function block({ photo, time_es, time_en, text_es, text_en, spot }) {
+function block({ photo, time, time_es, time_en, text_es, text_en, spot }) {
   return {
     id: crypto.randomUUID(),
     photo,
@@ -80,6 +80,9 @@ function block({ photo, time_es, time_en, text_es, text_en, spot }) {
     title_en: time_en,
     text_es,
     text_en,
+    // 24h "HH:MM" — the raw value ArticleBlocksEditor's <input type="time">
+    // repopulates from when this article is reopened in the admin.
+    time,
     ref_type: "spot",
     ref_id: spot.id,
     ref_slug: spot.slug,
@@ -105,42 +108,42 @@ const article = {
   blocks: [
     block({
       photo: SPOT.fondaLoQueHay.photo,
-      time_es: "12:30 p.m.", time_en: "12:30 PM",
+      time: "12:30", time_es: "12:30 p.m.", time_en: "12:30 PM",
       text_es: "Empieza con comida panameña de verdad en Fonda Lo Que Hay: el menú cambia cada día según lo que haya en el mercado esa mañana, así que pregunta qué recomiendan antes de sentarte.",
       text_en: "Start with real Panamanian home cooking at Fonda Lo Que Hay: the menu changes daily depending on what came in from the market that morning, so ask what they recommend before sitting down.",
       spot: SPOT.fondaLoQueHay,
     }),
     block({
       photo: SPOT.museoMola.photo,
-      time_es: "1:30 p.m.", time_en: "1:30 PM",
+      time: "13:30", time_es: "1:30 p.m.", time_en: "1:30 PM",
       text_es: "A dos cuadras, el Museo de la Mola (MUMO) dedica sus salas a la mola, el textil tradicional de la comarca Guna Yala — media hora perfecta de digestión con aire acondicionado.",
       text_en: "Two blocks over, the Museo de la Mola (MUMO) is dedicated to the mola, the traditional textile art of the Guna Yala comarca — a perfect half hour of air-conditioned digestion time.",
       spot: SPOT.museoMola,
     }),
     block({
       photo: SPOT.karavan.photo,
-      time_es: "2:30 p.m.", time_en: "2:30 PM",
+      time: "14:30", time_es: "2:30 p.m.", time_en: "2:30 PM",
       text_es: "Karavan reúne ropa, joyería y objetos de diseñadores y artesanos panameños — buena parada para encontrar un recuerdo que no sea un imán de nevera.",
       text_en: "Karavan gathers clothing, jewelry, and objects from Panamanian designers and artisans — a good stop for a souvenir that isn't a fridge magnet.",
       spot: SPOT.karavan,
     }),
     block({
       photo: SPOT.plazaFrancia.photo,
-      time_es: "3:30 p.m.", time_en: "3:30 PM",
+      time: "15:30", time_es: "3:30 p.m.", time_en: "3:30 PM",
       text_es: "Camina hasta la punta del barrio para ver la Plaza de Francia y su paseo sobre la muralla frente al mar, con placas que recuerdan a los miles de trabajadores franceses que murieron durante el primer intento de construir el canal.",
       text_en: "Walk to the tip of the peninsula for Plaza de Francia and its seawall promenade, lined with plaques honoring the thousands of French workers who died during the first attempt to build the canal.",
       spot: SPOT.plazaFrancia,
     }),
     block({
       photo: SPOT.granclement.photo,
-      time_es: "4:30 p.m.", time_en: "4:30 PM",
+      time: "16:30", time_es: "4:30 p.m.", time_en: "4:30 PM",
       text_es: "El calor de media tarde pide un helado o sorbete artesanal en Granclement — los sabores rotan y suelen incluir frutas locales como maracuyá o guanábana.",
       text_en: "The mid-afternoon heat calls for an artisanal ice cream or sorbet at Granclement — flavors rotate and often include local fruit like passionfruit or soursop.",
       spot: SPOT.granclement,
     }),
     block({
       photo: SPOT.tantalo.photo,
-      time_es: "5:30 p.m.", time_en: "5:30 PM",
+      time: "17:30", time_es: "5:30 p.m.", time_en: "5:30 PM",
       text_es: "Cierra la tarde subiendo a la terraza de Tántalo justo antes del atardecer, con el skyline de Panamá de fondo — llega temprano, se llena rápido.",
       text_en: "Close out the afternoon by heading up to Tántalo's rooftop just before sunset, with the Panama City skyline as a backdrop — arrive early, it fills up fast.",
       spot: SPOT.tantalo,

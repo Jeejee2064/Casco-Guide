@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronUp, SearchX, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, ChevronUp, SearchX, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SpotCard } from "./SpotCard";
 import { Stagger, StaggerItem, TAP_SPRING, EASE_OUT } from "./motion";
 import { useRouter } from "@/i18n/navigation";
 import { isOpenNow } from "@/lib/hours";
-import type { PriceRange, Spot } from "@/lib/types/database";
+import type { ExploreFilterMode } from "./ExploreFilterContext";
+import type { PriceRange, Spot, SpotVibe } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
 type SortKey = "newest" | "rating" | "alpha" | "random";
@@ -36,7 +37,23 @@ function seededShuffle<T>(items: T[], seed: number): T[] {
   return result;
 }
 
-export function SpotExplorer({ spots }: { spots: Spot[] }) {
+export function SpotExplorer({
+  spots,
+  activeVibes = [],
+  mode,
+}: {
+  spots: Spot[];
+  /** The currently-selected vibes (see ExploreFilterBar/SpotsExplorerSection) —
+   * `spots` already arrives pre-sorted by relevance to them. Threaded
+   * through only so this component can (a) not clobber that order with its
+   * own default sort, and (b) pass it to SpotCard for the match highlight. */
+  activeVibes?: SpotVibe[];
+  /** Classic↔Vibes toggle (see ExploreFilterBar/SpotsExplorerSection). Only used
+   * to notice *when it flips* (see freshnessSeed below) — reshuffling the
+   * grid on that switch even while "All" is selected on both sides, so
+   * flipping the toggle always reads as new content, not a no-op. */
+  mode: ExploreFilterMode;
+}) {
   const t = useTranslations("filters");
   const router = useRouter();
   const [prices, setPrices] = useState<PriceRange[]>([]);
@@ -45,6 +62,42 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
   const [shuffleSeed, setShuffleSeed] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  // Random seed for the "fresh view" reshuffle triggered by flipping the
+  // Classic↔Vibes toggle (see the effect below) — null until the first
+  // flip, so the grid still opens in its normal newest-first order and
+  // only starts shuffling once there's actually a switch to react to.
+  const [freshnessSeed, setFreshnessSeed] = useState<number | null>(null);
+
+  // Brief opacity dip whenever the card order is about to visibly change —
+  // either the vibe reorder (a new vibe selected) or the Classic↔Vibes
+  // toggle itself (mode flip, even with "All" selected on both sides — see
+  // freshnessSeed above, and the sort switch below where it's consumed).
+  // The layout-position animation (StaggerItem's `layout` prop, already on
+  // every card) handles the actual reshuffle; this just adds the fade so it
+  // doesn't silently snap into place. Skipped on mount and on vibe -> null.
+  const [isReordering, setIsReordering] = useState(false);
+  // Sorted + joined so the comparison below is by content, not array
+  // identity — SpotsExplorerSection/MapExplorerSection can (and do) hand down a new array
+  // reference for the same set of vibes across renders.
+  const vibesKey = (vs: SpotVibe[]) => [...vs].sort().join(",");
+  const prevVibesKeyRef = useRef(vibesKey(activeVibes));
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    const modeChanged = mode !== prevModeRef.current;
+    const currentKey = vibesKey(activeVibes);
+    const vibeChanged = activeVibes.length > 0 && currentKey !== prevVibesKeyRef.current;
+    if (modeChanged || vibeChanged) {
+      setIsReordering(true);
+      const timer = setTimeout(() => setIsReordering(false), 220);
+      if (modeChanged) setFreshnessSeed(Math.random());
+      prevVibesKeyRef.current = currentKey;
+      prevModeRef.current = mode;
+      return () => clearTimeout(timer);
+    }
+    prevVibesKeyRef.current = currentKey;
+    prevModeRef.current = mode;
+  }, [activeVibes, mode]);
 
   const toggle = <T,>(list: T[], value: T, setter: (v: T[]) => void) =>
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -56,7 +109,7 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
     setExpanded(false);
   };
 
-  // `spots` is already filtered by search/category/vibe (see ExploreSection)
+  // `spots` is already filtered by search/category/vibe (see SpotsExplorerSection)
   // — this only layers price/openNow/sort on top of that.
   const filtered = useMemo(() => {
     let result = spots.filter((spot) => {
@@ -77,15 +130,29 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
         result = seededShuffle(result, shuffleSeed);
         break;
       default:
-        result = [...result].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        );
+        // "Newest" is the implicit default sort, but `spots` already comes
+        // in vibe-relevance order when a vibe is active — re-sorting by
+        // date here would silently discard that (the one thing the whole
+        // reorder feature is supposed to make visible). An explicit sort
+        // choice (rating/alpha/random above) still wins either way.
+        if (activeVibes.length === 0) {
+          // No vibe driving the order — so with nothing else to make a
+          // Classic↔Vibes toggle flip visually register, shuffle instead of
+          // the usual date sort once that toggle has actually been flipped
+          // (freshnessSeed stays null, i.e. this falls through to the plain
+          // date sort, until the first flip — see the effect above).
+          result =
+            freshnessSeed !== null
+              ? seededShuffle(result, freshnessSeed)
+              : [...result].sort(
+                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+                );
+        }
     }
     return result;
-  }, [spots, prices, openNow, sort, shuffleSeed]);
+  }, [spots, prices, openNow, sort, shuffleSeed, activeVibes, freshnessSeed]);
 
   const hasActiveFilters = prices.length > 0 || openNow;
-  const activeFilterCount = prices.length + (openNow ? 1 : 0);
 
   // Truncate only the unfiltered, default list — once someone searches or
   // filters, show every match, since that's the result set they asked for.
@@ -94,30 +161,10 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* Floating, always-reachable filters trigger — bottom-right thumb zone, survives scroll.
-          Search, category, price, open-now and sort all live in the one panel below it. */}
-      <div className="safe-bottom fixed bottom-4 right-4 z-40">
-        <motion.button
-          onClick={() => setFiltersOpen((v) => !v)}
-          whileTap={{ scale: 0.94 }}
-          transition={TAP_SPRING}
-          className={cn(
-            "pill-lift flex h-12 items-center justify-center gap-2 rounded-full border px-5 text-sm font-semibold shadow-lg",
-            hasActiveFilters
-              ? "border-transparent bg-gradient-to-br from-aqua to-aqua-dark text-white"
-              : "glass border-border",
-          )}
-        >
-          <SlidersHorizontal size={16} />
-          {t("title")}
-          {hasActiveFilters && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/25 text-[10px] text-white">
-              {activeFilterCount}
-            </span>
-          )}
-        </motion.button>
-      </div>
-
+      {/* Filters trigger button is hidden — price/open-now/sort panel below
+          is kept in place (unreachable via UI for now) rather than ripped
+          out, since ExploreFilterBar's category/vibe chips cover the
+          everyday filtering need. */}
       <AnimatePresence>
         {filtersOpen && (
           <>
@@ -202,23 +249,34 @@ export function SpotExplorer({ spots }: { spots: Spot[] }) {
 
       {filtered.length > 0 ? (
         <>
-          <Stagger
-            className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            amount={0.05}
+          {/* Opacity-only dip on vibe change — the actual reshuffle is the
+              layout-position animation each StaggerItem below already does
+              (`layout`), this just makes the reorder itself readable instead
+              of an instant snap. Independent of Stagger's own
+              variants/trigger, hence the separate wrapping motion.div. */}
+          <motion.div
+            animate={{ opacity: isReordering ? 0.3 : 1 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
           >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {visibleSpots.map((spot) => (
-                <StaggerItem key={spot.id} layout>
-                  <SpotCard
-                    spot={spot}
-                    onClick={() =>
-                      router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
-                    }
-                  />
-                </StaggerItem>
-              ))}
-            </AnimatePresence>
-          </Stagger>
+            <Stagger
+              className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              amount={0.05}
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                {visibleSpots.map((spot) => (
+                  <StaggerItem key={spot.id} layout>
+                    <SpotCard
+                      spot={spot}
+                      activeVibes={activeVibes}
+                      onClick={() =>
+                        router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
+                      }
+                    />
+                  </StaggerItem>
+                ))}
+              </AnimatePresence>
+            </Stagger>
+          </motion.div>
 
           {canCollapse && (
             <div className="mt-6 flex justify-center">

@@ -28,6 +28,7 @@ import { ArticleCard } from "./ArticleCard";
 import { Stagger, StaggerItem, fadeUp } from "./motion";
 import { Button } from "@/components/ui/Button";
 import { CATEGORY_META } from "@/lib/categories";
+import { VIBE_META } from "@/lib/vibes";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
@@ -59,6 +60,7 @@ export function SpotDetailView({
   const t = useTranslations("spot");
   const td = useTranslations("spotDetail");
   const th = useTranslations("hours");
+  const tVibe = useTranslations("vibe");
   const locale = useLocale();
   const router = useRouter();
 
@@ -180,6 +182,25 @@ export function SpotDetailView({
               </div>
               <HoursBadge spot={spot} className="shrink-0" />
             </div>
+
+            {spot.vibes.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {spot.vibes.map((v) => {
+                  const meta = VIBE_META[v];
+                  const Icon = meta.icon;
+                  const gradient = `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`;
+                  return (
+                    <span
+                      key={v}
+                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-white shadow-sm"
+                      style={{ background: gradient }}
+                    >
+                      <Icon size={12} /> {tVibe(v)}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             {spot.tags.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-1.5">

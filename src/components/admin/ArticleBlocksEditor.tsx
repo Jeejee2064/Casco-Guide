@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { GripVertical, ChevronUp, ChevronDown, Link2, MapPin, CalendarDays, Trash2, Plus, Upload, Loader2, X } from "lucide-react";
+import { GripVertical, ChevronUp, ChevronDown, Link2, MapPin, CalendarDays, Clock, Trash2, Plus, Upload, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadFile } from "@/components/admin/PhotoUploader";
 import { PlaceLinkPicker, type LinkablePlace } from "@/components/admin/PlaceLinkPicker";
@@ -23,7 +23,23 @@ function emptyBlock(): ArticleBlockRecord {
     ref_type: null,
     ref_id: null,
     ref_slug: null,
+    time: null,
   };
+}
+
+/** Formats a 24h "HH:MM" (native `<input type="time">` value) into the
+ * localized label an "itinerary" block's title_es/title_en actually store
+ * — e.g. "09:00" → "9:00 a.m." (es) / "9:00 AM" (en). */
+function formatItineraryTime(time: string, lang: Lang): string {
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return "";
+  const date = new Date();
+  date.setHours(h, m, 0, 0);
+  return new Intl.DateTimeFormat(lang === "es" ? "es-PA" : "en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
 }
 
 /**
@@ -106,12 +122,37 @@ export function ArticleBlocksEditor({
             />
 
             <div className="space-y-2">
-              <input
-                value={(block[`title_${lang}`] as string) ?? ""}
-                onChange={(e) => update(block.id, { [`title_${lang}`]: e.target.value } as Partial<ArticleBlockRecord>)}
-                placeholder={layout === "itinerary" ? t("timePlaceholder") : t("titlePlaceholder")}
-                className="w-full rounded-[var(--radius-button)] border border-border bg-background px-3 py-2 text-sm font-semibold outline-none focus:border-aqua"
-              />
+              {layout === "itinerary" ? (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Clock size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/40" />
+                    <input
+                      type="time"
+                      aria-label={t("time")}
+                      value={block.time ?? ""}
+                      onChange={(e) => {
+                        const time = e.target.value || null;
+                        update(block.id, {
+                          time,
+                          title_es: time ? formatItineraryTime(time, "es") : "",
+                          title_en: time ? formatItineraryTime(time, "en") : "",
+                        });
+                      }}
+                      className="rounded-[var(--radius-button)] border border-border bg-background py-2 pl-8 pr-3 text-sm font-semibold outline-none focus:border-aqua"
+                    />
+                  </div>
+                  {(block[`title_${lang}`] as string) && (
+                    <span className="text-xs font-semibold text-foreground/50">{block[`title_${lang}`] as string}</span>
+                  )}
+                </div>
+              ) : (
+                <input
+                  value={(block[`title_${lang}`] as string) ?? ""}
+                  onChange={(e) => update(block.id, { [`title_${lang}`]: e.target.value } as Partial<ArticleBlockRecord>)}
+                  placeholder={t("titlePlaceholder")}
+                  className="w-full rounded-[var(--radius-button)] border border-border bg-background px-3 py-2 text-sm font-semibold outline-none focus:border-aqua"
+                />
+              )}
               <textarea
                 value={(block[`text_${lang}`] as string) ?? ""}
                 onChange={(e) => update(block.id, { [`text_${lang}`]: e.target.value } as Partial<ArticleBlockRecord>)}
@@ -176,7 +217,9 @@ export function ArticleBlocksEditor({
               ref_type: place.type,
               ref_id: place.id,
               ref_slug: place.slug,
-              ...(!value.find((b) => b.id === pickerForId)?.[`title_${lang}`]
+              // "itinerary" titles are the time label, not the place name —
+              // never auto-fill them from the linked place.
+              ...(layout !== "itinerary" && !value.find((b) => b.id === pickerForId)?.[`title_${lang}`]
                 ? ({ [`title_${lang}`]: place.label } as Partial<ArticleBlockRecord>)
                 : {}),
             });

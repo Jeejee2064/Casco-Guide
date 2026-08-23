@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronLeft, MapPin, CalendarDays, User, Clock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { SpotMap } from "./SpotMap";
+import { ItineraryMap, type ItineraryStop } from "./ItineraryMap";
 import { ShareMenu } from "./ShareMenu";
 import { Stagger, StaggerItem, staggerContainer, fadeUp } from "./motion";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
@@ -46,6 +47,46 @@ export function ArticleDetailView({
     : null;
 
   const hasCitations = citedSpots.length > 0 || citedEvents.length > 0;
+
+  // For "itinerary" articles, resolve each block's ref (in block/day-plan
+  // order) against citedSpots/citedEvents to build the route ItineraryMap
+  // draws below — a block without a ref, or one whose ref didn't resolve
+  // (e.g. missing coordinates), is simply skipped rather than breaking the
+  // sequence.
+  const itineraryStops: ItineraryStop[] = useMemo(() => {
+    if (article.layout !== "itinerary") return [];
+    const stops: ItineraryStop[] = [];
+    for (const block of article.blocks) {
+      if (block.ref_type === "spot" && block.ref_id) {
+        const spot = citedSpots.find((s) => s.id === block.ref_id);
+        if (spot) {
+          stops.push({
+            id: block.id,
+            index: stops.length + 1,
+            latitude: spot.latitude,
+            longitude: spot.longitude,
+            name: spot.name,
+            href: { pathname: "/spots/[slug]", params: { slug: spot.slug } },
+            place: { kind: "spot", spot },
+          });
+        }
+      } else if (block.ref_type === "event" && block.ref_id) {
+        const event = citedEvents.find((e) => e.id === block.ref_id);
+        if (event) {
+          stops.push({
+            id: block.id,
+            index: stops.length + 1,
+            latitude: event.latitude,
+            longitude: event.longitude,
+            name: event.title,
+            href: { pathname: "/events/[slug]", params: { slug: event.slug } },
+            place: { kind: "event", event },
+          });
+        }
+      }
+    }
+    return stops;
+  }, [article.layout, article.blocks, citedSpots, citedEvents]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 pb-24 sm:px-6 sm:py-10">
@@ -223,28 +264,47 @@ export function ArticleDetailView({
             <h2 className="font-heading mb-3 text-xl font-bold">{t("placesMentioned")}</h2>
           </StaggerItem>
           <StaggerItem>
-            <SpotMap spots={citedSpots} events={citedEvents} heightClassName="h-[45vh] min-h-[320px]" />
+            {itineraryStops.length > 0 ? (
+              <ItineraryMap stops={itineraryStops} heightClassName="h-[55vh] min-h-[440px]" />
+            ) : (
+              <SpotMap spots={citedSpots} events={citedEvents} heightClassName="h-[55vh] min-h-[440px]" />
+            )}
           </StaggerItem>
           <StaggerItem>
             <div className="mt-3 flex flex-wrap gap-2">
-              {citedSpots.map((spot) => (
-                <Link
-                  key={spot.id}
-                  href={{ pathname: "/spots/[slug]", params: { slug: spot.slug } }}
-                  className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-aqua hover:text-aqua"
-                >
-                  <MapPin size={12} /> {spot.name}
-                </Link>
-              ))}
-              {citedEvents.map((event) => (
-                <Link
-                  key={event.id}
-                  href={{ pathname: "/events/[slug]", params: { slug: event.slug } }}
-                  className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-coral hover:text-coral"
-                >
-                  <CalendarDays size={12} /> {event.title}
-                </Link>
-              ))}
+              {itineraryStops.length > 0
+                ? itineraryStops.map((stop) => (
+                    <Link
+                      key={stop.id}
+                      href={stop.href}
+                      className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-aqua hover:text-aqua"
+                    >
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-aqua text-[10px] font-extrabold text-white">
+                        {stop.index}
+                      </span>
+                      {stop.name}
+                    </Link>
+                  ))
+                : [
+                    ...citedSpots.map((spot) => (
+                      <Link
+                        key={spot.id}
+                        href={{ pathname: "/spots/[slug]", params: { slug: spot.slug } }}
+                        className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-aqua hover:text-aqua"
+                      >
+                        <MapPin size={12} /> {spot.name}
+                      </Link>
+                    )),
+                    ...citedEvents.map((event) => (
+                      <Link
+                        key={event.id}
+                        href={{ pathname: "/events/[slug]", params: { slug: event.slug } }}
+                        className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold hover:border-coral hover:text-coral"
+                      >
+                        <CalendarDays size={12} /> {event.title}
+                      </Link>
+                    )),
+                  ]}
             </div>
           </StaggerItem>
         </Stagger>

@@ -18,7 +18,10 @@ import { fadeUp } from "./motion";
  * Layout: the most recent article gets the big tile (left on desktop, top
  * on mobile), the next two stack beside it at half height each — classic
  * "featured + 2 up next" bento, not a 3-up grid, so the newest guide reads
- * as the headline rather than one of three equals.
+ * as the headline rather than one of three equals. On mobile the other two
+ * are dropped entirely (not just visually de-emphasized) — one tall image
+ * per screen keeps the hero from turning into a long scroll before the
+ * search bar even shows up.
  */
 export function HeroArticles({ articles }: { articles: Article[] }) {
   const t = useTranslations("articles");
@@ -53,7 +56,7 @@ export function HeroArticles({ articles }: { articles: Article[] }) {
           showExcerpt
         />
 
-        <div className="grid gap-4 sm:grid-rows-2">
+        <div className="hidden gap-4 sm:grid sm:grid-rows-2">
           {rest.map((article) => (
             <ArticleTile
               key={article.id}

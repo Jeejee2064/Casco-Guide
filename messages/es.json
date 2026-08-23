@@ -6,20 +6,20 @@
     "searchPlaceholder": "Busca lugares, etiquetas, cocina…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Cuadrícula",
-    "viewMap": "Mapa"
+    "viewMap": "Mapa",
+    "menu": "Menú"
   },
   "nav": {
     "spots": "Lugares",
     "events": "Eventos",
     "admin": "Admin",
-    "articles": "Guías"
+    "articles": "Guías",
+    "map": "Mapa"
   },
   "night": {
     "toggle": "Modo día / noche",
     "dayMode": "Día",
     "nightMode": "Noche",
-    "bannerTitle": "Modo nocturno activado",
-    "bannerSubtitle": "¡Los mejores lugares para salir ahora!",
     "featuredBadge": "Destacado · Exclusive"
   },
   "filters": {
@@ -27,7 +27,6 @@
     "all": "Todos",
     "classic": "Clásico",
     "vibes": "Vibes",
-    "category": "Categoría",
     "price": "Rango de precio",
     "openNow": "Abierto ahora",
     "sort": "Ordenar por",
@@ -40,10 +39,9 @@
     "resultsCount": "{count, plural, =0 {Ningún lugar encontrado} one {# lugar} other {# lugares}}",
     "showMore": "{count, plural, one {Ver # lugar más} other {Ver # lugares más}}",
     "showLess": "Ver menos",
-    "date": "Fecha",
-    "dateToday": "Hoy",
-    "dateWeek": "Esta semana",
-    "dateWeekend": "Este fin de semana"
+    "close": "Cerrar",
+    "vibesModalTitle": "¿Cuál es tu vibra en Casco hoy?",
+    "vibesHint": "¡Prueba explorar por vibra!"
   },
   "category": {
     "restaurant": "Restaurante",
@@ -56,12 +54,20 @@
     "hotel": "Hotel"
   },
   "vibe": {
-    "rooftop_party": "Azoteas y Fiesta",
+    "rooftop_party": "Azoteas y Vida Nocturna",
     "nomad_work": "Trabajo y Café",
-    "romantic_sunset": "Romántico / Atardecer",
-    "local_heritage": "Local y Patrimonio",
-    "gastro_trendy": "Gastro y Trendy",
-    "chill_coffee": "Chill y Café"
+    "romantic_sunset": "Romántico y Atardecer",
+    "local_heritage": "Local y Auténtico",
+    "gastro_trendy": "Foodie y Gastro",
+    "chill_coffee": "Arte y Cultura"
+  },
+  "vibeDescriptors": {
+    "rooftop_party": "Bares • Clubes • Energía nocturna",
+    "nomad_work": "WiFi • Coworking • Tranquilo • Buen café",
+    "romantic_sunset": "Velas • Vistas al atardecer • Propuestas",
+    "local_heritage": "Comida callejera • Panamá real • Sin turistas",
+    "gastro_trendy": "Alta cocina • Chefs • Culinario",
+    "chill_coffee": "Galerías • Museos • Música en vivo"
   },
   "price": {
     "$": "Económico",
@@ -144,7 +150,6 @@
     "viewDetails": "Ver detalles",
     "capacity": "Capacidad: {count}",
     "organizer": "Organizado por {name}",
-    "paid": "De pago",
     "searchPlaceholder": "Buscar eventos, categorías…"
   },
   "empty": {
@@ -479,7 +484,7 @@
         "item": "Elemento #{n}",
         "step": "Paso #{n}",
         "titlePlaceholder": "Título",
-        "timePlaceholder": "Hora (ej. 9:00 a.m. o Mañana)",
+        "time": "Hora",
         "textPlaceholder": "Texto corto…",
         "linkPlace": "Enlazar lugar/evento",
         "addRank": "+ Agregar puesto",
@@ -519,6 +524,14 @@
     "articles": {
       "title": "Guías y Recomendaciones de Casco Viejo",
       "description": "Guías a fondo, selecciones y crónicas sobre los mejores restaurantes, bares, sitios y rincones escondidos de Casco Viejo, Ciudad de Panamá."
+    },
+    "spots": {
+      "title": "Lugares en Casco Viejo — Restaurantes, Bares, Cafés, Museos y Más",
+      "description": "Explora cada restaurante, bar, café, museo, tienda y hotel de Casco Viejo, Ciudad de Panamá. Filtra por categoría o por vibe — atardecer romántico, fiesta en azotea, patrimonio local y más — para encontrar justo lo que buscas."
+    },
+    "map": {
+      "title": "Mapa de Casco Viejo — Todos los Lugares",
+      "description": "Un mapa interactivo con cada restaurante, bar, café, sitio y hotel de Casco Viejo, Ciudad de Panamá. Filtra por categoría o vibe y muévete a pie por el casco antiguo."
     },
     "spotTitle": "{name} — {category} en Casco Viejo",
     "spotDescriptionFallback": "{name} — {category} en Casco Viejo, Ciudad de Panamá. Consulta horario, dirección, fotos y todo lo que necesitas para visitarlo.",
@@ -563,6 +576,21 @@
         "q": "¿Cuál es la mejor época para visitar Casco Viejo?",
         "a": "La temporada seca de Panamá, de mediados de diciembre a abril, trae menos lluvia. Dentro de un mismo día, la mejor franja es la tarde-noche — baja el calor, la luz es ideal para fotos y los bares en azotea se llenan para el atardecer sobre la Bahía de Panamá."
       }
+    }
+  },
+  "home": {
+    "featuredSpots": {
+      "title": "Lugares imprescindibles",
+      "subtitle": "Un puñado de favoritos locales para empezar — los restaurantes, bares, cafés y sitios mejor calificados.",
+      "cta": "Explora los {count} lugares"
+    },
+    "mapTeaser": {
+      "title": "Míralo todo en el mapa"
+    },
+    "vibeTeaser": {
+      "title": "Encuentra tu vibe",
+      "subtitle": "Olvídate de las categorías — elige una vibe y te mostramos los lugares que encajan.",
+      "cta": "Descubre tu vibe"
     }
   },
   "installPwa": {
