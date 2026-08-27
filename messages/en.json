@@ -116,7 +116,8 @@
     "featured": "Featured",
     "verified": "Verified ✓",
     "close": "Close",
-    "readMore": "Read more"
+    "readMore": "Read more",
+    "partOf": "Part of {name}"
   },
   "share": {
     "cta": "Share",
@@ -164,10 +165,33 @@
     "locateError": "Couldn't find your location",
     "youAreHere": "You are here",
     "walkTime": "{mins} min walk",
-    "backToList": "Back to list"
+    "backToList": "Back to list",
+    "directionsTo": "Directions to {name}",
+    "calculatingRoute": "Finding the best route…",
+    "approximateRoute": "Approximate route",
+    "openInGoogleMaps": "Open in Google Maps instead",
+    "retry": "Try again",
+    "exitDirections": "Exit directions",
+    "steps": {
+      "title": "Turn-by-turn directions",
+      "depart": "Head onto {street}",
+      "departGeneric": "Head straight ahead",
+      "turnLeft": "Turn left onto {street}",
+      "turnLeftGeneric": "Turn left",
+      "turnRight": "Turn right onto {street}",
+      "turnRightGeneric": "Turn right",
+      "continue": "Continue onto {street}",
+      "continueGeneric": "Continue straight",
+      "cross": "Cross the plaza",
+      "crossNamed": "Cross {street}",
+      "stairs": "Take the stairs",
+      "stairsNamed": "Take the stairs on {street}",
+      "arrive": "Arrive at {name}"
+    }
   },
   "discover": {
     "nearbySpots": "Nearby spots",
+    "relatedSpots": "You might also like",
     "relatedEvents": "Related events",
     "exploreMap": "Explore the full map",
     "exploreMapSubtitle": "See every spot & event around Casco Viejo"
@@ -182,7 +206,8 @@
     "back": "Back",
     "amenities": "Amenities",
     "gallery": "Gallery",
-    "featuredIn": "Featured in"
+    "featuredIn": "Featured in",
+    "placesHere": "Places here"
   },
   "eventDetail": {
     "back": "Back",
@@ -294,6 +319,7 @@
       "allCategories": "All categories",
       "allVibes": "All vibes",
       "featuredOnly": "Featured only",
+      "childCount": "{count} linked",
       "columns": {
         "name": "Name",
         "category": "Category",
@@ -356,6 +382,8 @@
       "sections": {
         "basics": "Basics",
         "location": "Location",
+        "parent": "Parent location",
+        "children": "Places inside",
         "hours": "Hours",
         "details": "Details",
         "media": "Photos",
@@ -382,6 +410,27 @@
       "phone": "Phone",
       "website": "Website",
       "email": "Email",
+      "hierarchy": {
+        "parentHint": "If this spot is really a business inside another one (e.g. a hotel's restaurant), link it here — its pin disappears from the map and shows up inside the parent's pin instead.",
+        "chooseParent": "Choose parent location",
+        "removeParent": "Remove parent location",
+        "childrenHint": "Businesses that live inside this spot (e.g. a hotel's restaurant and bar) — they share one pin on the map, each with its own page.",
+        "attachExisting": "Link existing spot",
+        "createChild": "Create new spot inside",
+        "removeChild": "Unlink",
+        "childAttached": "Spot linked",
+        "childDetached": "Spot unlinked",
+        "parentPicker": {
+          "title": "Choose parent location",
+          "search": "Search spots…",
+          "empty": "No spots available"
+        },
+        "childPicker": {
+          "title": "Link existing spot",
+          "search": "Search spots…",
+          "empty": "No spots available"
+        }
+      },
       "hoursNote": "Hours note",
       "hoursNoteHint": "e.g. Closed during holidays",
       "addSlot": "+ Add time slot",

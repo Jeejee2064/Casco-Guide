@@ -24,6 +24,9 @@ export interface SpotFormValues {
   phone: string;
   website: string;
   email: string;
+  /** Set when this spot is one of several businesses inside a shared hub
+   * location — the parent hub's id, or `null` for a standalone spot. */
+  parent_id: string | null;
   hours_monday: DayHours;
   hours_tuesday: DayHours;
   hours_wednesday: DayHours;
@@ -68,6 +71,7 @@ export async function upsertSpot(locale: Locale, values: SpotFormValues) {
     cuisine_type_es: rest.cuisine_type_es || null,
     cuisine_type_en: rest.cuisine_type_en || null,
     featured_photo: rest.featured_photo || null,
+    parent_id: rest.parent_id || null,
     last_verified: rest.is_verified ? new Date().toISOString() : null,
   };
 
@@ -90,5 +94,18 @@ export async function deleteSpot(id: string) {
   const { error } = await supabase.from("spots").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/[locale]/admin/spots", "page");
+  return { error: null };
+}
+
+/** Attaches or detaches a child spot from a parent hub — a targeted update
+ * for the admin "children" manager, so attaching/detaching doesn't require
+ * resubmitting either spot's whole form. Pass `parentId: null` to detach. */
+export async function setSpotParent(childId: string, parentId: string | null) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("spots").update({ parent_id: parentId }).eq("id", childId);
+  if (error) return { error: error.message };
+  revalidatePath("/[locale]/admin/spots", "page");
+  revalidatePath("/[locale]/admin/spots/[id]", "page");
+  revalidatePath("/[locale]", "page");
   return { error: null };
 }

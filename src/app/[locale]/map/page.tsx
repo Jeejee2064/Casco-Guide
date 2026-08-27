@@ -64,6 +64,11 @@ export default async function MapPage({
   const initialMode = vibe || sp.mode === "vibes" ? "vibes" : "classic";
   const autoOpenVibesModal = sp.vibesModal === "1";
 
+  // SpotDetailView's "Get directions" button, instead of opening Google
+  // Maps directly — see MapExplorerSection/SpotMap's itinerary mode.
+  const directionsSlugParam = Array.isArray(sp.directions) ? sp.directions[0] : sp.directions;
+  const initialDirectionsSlug = directionsSlugParam ?? null;
+
   return (
     <>
       <Header />
@@ -79,6 +84,7 @@ export default async function MapPage({
           initialMode={initialMode}
           initialVibes={vibe ? [vibe] : []}
           autoOpenVibesModal={autoOpenVibesModal}
+          initialDirectionsSlug={initialDirectionsSlug}
         />
       </main>
     </>

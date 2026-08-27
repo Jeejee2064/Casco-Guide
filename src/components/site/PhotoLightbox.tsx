@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { LoadingImage } from "./LoadingImage";
 import type { Photo } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
@@ -92,10 +93,9 @@ export function PhotoLightbox({
                 className="relative flex h-full min-w-0 flex-[0_0_100%] items-center justify-center p-3 sm:p-10"
               >
                 <div className="relative h-full w-full">
-                  <Image
+                  <LoadingImage
                     src={photo.url}
                     alt={photo.caption ?? `${altBase} — ${i + 1}/${photos.length}`}
-                    fill
                     sizes="100vw"
                     className="object-contain"
                     preload={i === startIndex}

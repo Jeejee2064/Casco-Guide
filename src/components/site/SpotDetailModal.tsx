@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import {
@@ -23,6 +22,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
+import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { Button } from "@/components/ui/Button";
@@ -130,10 +130,9 @@ export function SpotDetailModal({
                   <div className="flex h-full">
                     {photos.map((photo, i) => (
                       <div key={i} className="relative h-full min-w-0 flex-[0_0_100%]">
-                        <Image
+                        <LoadingImage
                           src={photo.url}
                           alt={photo.caption ?? spot.name}
-                          fill
                           sizes="(max-width: 640px) 100vw, 640px"
                           className="object-cover"
                         />

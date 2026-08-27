@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { SpotForm } from "@/components/admin/SpotForm";
-import { isSupabaseConfigured } from "@/lib/data/spots";
+import { isSupabaseConfigured, getSpots } from "@/lib/data/spots";
 import { MOCK_SPOTS } from "@/lib/data/mock-spots";
+import type { Locale } from "@/i18n/routing";
 import type { SpotRecord } from "@/lib/types/database";
 
 export default async function EditSpotPage({
@@ -13,6 +14,7 @@ export default async function EditSpotPage({
 }) {
   const { id } = await params;
   const t = await getTranslations("admin.spotForm");
+  const locale = (await getLocale()) as Locale;
 
   let spot: SpotRecord | null = null;
   if (isSupabaseConfigured) {
@@ -25,10 +27,12 @@ export default async function EditSpotPage({
 
   if (!spot) notFound();
 
+  const allSpots = await getSpots(locale);
+
   return (
     <div className="max-w-3xl space-y-6">
       <h1 className="font-heading text-2xl font-extrabold">{t("titleEdit")}</h1>
-      <SpotForm spot={spot} />
+      <SpotForm spot={spot} allSpots={allSpots} />
     </div>
   );
 }

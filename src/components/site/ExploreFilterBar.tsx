@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, Sparkles } from "lucide-react";
+import { LayoutGrid, Search, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { VibesModal } from "./VibesModal";
-import { useExploreFilter, type ExploreFilterMode } from "./ExploreFilterContext";
+import {
+  useExploreFilter,
+  type ExploreFilterMode,
+} from "./ExploreFilterContext";
 import { useHeaderHeight } from "./useHeaderHeight";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META, SPOT_CATEGORIES } from "@/lib/categories";
@@ -47,6 +50,7 @@ export function ExploreFilterBar({
   spots,
   fixed = false,
   autoOpenVibesModal = false,
+  hideFloatingBottomBar = false,
 }: {
   /** Full, unfiltered spot list — powers the search input's autocomplete
    * dropdown (name matches, regardless of the current category/vibe
@@ -59,14 +63,33 @@ export function ExploreFilterBar({
    * "Discover your vibe" CTA (see /map's page.tsx), which is explicitly
    * asking to see the modal, not just landing quietly in vibes mode. */
   autoOpenVibesModal?: boolean;
+  /** Animates the /map bottom shelf (mode toggle + chips) out of view
+   * without unmounting it — fed by SpotMap's `onSelectionChange` (see its
+   * doc comment: the mobile sheet is `position: fixed` inside SpotMap's
+   * *own* stacking context, so no z-index in here can ever put this shelf
+   * below it; moving the shelf out of the way while a pin is selected is
+   * the actual fix). Stays mounted throughout — an opacity/transform
+   * animation, not a conditional unmount — so SpotMap's own ResizeObserver
+   * on this shelf (for the locate-me button's offset) doesn't lose track of
+   * the node, and so it can fade back in as the sheet slides back down
+   * instead of popping back in already-open. */
+  hideFloatingBottomBar?: boolean;
 }) {
   const t = useTranslations("filters");
   const tSite = useTranslations("site");
   const tCategory = useTranslations("category");
   const tVibe = useTranslations("vibe");
   const router = useRouter();
-  const { mode, setMode, query, setQuery, categories, setCategories, vibes, setVibes } =
-    useExploreFilter();
+  const {
+    mode,
+    setMode,
+    query,
+    setQuery,
+    categories,
+    setCategories,
+    vibes,
+    setVibes,
+  } = useExploreFilter();
   const headerHeight = useHeaderHeight(true);
 
   const [isVibesModalOpen, setIsVibesModalOpen] = useState(false);
@@ -122,7 +145,8 @@ export function ExploreFilterBar({
   useEffect(() => {
     if (!isSearchFocused) return;
     const handlePointerDown = (e: PointerEvent) => {
-      if (!searchWrapperRef.current?.contains(e.target as Node)) setIsSearchFocused(false);
+      if (!searchWrapperRef.current?.contains(e.target as Node))
+        setIsSearchFocused(false);
     };
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
@@ -193,7 +217,8 @@ export function ExploreFilterBar({
     const active = !vibes.includes(v);
     setVibes(active ? [v] : []);
     setMode("vibes");
-    if (active) track("filter_applied", { mode: "vibes", kind: "vibe", value: v });
+    if (active)
+      track("filter_applied", { mode: "vibes", kind: "vibe", value: v });
   };
 
   // Same idea for categories, no mode flip needed (classic is already
@@ -201,298 +226,434 @@ export function ExploreFilterBar({
   const toggleCategory = (c: SpotCategory) => {
     const active = !categories.includes(c);
     setCategories(active ? [c] : []);
-    if (active) track("filter_applied", { mode: "classic", kind: "category", value: c });
+    if (active)
+      track("filter_applied", { mode: "classic", kind: "category", value: c });
   };
 
-  return (
-    <div
-      // Lets SpotMap (fullScreen mode always renders alongside this bar)
-      // measure its rendered height, so its own top-anchored floating UI —
-      // the detail panel in particular — can start below it instead of
-      // being covered by it (this bar sits at a higher z-index).
-      data-explore-filter-bar
-      className={cn(
-        // Solid, not `.glass` — see Header.tsx for why: this bar overlaps the
-        // scrolling grid directly, and blur can silently no-op depending on
-        // the browser/GPU, leaving nothing but a faint tint over full-detail
-        // card content underneath. `.bar-surface` matches Header's subtle
-        // gradient so the two bars read as one continuous shelf.
-        "bar-surface inset-x-0 z-40 space-y-3 border-b border-border px-4 py-3 shadow-[var(--shadow-sm)] sm:px-6",
-        fixed ? "fixed" : "sticky",
-      )}
-      style={{ top: headerHeight ?? 56 }}
-    >
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center">
-        <div ref={searchWrapperRef} className="group relative flex-1">
-          <Search
-            size={17}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40 transition-colors duration-200 group-focus-within:text-aqua"
-          />
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              // Stale highlight from a previous query shouldn't linger once
-              // the list underneath it has changed.
-              setActiveSuggestion(-1);
-            }}
-            onFocus={() => setIsSearchFocused(true)}
-            onKeyDown={handleSearchKeyDown}
-            placeholder={tSite("searchPlaceholder")}
-            role="combobox"
-            aria-expanded={showSuggestions}
-            aria-controls="explore-search-suggestions"
-            aria-autocomplete="list"
-            aria-activedescendant={
-              activeSuggestion >= 0 ? `explore-search-suggestion-${activeSuggestion}` : undefined
-            }
-            autoComplete="off"
-            className="input-glow h-11 w-full rounded-full border border-border bg-background pl-10 pr-4 text-sm outline-none"
-          />
-
-          {/* Autocomplete dropdown — name matches only, a "jump straight to
-              a place you already have in mind" shortcut alongside the
-              broader live filter below (see `suggestions` above). */}
-          <AnimatePresence>
-            {showSuggestions && (
-              <motion.div
-                id="explore-search-suggestions"
-                role="listbox"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-                className="glass absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-2xl border border-border py-1.5 shadow-lg"
-              >
-                {suggestions.map((spot, i) => {
-                  const meta = CATEGORY_META[spot.category];
-                  const Icon = meta.icon;
-                  return (
-                    <button
-                      key={spot.id}
-                      id={`explore-search-suggestion-${i}`}
-                      role="option"
-                      aria-selected={i === activeSuggestion}
-                      type="button"
-                      onClick={() => selectSuggestion(spot)}
-                      onMouseEnter={() => setActiveSuggestion(i)}
-                      className={cn(
-                        "flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors",
-                        i === activeSuggestion ? "bg-foreground/5" : "hover:bg-foreground/5",
-                      )}
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/60">
-                        <Icon size={14} strokeWidth={2.5} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate font-semibold">{spot.name}</span>
-                      <span className="shrink-0 text-xs text-foreground/45">
-                        {tCategory(spot.category)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Classic/Vibes segmented control — same sliding-pill idiom as the
-            spots/events switcher (SpotMap), just a new layoutId. Clicking
-            "Vibes" opens VibesModal
-            only the very first time ever (same `vibesDiscovered`/
-            `VIBES_USED_KEY` gate as the discovery nudge above) — picking a
-            vibe in the modal seeds `vibes` with just that one and flips
-            `mode` (see VibesModal's onSelect below), which the effect above
-            catches and marks discovered, so every click after that just
-            switches mode directly like "Classic" does; the chip row below
-            (single-select — see toggleVibe/toggleCategory above) is how you
-            switch to a different one from then on. */}
-        {/* `self-center` (rather than the flex row's default stretch) keeps
-            this wrapper fit-to-content instead of full-width on mobile,
-            where the row is a column — otherwise the toggle pill sits
-            flush-left inside a stretched wrapper (not actually centered)
-            and the hint bubble below, which centers itself on *this*
-            wrapper via left-1/2, drifts to the middle of the screen instead
-            of pointing at the toggle. */}
-        <div className="relative shrink-0 self-center">
-          <div className="glass relative inline-flex rounded-full border border-border p-1">
-            {(
-              [
-                { key: "classic", label: t("classic") },
-                { key: "vibes", label: t("vibes") },
-              ] satisfies { key: ExploreFilterMode; label: string }[]
-            ).map(({ key, label }) => {
-              const active = mode === key;
-              return (
-                <motion.button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    if (key !== "vibes") {
-                      setMode(key);
-                      return;
-                    }
-                    if (vibesDiscovered) setMode("vibes");
-                    else setIsVibesModalOpen(true);
-                  }}
-                  aria-pressed={active}
-                  whileTap={{ scale: 0.94 }}
-                  transition={TAP_SPRING}
-                  className={cn(
-                    "relative z-10 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
-                    active ? "text-white" : "text-foreground/60 hover:text-foreground",
-                  )}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId="explore-filter-mode-pill"
-                      transition={{ type: "spring", stiffness: 500, damping: 34 }}
-                      className="brand-accent absolute inset-0 -z-10 rounded-full"
-                    />
-                  )}
-                  {key === "vibes" && showHint && (
-                    <motion.span
-                      aria-hidden
-                      className="absolute inset-0 -z-10 rounded-full border-2 border-coral"
-                      animate={{ opacity: [0.7, 0.15, 0.7], scale: [1, 1.08, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                  )}
-                  {label}
-                </motion.button>
-              );
-            })}
-          </div>
-
-          {/* Animated callout bubble — a real speech-bubble (pointer +
-              filled pill, not just floating text) so it reads as something
-              pointing *at* the toggle, not a caption near it. Bounces in
-              place continuously to catch the eye; dismissible by tapping it
-              away, otherwise auto-fades after a few seconds (see showHint
-              above for when it's shown/reset). */}
-          <AnimatePresence>
-            {showHint && (
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.85 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.85 }}
-                transition={{ duration: 0.25, ease: EASE_OUT }}
-                className="absolute left-1/2 top-full z-10 mt-2.5 -translate-x-1/2"
-              >
-                <div
-                  aria-hidden
-                  className="brand-accent absolute -top-1 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 rounded-[2px]"
+  // Classic/Vibes segmented control — same sliding-pill idiom as the
+  // spots/events switcher (SpotMap), just a new layoutId. Clicking "Vibes"
+  // opens VibesModal only the very first time ever (same
+  // `vibesDiscovered`/`VIBES_USED_KEY` gate as the discovery nudge above) —
+  // picking a vibe in the modal seeds `vibes` with just that one and flips
+  // `mode` (see VibesModal's onSelect below), which the effect above catches
+  // and marks discovered, so every click after that just switches mode
+  // directly like "Classic" does; the chip row (single-select — see
+  // toggleVibe/toggleCategory above) is how you switch to a different one
+  // from then on.
+  //
+  // A function, not a plain JSX const like `chips` below, because it takes
+  // one: `big` is true only for the /map bottom shelf (see the `fixed`
+  // branch of the return below), where this is the one control choosing
+  // *what the whole chip row means* — categories or vibes — so it earns a
+  // bigger, icon-carrying, unmissable treatment instead of the compact
+  // version /spots keeps tucked next to its search bar.
+  const renderModeToggle = (big: boolean) => (
+    <div className="relative shrink-0 self-center">
+      <div
+        className={cn(
+          "relative inline-flex rounded-full border shadow-lg",
+          big
+            ? "gap-0.5 border-border/60 bg-surface/70 p-1 backdrop-blur-xl"
+            : "glass border-border p-1",
+        )}
+      >
+        {(
+          [
+            { key: "classic", label: t("classic"), icon: LayoutGrid },
+            { key: "vibes", label: t("vibes"), icon: Sparkles },
+          ] satisfies {
+            key: ExploreFilterMode;
+            label: string;
+            icon: typeof Sparkles;
+          }[]
+        ).map(({ key, label, icon: Icon }) => {
+          const active = mode === key;
+          return (
+            <motion.button
+              key={key}
+              type="button"
+              onClick={() => {
+                if (key !== "vibes") {
+                  setMode(key);
+                  return;
+                }
+                if (vibesDiscovered) setMode("vibes");
+                else setIsVibesModalOpen(true);
+              }}
+              aria-pressed={active}
+              whileTap={{ scale: 0.94 }}
+              transition={TAP_SPRING}
+              className={cn(
+                "relative z-10 flex items-center gap-1.5 rounded-full font-semibold transition-colors",
+                big ? "px-4 py-2 text-xs" : "px-4 py-1.5 text-xs",
+                active
+                  ? "text-white"
+                  : "text-foreground/60 hover:text-foreground",
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId={
+                    big
+                      ? "explore-filter-mode-pill-big"
+                      : "explore-filter-mode-pill"
+                  }
+                  transition={{ type: "spring", stiffness: 500, damping: 34 }}
+                  className="brand-accent absolute inset-0 -z-10 rounded-full"
                 />
-                <motion.button
-                  type="button"
-                  onClick={markVibesDiscovered}
-                  animate={{ y: [0, -3, 0] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                  className="brand-accent relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-[11px] font-bold text-white shadow-lg"
-                >
-                  <Sparkles size={12} className="shrink-0" />
-                  {t("vibesHint")}
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              )}
+              {key === "vibes" && showHint && (
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-0 -z-10 rounded-full border-2 border-coral"
+                  animate={{ opacity: [0.7, 0.15, 0.7], scale: [1, 1.08, 1] }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                />
+              )}
+              {big && <Icon size={15} strokeWidth={2.5} />}
+              {label}
+            </motion.button>
+          );
+        })}
       </div>
 
-      <VibesModal
-        open={isVibesModalOpen}
-        onClose={() => setIsVibesModalOpen(false)}
-        onSelect={(v) => {
-          // The modal is a fresh start, not an add — it replaces whatever
-          // was selected (usually nothing yet) with just this one vibe;
-          // the chip row below is how more get added afterward.
-          setVibes([v]);
-          setMode("vibes");
-          setIsVibesModalOpen(false);
-        }}
-      />
+      {/* Animated callout bubble — a real speech-bubble (pointer + filled
+          pill, not just floating text) so it reads as something pointing
+          *at* the toggle, not a caption near it. Bounces in place
+          continuously to catch the eye; dismissible by tapping it away,
+          otherwise auto-fades after a few seconds (see showHint above for
+          when it's shown/reset). Sits *above* the big/bottom-shelf version
+          (there's no screen left below it to point into) and below the
+          compact/top version, same as before. */}
+      <AnimatePresence>
+        {showHint && (
+          <motion.div
+            initial={{ opacity: 0, y: big ? 8 : -8, scale: 0.85 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: big ? 8 : -8, scale: 0.85 }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+            className={cn(
+              "absolute left-1/2 z-10 -translate-x-1/2",
+              big ? "bottom-full mb-2.5" : "top-full mt-2.5",
+            )}
+          >
+            <div
+              aria-hidden
+              className={cn(
+                "brand-accent absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 rounded-[2px]",
+                big ? "-bottom-1" : "-top-1",
+              )}
+            />
+            <motion.button
+              type="button"
+              onClick={markVibesDiscovered}
+              animate={{ y: [0, big ? 3 : -3, 0] }}
+              transition={{
+                duration: 1.6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="brand-accent relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-[11px] font-bold text-white shadow-lg"
+            >
+              <Sparkles size={12} className="shrink-0" />
+              {t("vibesHint")}
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 
-      {/* Chip row — single-select: only one category (or vibe) chip is
-          active at a time, narrowing to spots matching it; picking a new
-          one replaces the old, and re-picking the active one (or the
-          explicit "All" chip) clears back to no filter. A hairline + its own
-          top padding (on top of the parent's space-y-3) separates it from
-          the search/mode row above — without it the two rows read as one
-          flat stack of same-weight pills, when the mode switch is really a
-          level above the chips it's filtering within. */}
-      <div className="scrollbar-none mx-auto flex max-w-6xl gap-2 overflow-x-auto border-t border-border/60 pb-0.5 pt-3">
-        <button
-          type="button"
-          onClick={() => (mode === "classic" ? setCategories([]) : setVibes([]))}
+  // Extracted so the "All" + category/vibe chips render identically whether
+  // they end up nested under the search/mode row (/spots) or floating on
+  // their own, detached shelf at the bottom of the screen (/map — see the
+  // `fixed` branch below, which is otherwise the whole reason this bar
+  // exists as a component someone could still be looking at while a spot's
+  // pin sits under their thumb, not just above it).
+  const chips = (
+    <>
+      <button
+        type="button"
+        onClick={() => (mode === "classic" ? setCategories([]) : setVibes([]))}
+        className={cn(
+          "pill-lift shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
+          (mode === "classic" ? categories.length === 0 : vibes.length === 0)
+            ? "brand-accent border-transparent text-white"
+            : "chip-surface border-border text-foreground/60 hover:text-foreground",
+        )}
+      >
+        {t("all")}
+      </button>
+
+      {mode === "classic"
+        ? // Classic/category chips are deliberately not per-category
+          // colored — selection reads through the same brand-accent blue
+          // as the mode toggle above (`.brand-accent`, globals.css) and the
+          // "All" chip, not a different hue per category, so the bar
+          // doesn't compete for attention with the one filter axis (vibes)
+          // that actually earns per-item color.
+          SPOT_CATEGORIES.map((cat) => {
+            const meta = CATEGORY_META[cat];
+            const Icon = meta.icon;
+            const isActive = categories.includes(cat);
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => toggleCategory(cat)}
+                aria-pressed={isActive}
+                className={cn(
+                  "pill-lift flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
+                  isActive
+                    ? "brand-accent border-transparent text-white"
+                    : "chip-surface border-border text-foreground/60 hover:text-foreground",
+                )}
+              >
+                <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
+              </button>
+            );
+          })
+        : // Vibe chips are the one place color carries meaning, but only
+          // once a chip is actually selected — inactive sits in the same
+          // neutral `chip-surface` as a classic-mode category chip (no
+          // per-vibe tint, so the row doesn't look like a stray "which
+          // hue is which" quiz before anything's picked), and only the
+          // selected vibe lights up in its own color — that same hue then
+          // propagates to the map's pins and detail-panel CTA via
+          // `--accent-color` (see SpotMap/MapDetailPanel).
+          SPOT_VIBES.map((v) => {
+            const meta = VIBE_META[v];
+            const Icon = meta.icon;
+            const isActive = vibes.includes(v);
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => toggleVibe(v)}
+                aria-pressed={isActive}
+                className={cn(
+                  "pill-lift flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
+                  isActive
+                    ? "border-transparent text-white"
+                    : "chip-surface border-border text-foreground/60 hover:text-foreground",
+                )}
+                style={
+                  isActive
+                    ? {
+                        background: `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`,
+                      }
+                    : undefined
+                }
+              >
+                <Icon size={13} strokeWidth={2.5} /> {tVibe(v)}
+              </button>
+            );
+          })}
+    </>
+  );
+
+  return (
+    <>
+      <div
+        // Lets SpotMap (fullScreen mode always renders alongside this bar)
+        // measure its rendered height, so its own top-anchored floating UI —
+        // the detail panel in particular — can start below it instead of
+        // being covered by it (this bar sits at a higher z-index).
+        data-explore-filter-bar
+        className={cn(
+          "inset-x-0 z-40 space-y-3 px-4 py-3 sm:px-6",
+          fixed
+            ? // /map: no panel background at all — the map fills the entire
+              // strip below the header, and this bar is just a transparent
+              // shelf for the individually-styled floating pills (search
+              // input, mode toggle — the chip row moves to its own shelf at
+              // the bottom of the screen, see below) to sit on top of it.
+              "fixed"
+            : // /spots: solid, not `.glass` — see Header.tsx for why: this bar
+              // overlaps the scrolling grid directly, and blur can silently
+              // no-op depending on the browser/GPU, leaving nothing but a
+              // faint tint over full-detail card content underneath.
+              // `.bar-surface` matches Header's subtle gradient so the two
+              // bars read as one continuous shelf.
+              "sticky bar-surface border-b border-border shadow-[var(--shadow-sm)]",
+        )}
+        style={{ top: headerHeight ?? 56 }}
+      >
+        <div
           className={cn(
-            "pill-lift shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold",
-            (mode === "classic" ? categories.length === 0 : vibes.length === 0)
-              ? "brand-accent border-transparent text-white shadow-sm"
-              : "border-border bg-transparent text-foreground/60 hover:text-foreground",
+            "mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center",
+            // /map only: the mode toggle used to sit here too, keeping the
+            // search input naturally clear of Leaflet's top-right zoom
+            // control — now that it's floated down to the bottom shelf (see
+            // below), this row is just the search bar, which would
+            // otherwise stretch edge-to-edge right underneath that control.
+            // Reserve its footprint instead of guessing at a breakpoint —
+            // it's the same fixed size regardless of viewport.
+            fixed && "pr-12",
           )}
         >
-          {t("all")}
-        </button>
+          <div ref={searchWrapperRef} className="group relative flex-1">
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40 transition-colors duration-200 group-focus-within:text-aqua"
+            />
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                // Stale highlight from a previous query shouldn't linger once
+                // the list underneath it has changed.
+                setActiveSuggestion(-1);
+              }}
+              onFocus={() => setIsSearchFocused(true)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder={tSite("searchPlaceholder")}
+              role="combobox"
+              aria-expanded={showSuggestions}
+              aria-controls="explore-search-suggestions"
+              aria-autocomplete="list"
+              aria-activedescendant={
+                activeSuggestion >= 0
+                  ? `explore-search-suggestion-${activeSuggestion}`
+                  : undefined
+              }
+              autoComplete="off"
+              className="input-glow glass h-11 w-full rounded-full border border-border pl-10 pr-4 text-sm shadow-lg outline-none"
+            />
 
-        {mode === "classic"
-          ? // Classic/category chips are deliberately not per-category
-            // colored — selection reads through the same brand-accent blue
-            // as the mode toggle above (`.brand-accent`, globals.css) and the
-            // "All" chip, not a different hue per category, so the bar
-            // doesn't compete for attention with the one filter axis (vibes)
-            // that actually earns per-item color.
-            SPOT_CATEGORIES.map((cat) => {
-              const meta = CATEGORY_META[cat];
-              const Icon = meta.icon;
-              const isActive = categories.includes(cat);
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => toggleCategory(cat)}
-                  aria-pressed={isActive}
-                  className={cn(
-                    "pill-lift flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold",
-                    isActive
-                      ? "brand-accent border-transparent text-white shadow-sm"
-                      : "border-border bg-transparent text-foreground/60 hover:text-foreground",
-                  )}
+            {/* Autocomplete dropdown — name matches only, a "jump straight to
+              a place you already have in mind" shortcut alongside the
+              broader live filter below (see `suggestions` above). */}
+            <AnimatePresence>
+              {showSuggestions && (
+                <motion.div
+                  id="explore-search-suggestions"
+                  role="listbox"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="glass absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-2xl border border-border py-1.5 shadow-lg"
                 >
-                  <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
-                </button>
-              );
-            })
-          : // Vibe chips are the one place color carries meaning: inactive
-            // sits at a bare whisper of its own hue (just enough to hint
-            // which chip is which without shouting), and only the selected
-            // vibe lights up fully — that same hue then propagates to the
-            // map's pins and detail-panel CTA via `--accent-color` (see
-            // SpotMap/MapDetailPanel).
-            SPOT_VIBES.map((v) => {
-              const meta = VIBE_META[v];
-              const Icon = meta.icon;
-              const isActive = vibes.includes(v);
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => toggleVibe(v)}
-                  aria-pressed={isActive}
-                  className={cn(
-                    "pill-lift flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
-                    isActive ? "text-white shadow-sm" : "text-foreground/60",
-                  )}
-                  style={{
-                    background: isActive
-                      ? `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`
-                      : `color-mix(in srgb, ${meta.color} 10%, transparent)`,
-                  }}
-                >
-                  <Icon size={13} strokeWidth={2.5} /> {tVibe(v)}
-                </button>
-              );
-            })}
+                  {suggestions.map((spot, i) => {
+                    const meta = CATEGORY_META[spot.category];
+                    const Icon = meta.icon;
+                    return (
+                      <button
+                        key={spot.id}
+                        id={`explore-search-suggestion-${i}`}
+                        role="option"
+                        aria-selected={i === activeSuggestion}
+                        type="button"
+                        onClick={() => selectSuggestion(spot)}
+                        onMouseEnter={() => setActiveSuggestion(i)}
+                        className={cn(
+                          "flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors",
+                          i === activeSuggestion
+                            ? "bg-foreground/5"
+                            : "hover:bg-foreground/5",
+                        )}
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/60">
+                          <Icon size={14} strokeWidth={2.5} />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-semibold">
+                          {spot.name}
+                        </span>
+                        <span className="shrink-0 text-xs text-foreground/45">
+                          {tCategory(spot.category)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* /spots keeps the compact toggle right here, next to search —
+              /map's own (bigger) copy moves down to the bottom shelf
+              alongside the chips it controls, see the `fixed` branch below. */}
+          {!fixed && renderModeToggle(false)}
+        </div>
+
+        <VibesModal
+          open={isVibesModalOpen}
+          onClose={() => setIsVibesModalOpen(false)}
+          onSelect={(v) => {
+            // The modal is a fresh start, not an add — it replaces whatever
+            // was selected (usually nothing yet) with just this one vibe;
+            // the chip row below is how more get added afterward.
+            setVibes([v]);
+            setMode("vibes");
+            setIsVibesModalOpen(false);
+          }}
+        />
+
+        {/* Chip row — single-select: only one category (or vibe) chip is
+          active at a time, narrowing to spots matching it; picking a new
+          one replaces the old, and re-picking the active one (or the
+          explicit "All" chip) clears back to no filter. On /spots it stays
+          nested right here, under a hairline that separates it from the
+          search/mode row above (the mode switch is a level above the chips
+          it's filtering within). On /map it moves to its own shelf at the
+          bottom of the screen instead (see below the closing tag of this
+          bar) — floating pills at the top *and* bottom of a fullscreen map
+          competes with the pins for thumb reach on mobile, so only one row
+          lives up here. */}
+        {!fixed && (
+          <div className="scrollbar-none mx-auto flex max-w-6xl gap-2 overflow-x-auto border-t border-border/60 pb-0.5 pt-3">
+            {chips}
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* /map only — the mode toggle and chip row float at the bottom of the
+          screen instead, same idea as a mobile app's bottom tab bar:
+          reachable one-handed instead of a stretch up to the top of a
+          fullscreen map. Two separate pill-shaped shelves, not one big
+          panel — the toggle picks *what the chips mean* (categories or
+          vibes), so it stays its own smaller, distinct control stacked
+          above them rather than merging into one slab that reads as a
+          single oversized bar. Each carries a semi-transparent blurred
+          background sized to its own content (not the full screen width)
+          so pills floating over a busy map (pins, streets, whatever Night
+          Mode's brighter glow puts underneath) stay legible without
+          blocking more of the map than the controls themselves need. */}
+      {fixed && (
+        <motion.div
+          // Lets SpotMap measure this shelf's height so its own
+          // bottom-anchored floating UI — the locate-me button — can float
+          // above it instead of being covered by it, same idea as
+          // `data-explore-filter-bar` up top. Stays mounted even while
+          // hidden (animated out, not unmounted) so that measurement keeps
+          // working — an AnimatePresence exit would tear the node down
+          // between selections.
+          data-explore-filter-bottom-bar
+          initial={false}
+          animate={
+            hideFloatingBottomBar ? { opacity: 0, y: 40 } : { opacity: 1, y: 0 }
+          }
+          transition={{ duration: 0.28, ease: EASE_OUT }}
+          className={cn(
+            "safe-bottom fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 px-4 pb-3 sm:px-6",
+            // Matches the mobile sheet's own open/close transition (see
+            // MapDetailPanel) — the two swap places in one motion: this
+            // shelf fades/slides down out of the way as the sheet slides up
+            // over it, and the reverse on close.
+            hideFloatingBottomBar && "pointer-events-none",
+          )}
+        >
+          {renderModeToggle(true)}
+          <div className="scrollbar-none flex max-w-full gap-2 overflow-x-auto rounded-full border border-border/60 bg-surface/70 px-3 py-2 shadow-lg backdrop-blur-xl">
+            {chips}
+          </div>
+        </motion.div>
+      )}
+    </>
   );
 }

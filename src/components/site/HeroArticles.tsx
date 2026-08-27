@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { HERO_IMAGE } from "@/lib/data/categoryImages";
 import type { Article } from "@/lib/types/database";
 import { fadeUp } from "./motion";
+import { LoadingImage } from "./LoadingImage";
 
 /**
  * Bento showcase for the 3 latest guides, replacing the old plain "Latest
@@ -90,10 +90,9 @@ function ArticleTile({
       href={{ pathname: "/articles/[slug]", params: { slug: article.slug } }}
       className={`card-lift group relative block overflow-hidden rounded-[var(--radius-card)] border border-white/15 ${className}`}
     >
-      <Image
+      <LoadingImage
         src={article.cover_photo || HERO_IMAGE}
         alt=""
-        fill
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 60vw, 40vw"
         className="object-cover transition-transform duration-500 group-hover:scale-105"
       />

@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Map as LeafletMap, Marker as LeafletMarker, Polyline, TileLayer } from "leaflet";
+import type { Map as LeafletMap, Marker as LeafletMarker, Polyline } from "leaflet";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { CalendarDays } from "lucide-react";
@@ -11,15 +11,17 @@ import { useNightMode } from "./NightModeContext";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META } from "@/lib/categories";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
+import {
+  addCascoBasemap,
+  CASCO_VIEJO_ATTRIBUTION,
+  CASCO_VIEJO_BOUNDS,
+  type CascoBasemap,
+} from "@/lib/cascoMap";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { formatTime } from "@/lib/hours";
 import type { EventRow, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
-const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
 const ROUTE_COLOR = "#146b8c"; // --color-aqua — matches the itinerary timeline's dots (ArticleDetailView)
 // Casco Viejo, Panama City — initial view before the first fitBounds() call
 // below (see SpotMap.tsx for the same fallback).
@@ -112,7 +114,7 @@ export function ItineraryMap({
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
-  const tileLayerRef = useRef<TileLayer | null>(null);
+  const basemapRef = useRef<CascoBasemap | null>(null);
   const markersRef = useRef<LeafletMarker[]>([]);
   const lineRef = useRef<Polyline | null>(null);
 
@@ -159,17 +161,28 @@ export function ItineraryMap({
       const map = L.map(containerRef.current, {
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
+        minZoom: 14,
+        maxZoom: 19,
+        maxBounds: CASCO_VIEJO_BOUNDS,
+        maxBoundsViscosity: 0.6,
         zoomControl: false,
         scrollWheelZoom: false,
+        attributionControl: false,
       });
       L.control.zoom({ position: "topright" }).addTo(map);
+      L.control.attribution({ prefix: false }).addAttribution(CASCO_VIEJO_ATTRIBUTION).addTo(map);
       map.on("click", () => setSelected(null));
 
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      tileLayerRef.current = L.tileLayer(
-        isNightRef.current || prefersDark ? DARK_TILES : LIGHT_TILES,
-        { attribution: TILE_ATTRIBUTION, maxZoom: 20 },
-      ).addTo(map);
+      const basemap = await addCascoBasemap(L, map, isNightRef.current || prefersDark);
+      // A second await (the basemap's own GeoJSON fetch) — re-check in case
+      // this ItineraryMap unmounted while it was in flight.
+      if (cancelled) {
+        basemap.destroy();
+        map.remove();
+        return;
+      }
+      basemapRef.current = basemap;
 
       mapRef.current = map;
       setReady(true);
@@ -179,7 +192,7 @@ export function ItineraryMap({
       cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
-      tileLayerRef.current = null;
+      basemapRef.current = null;
       markersRef.current = [];
       lineRef.current = null;
     };
@@ -187,12 +200,12 @@ export function ItineraryMap({
     // ItineraryMap (keyed by the caller), not a re-init here.
   }, []);
 
-  // Swaps the tile set live if Night Mode is toggled after mount — the init
-  // effect above only reads isNight once, at creation.
+  // Swaps the basemap's colors live if Night Mode is toggled after mount —
+  // the init effect above only reads isNight once, at creation.
   useEffect(() => {
     if (!ready) return;
     const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    tileLayerRef.current?.setUrl(isNight || prefersDark ? DARK_TILES : LIGHT_TILES);
+    basemapRef.current?.setDark(isNight || prefersDark);
   }, [ready, isNight]);
 
   // Draw the numbered pins + connecting line whenever the stop list changes.

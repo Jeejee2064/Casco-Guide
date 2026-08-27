@@ -12,19 +12,21 @@ import {
   CalendarCheck,
   Car,
   MessageCircle,
+  Building2,
 } from "lucide-react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
+import { LoadingImage } from "./LoadingImage";
 import { PhotoGallery } from "./PhotoGallery";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { ExploreMapCard } from "./ExploreMapCard";
 import { NearbySection } from "./NearbySection";
+import { SpotCard } from "./SpotCard";
 import { ArticleCard } from "./ArticleCard";
 import { Stagger, StaggerItem, fadeUp } from "./motion";
 import { Button } from "@/components/ui/Button";
@@ -37,28 +39,39 @@ import { panamaWhatsAppUrl } from "@/lib/phone";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
 import { useSmartBack } from "@/lib/useSmartBack";
-import { cn } from "@/lib/utils";
 
 /** Full public detail page for a spot — gallery, story, hours, contact & directions.
  * `onBack`, when given, replaces the default "back to home" link with a button
  * that calls it instead — used by the admin preview, where a real navigation
  * would exit the editor for an unsaved draft. `nearbySpots`/`nearbyEvents`
- * feed the "keep browsing" rails at the bottom; both default to empty so the
- * admin preview (which has nothing to recommend) can omit them. `articles`
+ * feed the "keep browsing" rails at the bottom — despite the prop name,
+ * `nearbySpots` here holds category/vibe-matched picks, not proximity ones
+ * (see getRelatedSpots and NearbySection's `spotsAreNearby`); both default
+ * to empty so the admin preview (which has nothing to recommend) can omit
+ * them. `articles`
  * are the published articles whose body links to this spot (its `spot_refs`,
  * see getArticlesForSpot) — the inverse of the "places mentioned" map on the
- * article page; defaults to empty for the same reason as the rails above. */
+ * article page; defaults to empty for the same reason as the rails above.
+ * `parentSpot`/`childSpots` reflect the hub relationship (see parent_id in
+ * lib/types/database.ts) — a spot has at most one of the two set: `parentSpot`
+ * when this page is one of several businesses inside a hub, `childSpots` when
+ * this page *is* the hub. Both default to empty/null for an ordinary
+ * standalone spot. */
 export function SpotDetailView({
   spot,
   nearbySpots = [],
   nearbyEvents = [],
   articles = [],
+  parentSpot = null,
+  childSpots = [],
   onBack,
 }: {
   spot: Spot;
   nearbySpots?: Spot[];
   nearbyEvents?: EventRow[];
   articles?: Article[];
+  parentSpot?: Spot | null;
+  childSpots?: Spot[];
   onBack?: () => void;
 }) {
   const t = useTranslations("spot");
@@ -99,10 +112,35 @@ export function SpotDetailView({
 
   const directions = () => {
     track("directions_click", { entity: "spot", entity_id: spot.id, entity_slug: spot.slug });
-    window.open(
-      `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}`,
-      "_blank",
-    );
+    // The admin preview (`onBack` set — see this component's doc comment)
+    // has nothing real to route to on /map (an unsaved draft may not even
+    // have a slug in the database yet), so it keeps the old Google Maps
+    // hand-off rather than navigating the editor away from its own preview.
+    if (onBack) {
+      window.open(
+        `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}`,
+        "_blank",
+      );
+      return;
+    }
+    // Prime the location permission prompt right here, from this click's own
+    // user gesture, instead of waiting for SpotMap's itinerary mode to ask
+    // for it once it mounts after the navigation below — that would make the
+    // very first "where am I" prompt show up late, after the map's already
+    // loaded, and stall the route on "Locating…" until it's answered.
+    // Fire-and-forget: the result itself is unused here, SpotMap requests
+    // its own (by then either already-granted or instant) fix once it's up.
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        () => {},
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }
+    // Real visitors get walking directions drawn straight onto our own map
+    // instead — see MapExplorerSection/SpotMap's itinerary mode. `trackClick:
+    // false` there skips a second directions_click for the one just above.
+    router.push({ pathname: "/map", query: { directions: spot.slug } });
   };
 
   const whatsappUrl = panamaWhatsAppUrl(spot.phone);
@@ -131,17 +169,16 @@ export function SpotDetailView({
         </button>
       )}
 
-      {/* The hero fades in only once it's actually loaded, and everything
-          below it (see the Stagger further down) waits on that same flag
-          instead of firing on mount — so the page never "reveals" a still-
-          loading photo. */}
+      {/* The hero itself fades in on mount, same as any other section — it's
+          LoadingImage's own skeleton/tower mark that carries the "still
+          loading" state, so this container needs to be visible right away
+          for that to show. Everything below (see the Stagger further down)
+          waits on the photo's actual load instead, so the page never
+          reveals *that* content before there's a photo to go with it. */}
       <motion.div
-        className={cn(
-          "relative aspect-[16/10] w-full overflow-hidden rounded-[var(--radius-card)] sm:aspect-[21/9] lg:aspect-auto lg:h-72",
-          !heroLoaded && "animate-pulse bg-foreground/5",
-        )}
+        className="relative aspect-[16/10] w-full overflow-hidden rounded-[var(--radius-card)] sm:aspect-[21/9] lg:aspect-auto lg:h-72"
         initial="hidden"
-        animate={heroLoaded ? "show" : "hidden"}
+        animate="show"
         variants={fadeUp}
       >
         <button
@@ -150,10 +187,9 @@ export function SpotDetailView({
           aria-label={hero.caption ?? spot.name}
           className="block h-full w-full"
         >
-          <Image
+          <LoadingImage
             src={hero.url}
             alt={hero.caption ?? spot.name}
-            fill
             sizes="100vw"
             className="object-cover"
             preload
@@ -176,6 +212,17 @@ export function SpotDetailView({
       <div className="mt-6 grid gap-8 lg:mt-10 lg:grid-cols-[1fr_360px]">
         <Stagger className="space-y-8" show={heroLoaded} delay={0.15}>
           <StaggerItem>
+            {parentSpot && (
+              <button
+                type="button"
+                onClick={() =>
+                  router.push({ pathname: "/spots/[slug]", params: { slug: parentSpot.slug } })
+                }
+                className="mb-2 inline-flex items-center gap-1.5 text-sm font-semibold text-aqua-dark hover:underline"
+              >
+                <Building2 size={14} /> {t("partOf", { name: parentSpot.name })}
+              </button>
+            )}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-2">
                 <CategoryBadge category={spot.category} />
@@ -246,6 +293,24 @@ export function SpotDetailView({
               </div>
             )}
           </StaggerItem>
+
+          {childSpots.length > 0 && (
+            <StaggerItem>
+              <h2 className="font-heading mb-3 text-lg font-bold">{td("placesHere")}</h2>
+              <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+                {childSpots.map((child) => (
+                  <StaggerItem key={child.id} className="w-[240px] shrink-0 sm:w-[260px]">
+                    <SpotCard
+                      spot={child}
+                      onClick={() =>
+                        router.push({ pathname: "/spots/[slug]", params: { slug: child.slug } })
+                      }
+                    />
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            </StaggerItem>
+          )}
 
           {spot.article && (
             <StaggerItem>
@@ -393,6 +458,7 @@ export function SpotDetailView({
         nearbySpots={nearbySpots}
         nearbyEvents={nearbyEvents}
         origin={{ lat: spot.latitude, lng: spot.longitude }}
+        spotsAreNearby={false}
       />
 
       {/* Mobile sticky action bar — same Directions/WhatsApp-first layout

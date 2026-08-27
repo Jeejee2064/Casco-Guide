@@ -116,7 +116,8 @@
     "featured": "Destacado",
     "verified": "Verificado ✓",
     "close": "Cerrar",
-    "readMore": "Leer más"
+    "readMore": "Leer más",
+    "partOf": "Parte de {name}"
   },
   "share": {
     "cta": "Compartir",
@@ -164,10 +165,33 @@
     "locateError": "No pudimos encontrar tu ubicación",
     "youAreHere": "Estás aquí",
     "walkTime": "{mins} min a pie",
-    "backToList": "Volver a la lista"
+    "backToList": "Volver a la lista",
+    "directionsTo": "Cómo llegar a {name}",
+    "calculatingRoute": "Buscando la mejor ruta…",
+    "approximateRoute": "Ruta aproximada",
+    "openInGoogleMaps": "Abrir en Google Maps",
+    "retry": "Intentar de nuevo",
+    "exitDirections": "Salir de la ruta",
+    "steps": {
+      "title": "Indicaciones paso a paso",
+      "depart": "Toma {street}",
+      "departGeneric": "Sigue recto",
+      "turnLeft": "Gira a la izquierda en {street}",
+      "turnLeftGeneric": "Gira a la izquierda",
+      "turnRight": "Gira a la derecha en {street}",
+      "turnRightGeneric": "Gira a la derecha",
+      "continue": "Continúa por {street}",
+      "continueGeneric": "Sigue recto",
+      "cross": "Cruza la plaza",
+      "crossNamed": "Cruza {street}",
+      "stairs": "Sube o baja las escaleras",
+      "stairsNamed": "Sube o baja las escaleras en {street}",
+      "arrive": "Llegaste a {name}"
+    }
   },
   "discover": {
     "nearbySpots": "Lugares cercanos",
+    "relatedSpots": "También te puede gustar",
     "relatedEvents": "Eventos relacionados",
     "exploreMap": "Explora el mapa completo",
     "exploreMapSubtitle": "Descubre todos los lugares y eventos de Casco Viejo"
@@ -182,7 +206,8 @@
     "back": "Volver",
     "amenities": "Comodidades",
     "gallery": "Galería",
-    "featuredIn": "Aparece en"
+    "featuredIn": "Aparece en",
+    "placesHere": "Lugares aquí"
   },
   "eventDetail": {
     "back": "Volver",
@@ -294,6 +319,7 @@
       "allCategories": "Todas las categorías",
       "allVibes": "Todas las vibes",
       "featuredOnly": "Solo destacados",
+      "childCount": "{count} vinculados",
       "columns": {
         "name": "Nombre",
         "category": "Categoría",
@@ -356,6 +382,8 @@
       "sections": {
         "basics": "Datos básicos",
         "location": "Ubicación",
+        "parent": "Lugar padre",
+        "children": "Lugares dentro",
         "hours": "Horario",
         "details": "Detalles",
         "media": "Fotos",
@@ -382,6 +410,27 @@
       "phone": "Teléfono",
       "website": "Sitio web",
       "email": "Correo",
+      "hierarchy": {
+        "parentHint": "Si este lugar es en realidad un comercio dentro de otro (ej. el restaurante de un hotel), vincúlalo aquí — su pin desaparece del mapa y aparece dentro del pin del lugar padre.",
+        "chooseParent": "Elegir lugar padre",
+        "removeParent": "Quitar lugar padre",
+        "childrenHint": "Comercios que viven dentro de este lugar (ej. el restaurante y el bar de un hotel) — comparten pin en el mapa, cada uno con su propia ficha.",
+        "attachExisting": "Vincular lugar existente",
+        "createChild": "Crear nuevo lugar dentro",
+        "removeChild": "Desvincular",
+        "childAttached": "Lugar vinculado",
+        "childDetached": "Lugar desvinculado",
+        "parentPicker": {
+          "title": "Elegir lugar padre",
+          "search": "Buscar lugares…",
+          "empty": "No hay lugares disponibles"
+        },
+        "childPicker": {
+          "title": "Vincular lugar existente",
+          "search": "Buscar lugares…",
+          "empty": "No hay lugares disponibles"
+        }
+      },
       "hoursNote": "Nota de horario",
       "hoursNoteHint": "ej. Cerrado en días festivos",
       "addSlot": "+ Agregar horario",

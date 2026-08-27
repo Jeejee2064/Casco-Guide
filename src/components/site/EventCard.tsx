@@ -6,6 +6,7 @@ import { CalendarDays, Repeat, Ticket } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { formatTime } from "@/lib/hours";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
+import { LoadingImage } from "./LoadingImage";
 import { useRouter } from "@/i18n/navigation";
 import type { EventRow } from "@/lib/types/database";
 
@@ -42,7 +43,7 @@ export function EventCard({ event }: { event: EventRow }) {
     >
       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-foreground/5 sm:h-24 sm:w-24">
         {event.photo ? (
-          <Image src={event.photo} alt={event.title} fill sizes="96px" className="object-cover" />
+          <LoadingImage src={event.photo} alt={event.title} sizes="96px" className="object-cover" iconClassName="h-6 w-6" />
         ) : (
           <div
             className="flex h-full items-center justify-center"

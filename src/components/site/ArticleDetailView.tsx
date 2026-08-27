@@ -1,13 +1,13 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronLeft, MapPin, CalendarDays, User, Clock, Footprints } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { SpotMap } from "./SpotMap";
 import { ItineraryMap, type ItineraryStop } from "./ItineraryMap";
+import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
 import { Stagger, StaggerItem, staggerContainer, fadeUp } from "./motion";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
@@ -135,21 +135,20 @@ export function ArticleDetailView({
       )}
 
       {article.cover_photo && (
-        // Fades in only once it's actually loaded — the title/meta block
-        // below (see the Stagger further down) waits on that same flag.
+        // Fades in on mount, same as any other section — LoadingImage's own
+        // skeleton/tower mark carries the "still loading" state, so this
+        // needs to be visible right away for that to show. The title/meta
+        // block below (see the Stagger further down) waits on the actual
+        // load instead.
         <motion.div
-          className={cn(
-            "relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-[var(--radius-card)] lg:aspect-auto lg:h-72",
-            !coverLoaded && "animate-pulse bg-foreground/5",
-          )}
+          className="relative mb-6 aspect-[16/9] w-full overflow-hidden rounded-[var(--radius-card)] lg:aspect-auto lg:h-72"
           initial="hidden"
-          animate={coverLoaded ? "show" : "hidden"}
+          animate="show"
           variants={fadeUp}
         >
-          <Image
+          <LoadingImage
             src={article.cover_photo}
             alt={article.title}
-            fill
             sizes="100vw"
             className="object-cover"
             preload
@@ -240,7 +239,7 @@ export function ArticleDetailView({
               <div className="min-w-0 flex-1 space-y-2">
                 {block.photo && (
                   <BlockPhotoLink block={block} className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
-                    <Image src={block.photo} alt={block.title ?? ""} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
+                    <LoadingImage src={block.photo} alt={block.title ?? ""} sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
                   </BlockPhotoLink>
                 )}
                 {block.title && <h3 className="font-heading text-lg font-bold">{block.title}</h3>}
@@ -259,7 +258,7 @@ export function ArticleDetailView({
               <figure>
                 {block.photo && (
                   <BlockPhotoLink block={block} className="relative aspect-[4/3] w-full overflow-hidden rounded-[var(--radius-card)]">
-                    <Image src={block.photo} alt={block.title ?? ""} fill sizes="100vw" className="object-cover" />
+                    <LoadingImage src={block.photo} alt={block.title ?? ""} sizes="100vw" className="object-cover" />
                   </BlockPhotoLink>
                 )}
                 {(block.title || block.text) && (
@@ -308,7 +307,7 @@ export function ArticleDetailView({
                     )}
                     {block.photo && (
                       <div className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-button)]">
-                        <Image src={block.photo} alt={block.title ?? ""} fill sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
+                        <LoadingImage src={block.photo} alt={block.title ?? ""} sizes="(max-width: 640px) 100vw, 640px" className="object-cover" />
                       </div>
                     )}
                     {block.text && <p className="text-[15px] leading-relaxed text-foreground/80">{block.text}</p>}

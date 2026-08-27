@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Search, Star, CheckCircle2, Pencil, Trash2, Eye } from "lucide-react";
+import { Search, Star, CheckCircle2, Pencil, Trash2, Eye, CornerDownRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { Input, Select } from "@/components/ui/Field";
 import { CategoryBadge } from "@/components/site/CategoryBadge";
 import { SPOT_CATEGORIES } from "@/lib/categories";
 import { SPOT_VIBES } from "@/lib/vibes";
+import { groupSpotsByParent } from "@/lib/spots/hierarchy";
 import { deleteSpot } from "@/lib/actions/spots";
 import { cn } from "@/lib/utils";
 import type { Spot, SpotVibe } from "@/lib/types/database";
@@ -37,6 +38,28 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
       return true;
     });
   }, [spots, query, category, vibe, featuredOnly]);
+
+  // Nests each hub's children directly under it (one level, indented) —
+  // filters above stay literal per-row, so a child whose parent didn't pass
+  // the current filter falls back to a plain, unindented row rather than
+  // silently disappearing from the table.
+  const rows = useMemo(() => {
+    const { topLevel, childrenByParent } = groupSpotsByParent(filtered);
+    const nested = new Set<string>();
+    const out: { spot: Spot; isChild: boolean; childCount: number }[] = [];
+    for (const parent of topLevel) {
+      const kids = childrenByParent.get(parent.id) ?? [];
+      out.push({ spot: parent, isChild: false, childCount: kids.length });
+      for (const child of kids) {
+        out.push({ spot: child, isChild: true, childCount: 0 });
+        nested.add(child.id);
+      }
+    }
+    for (const s of filtered) {
+      if (s.parent_id && !nested.has(s.id)) out.push({ spot: s, isChild: false, childCount: 0 });
+    }
+    return out;
+  }, [filtered]);
 
   const handleDelete = (spot: Spot) => {
     if (!confirm(t("deleteConfirm", { name: spot.name }))) return;
@@ -107,9 +130,19 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((spot) => (
+            {rows.map(({ spot, isChild, childCount }) => (
               <tr key={spot.id} className="border-b border-border last:border-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
-                <td className="px-4 py-3 font-semibold">{spot.name}</td>
+                <td className="px-4 py-3 font-semibold">
+                  <span className={cn("inline-flex items-center gap-1.5", isChild && "font-medium text-foreground/80")}>
+                    {isChild && <CornerDownRight size={13} className="shrink-0 text-foreground/30" />}
+                    {spot.name}
+                    {childCount > 0 && (
+                      <span className="rounded-full bg-aqua/15 px-1.5 py-0.5 text-[10px] font-bold text-aqua-dark">
+                        {t("childCount", { count: childCount })}
+                      </span>
+                    )}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <CategoryBadge category={spot.category} />
                 </td>
@@ -157,7 +190,7 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-foreground/50">
                   {t("empty")}

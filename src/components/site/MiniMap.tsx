@@ -2,23 +2,13 @@
 
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
-import type {
-  CircleMarker,
-  Map as LeafletMap,
-  Marker as LeafletMarker,
-  Polyline,
-  TileLayer,
-} from "leaflet";
+import type { CircleMarker, Map as LeafletMap, Marker as LeafletMarker, Polyline } from "leaflet";
 import { Ruler } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useNightMode } from "./NightModeContext";
+import { addCascoBasemap, type CascoBasemap } from "@/lib/cascoMap";
 import { cn } from "@/lib/utils";
 import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
-
-const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
 
 // --color-aqua — same fixed blue as ItineraryMap's ROUTE_COLOR/pins, kept
 // consistent across every detail-page mini map instead of the per-category
@@ -49,7 +39,7 @@ export function MiniMap({
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
-  const tileLayerRef = useRef<TileLayer | null>(null);
+  const basemapRef = useRef<CascoBasemap | null>(null);
   const spotMarkerRef = useRef<LeafletMarker | null>(null);
   const meMarkerRef = useRef<CircleMarker | null>(null);
   const lineRef = useRef<Polyline | null>(null);
@@ -95,10 +85,15 @@ export function MiniMap({
       });
 
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      tileLayerRef.current = L.tileLayer(
-        isNightRef.current || prefersDark ? DARK_TILES : LIGHT_TILES,
-        { attribution: TILE_ATTRIBUTION, maxZoom: 20 },
-      ).addTo(map);
+      const basemap = await addCascoBasemap(L, map, isNightRef.current || prefersDark);
+      // A second await (the basemap's own GeoJSON fetch) — re-check in case
+      // this MiniMap unmounted while it was in flight.
+      if (cancelled) {
+        basemap.destroy();
+        map.remove();
+        return;
+      }
+      basemapRef.current = basemap;
 
       const icon = L.divIcon({
         className: "spot-pin-marker",
@@ -118,7 +113,7 @@ export function MiniMap({
       cancelled = true;
       mapRef.current?.remove();
       mapRef.current = null;
-      tileLayerRef.current = null;
+      basemapRef.current = null;
       spotMarkerRef.current = null;
       meMarkerRef.current = null;
       lineRef.current = null;
@@ -128,12 +123,12 @@ export function MiniMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Swaps the tile set live if Night Mode is toggled after mount — the init
-  // effect above only reads isNight once, at creation.
+  // Swaps the basemap's colors live if Night Mode is toggled after mount —
+  // the init effect above only reads isNight once, at creation.
   useEffect(() => {
     if (!ready) return;
     const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    tileLayerRef.current?.setUrl(isNight || prefersDark ? DARK_TILES : LIGHT_TILES);
+    basemapRef.current?.setDark(isNight || prefersDark);
   }, [ready, isNight]);
 
   // Once we know where the user is, drop their pin, draw the line, and fit

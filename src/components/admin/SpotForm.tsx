@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
-import { MapPin, Eye, X } from "lucide-react";
+import { MapPin, Eye, X, Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select, Textarea, FieldHint } from "@/components/ui/Field";
 import { TagInput } from "./TagInput";
@@ -13,6 +13,7 @@ import { FeaturedPhotoUploader, GalleryUploader } from "./PhotoUploader";
 import { ArticleEditor } from "./ArticleEditor";
 import { LangTabs } from "./LangTabs";
 import { LocationPickerModal } from "./LocationPickerModal";
+import { PlaceLinkPicker, type LinkablePlace } from "./PlaceLinkPicker";
 import { TranslationSyncModal } from "./TranslationSyncModal";
 import { useTranslationSyncGuard } from "./useTranslationSyncGuard";
 import { useUnsavedChangesGuard } from "./useUnsavedChangesGuard";
@@ -21,12 +22,15 @@ import { ImportFromScreenshot } from "./ImportFromScreenshot";
 import { PreviewModeTabs, type PreviewMode } from "./PreviewModeTabs";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
 import { SpotCard } from "@/components/site/SpotCard";
+import { CategoryBadge } from "@/components/site/CategoryBadge";
 import { SPOT_CATEGORIES } from "@/lib/categories";
 import { SPOT_VIBES, VIBE_META } from "@/lib/vibes";
+import { groupSpotsByParent } from "@/lib/spots/hierarchy";
 import { slugify } from "@/lib/utils";
-import { upsertSpot, type SpotFormValues } from "@/lib/actions/spots";
+import { upsertSpot, setSpotParent, type SpotFormValues } from "@/lib/actions/spots";
 import type { ExtractedSpot } from "@/lib/actions/importSpot";
 import type { Locale } from "@/i18n/routing";
+import { useRouter } from "@/i18n/navigation";
 import { DAY_KEYS, type Spot, type SpotRecord } from "@/lib/types/database";
 
 type Lang = "es" | "en";
@@ -74,6 +78,7 @@ function toPreviewSpot(values: SpotFormValues, lang: Lang, existing?: SpotRecord
     featured_photo: values.featured_photo || null,
     tags: values.tags,
     rating: values.rating,
+    parent_id: values.parent_id,
     review_count: existing?.review_count ?? 0,
     is_featured: values.is_featured,
     is_verified: values.is_verified,
@@ -122,6 +127,7 @@ const emptyValues = (): SpotFormValues => ({
   rating: null,
   is_featured: false,
   is_verified: false,
+  parent_id: null,
 });
 
 const fromSpot = (spot: SpotRecord): SpotFormValues => ({
@@ -164,28 +170,131 @@ const fromSpot = (spot: SpotRecord): SpotFormValues => ({
   rating: spot.rating,
   is_featured: spot.is_featured,
   is_verified: spot.is_verified,
+  parent_id: spot.parent_id,
 });
 
 const DIETARY_OPTIONS = ["vegan", "vegetarian", "gluten-free", "halal", "dairy-free"];
 
-export function SpotForm({ spot }: { spot?: SpotRecord }) {
+export function SpotForm({
+  spot,
+  allSpots = [],
+  initialParentId,
+}: {
+  spot?: SpotRecord;
+  /** Every other spot, localized — used to build the "parent location" and
+   * "children" pickers below. Only ids/names/categories/parent_id are read
+   * from it, so the caller can reuse whatever `getSpots(locale)` list it
+   * already fetched for the admin list page. */
+  allSpots?: Spot[];
+  /** Seeded from `/admin/spots/new?parent_id=...` (see the "Créer un lieu
+   * enfant" shortcut on a hub's own form) — prefills the new spot's parent
+   * plus its address/coordinates from that hub, since a child is almost
+   * always at the same physical address. Ignored when editing an existing
+   * spot (`spot` set). */
+  initialParentId?: string;
+}) {
   const t = useTranslations("admin.spotForm");
   const tPreview = useTranslations("admin.preview");
   const tSync = useTranslations("admin.translationSync");
   const tCat = useTranslations("category");
   const tVibe = useTranslations("vibe");
   const locale = useLocale() as Locale;
-  const [values, setValues] = useState<SpotFormValues>(spot ? fromSpot(spot) : emptyValues());
+  const router = useRouter();
+
+  const buildInitialValues = (): SpotFormValues => {
+    if (spot) return fromSpot(spot);
+    const base = emptyValues();
+    const parent = initialParentId ? allSpots.find((s) => s.id === initialParentId) : undefined;
+    if (!parent) return base;
+    return {
+      ...base,
+      parent_id: parent.id,
+      address: parent.address ?? base.address,
+      latitude: parent.latitude,
+      longitude: parent.longitude,
+      neighborhood: parent.neighborhood ?? base.neighborhood,
+    };
+  };
+
+  const [values, setValues] = useState<SpotFormValues>(buildInitialValues);
   const [slugTouched, setSlugTouched] = useState(Boolean(spot));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [lang, setLang] = useState<Lang>("es");
-  const syncGuard = useTranslationSyncGuard(spot ? fromSpot(spot) : emptyValues());
-  const unsavedGuard = useUnsavedChangesGuard(spot ? fromSpot(spot) : emptyValues(), values);
+  const syncGuard = useTranslationSyncGuard(buildInitialValues());
+  const unsavedGuard = useUnsavedChangesGuard(buildInitialValues(), values);
   const { registerSave } = useUnsavedChanges();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [pending, startTransition] = useTransition();
   const mobileFrameRef = useRef<HTMLIFrameElement>(null);
+
+  // The hierarchy pickers below — kept separate from `pending`/startTransition
+  // above so attaching/detaching a child doesn't disable the main Save button.
+  const [parentPickerOpen, setParentPickerOpen] = useState(false);
+  const [childPickerOpen, setChildPickerOpen] = useState(false);
+  const [childPending, startChildTransition] = useTransition();
+  const [children, setChildren] = useState<Spot[]>(() =>
+    spot ? allSpots.filter((s) => s.parent_id === spot.id) : [],
+  );
+
+  const { childrenByParent } = useMemo(() => groupSpotsByParent(allSpots), [allSpots]);
+
+  // A spot can offer itself as a parent as long as it isn't itself a child
+  // (two-level cap — see parent_id's doc comment in lib/types/database.ts).
+  // Whether it already has children doesn't disqualify it — that's just an
+  // existing hub taking on one more business.
+  const eligibleParents: LinkablePlace[] = useMemo(
+    () =>
+      allSpots
+        .filter((s) => !s.parent_id && s.id !== spot?.id)
+        .map((s) => ({ id: s.id, type: "spot" as const, label: s.name, slug: s.slug })),
+    [allSpots, spot?.id],
+  );
+
+  // A spot can be attached as a child only if it's currently standalone —
+  // not already someone's child (detach it first to move it), and not
+  // already a hub itself (no grandchildren).
+  const eligibleChildren: LinkablePlace[] = useMemo(
+    () =>
+      allSpots
+        .filter((s) => !s.parent_id && s.id !== spot?.id && !childrenByParent.has(s.id))
+        .map((s) => ({ id: s.id, type: "spot" as const, label: s.name, slug: s.slug })),
+    [allSpots, spot?.id, childrenByParent],
+  );
+
+  const selectedParent = values.parent_id
+    ? allSpots.find((s) => s.id === values.parent_id)
+    : undefined;
+
+  const handleAttachChild = (place: LinkablePlace) => {
+    setChildPickerOpen(false);
+    const child = allSpots.find((s) => s.id === place.id);
+    if (!child || !spot) return;
+    setChildren((prev) => [...prev, child]);
+    startChildTransition(async () => {
+      const res = await setSpotParent(child.id, spot.id);
+      if (res.error) {
+        toast.error(res.error);
+        setChildren((prev) => prev.filter((c) => c.id !== child.id));
+      } else {
+        toast.success(t("hierarchy.childAttached"));
+      }
+    });
+  };
+
+  const handleDetachChild = (childId: string) => {
+    const removed = children.find((c) => c.id === childId);
+    setChildren((prev) => prev.filter((c) => c.id !== childId));
+    startChildTransition(async () => {
+      const res = await setSpotParent(childId, null);
+      if (res.error) {
+        toast.error(res.error);
+        if (removed) setChildren((prev) => [...prev, removed]);
+      } else {
+        toast.success(t("hierarchy.childDetached"));
+      }
+    });
+  };
 
   const set = <K extends keyof SpotFormValues>(key: K, val: SpotFormValues[K]) =>
     setValues((v) => ({ ...v, [key]: val }));
@@ -500,6 +609,79 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
         </div>
       </Section>
 
+      {/* Hidden once this spot already has children of its own — a hub
+          can't also be someone else's child (two-level cap). */}
+      {children.length === 0 && (
+        <Section title={t("sections.parent")}>
+          <p className="text-xs text-foreground/50">{t("hierarchy.parentHint")}</p>
+          {selectedParent ? (
+            <div className="flex w-fit items-center gap-2 rounded-full bg-aqua/10 px-3 py-1.5 text-sm font-semibold text-aqua-dark">
+              <Building2 size={14} />
+              {selectedParent.name}
+              <button
+                type="button"
+                onClick={() => set("parent_id", null)}
+                className="text-aqua-dark/60 hover:text-aqua-dark"
+                aria-label={t("hierarchy.removeParent")}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <Button type="button" variant="outline" onClick={() => setParentPickerOpen(true)}>
+              <Building2 size={15} /> {t("hierarchy.chooseParent")}
+            </Button>
+          )}
+        </Section>
+      )}
+
+      {/* Only for an existing, standalone (non-child) spot — a brand new
+          spot has no id yet to attach children to, and a child can't have
+          children of its own. */}
+      {spot && !values.parent_id && (
+        <Section title={t("sections.children")}>
+          <p className="text-xs text-foreground/50">{t("hierarchy.childrenHint")}</p>
+          {children.length > 0 && (
+            <ul className="space-y-1.5">
+              {children.map((child) => (
+                <li
+                  key={child.id}
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-button)] border border-border px-3 py-2 text-sm"
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <CategoryBadge category={child.category} />
+                    {child.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDetachChild(child.id)}
+                    disabled={childPending}
+                    className="text-coral hover:text-coral-dark disabled:opacity-40"
+                    aria-label={t("hierarchy.removeChild")}
+                  >
+                    <X size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setChildPickerOpen(true)}>
+              <Plus size={15} /> {t("hierarchy.attachExisting")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                router.push({ pathname: "/admin/spots/new", query: { parent_id: spot.id } })
+              }
+            >
+              <Plus size={15} /> {t("hierarchy.createChild")}
+            </Button>
+          </div>
+        </Section>
+      )}
+
       <Section title={t("sections.hours")}>
         <HoursEditor
           value={{
@@ -760,6 +942,43 @@ export function SpotForm({ spot }: { spot?: SpotRecord }) {
               setPickerOpen(false);
             }}
             onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {parentPickerOpen && (
+          <PlaceLinkPicker
+            places={eligibleParents}
+            labels={{
+              title: t("hierarchy.parentPicker.title"),
+              searchPlaceholder: t("hierarchy.parentPicker.search"),
+              empty: t("hierarchy.parentPicker.empty"),
+              close: t("close"),
+              typeFilter: { all: "", spot: "", event: "", article: "" },
+            }}
+            onSelect={(place) => {
+              set("parent_id", place.id);
+              setParentPickerOpen(false);
+            }}
+            onClose={() => setParentPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {childPickerOpen && (
+          <PlaceLinkPicker
+            places={eligibleChildren}
+            labels={{
+              title: t("hierarchy.childPicker.title"),
+              searchPlaceholder: t("hierarchy.childPicker.search"),
+              empty: t("hierarchy.childPicker.empty"),
+              close: t("close"),
+              typeFilter: { all: "", spot: "", event: "", article: "" },
+            }}
+            onSelect={handleAttachChild}
+            onClose={() => setChildPickerOpen(false)}
           />
         )}
       </AnimatePresence>

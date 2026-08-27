@@ -86,6 +86,24 @@ export async function getSpotsByIds(ids: string[], locale: Locale): Promise<Spot
   return (data as SpotRecord[]).map((s) => localizeSpot(s, locale));
 }
 
+/** The businesses attached to a hub location (e.g. a hotel's on-site
+ * restaurant and bar) — spots whose `parent_id` points at `parentId`.
+ * Mirrors `getSpotsByIds` above; unordered. */
+export async function getChildSpots(parentId: string, locale: Locale): Promise<Spot[]> {
+  if (!isSupabaseConfigured) {
+    return MOCK_SPOTS.filter((s) => s.parent_id === parentId).map((s) => localizeSpot(s, locale));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("spots").select("*").eq("parent_id", parentId);
+
+  if (error) {
+    console.error("getChildSpots error:", error.message);
+    return [];
+  }
+  return (data as SpotRecord[]).map((s) => localizeSpot(s, locale));
+}
+
 /** Spots closest to a coordinate, nearest first — powers the "nearby spots"
  * rail on spot/event detail pages. `excludeId` keeps the page currently
  * being viewed out of its own recommendations. */
@@ -102,4 +120,46 @@ export async function getNearbySpots(
     .sort((a, b) => a.distanceKm - b.distanceKm)
     .slice(0, limit)
     .map(({ spot }) => spot);
+}
+
+/** Spots most like a given one — same category and/or shared vibes score
+ * highest — powering the "you might also like" rail on the spot detail page.
+ * This replaced a purely distance-based rail there: two spots across town
+ * that are both moody rooftop bars are a better recommendation than the
+ * nearest unrelated shop. Ties break by rating, then distance, so among
+ * equally good matches the more reachable one still wins. `excludeIds` lets
+ * the caller keep spots already shown elsewhere on the page (hub parent/
+ * children) out of the rail. Falls back to filling remaining slots with the
+ * nearest spots when too few share a category/vibe, so a spot with an
+ * uncommon category still gets a full rail instead of an empty one. */
+export async function getRelatedSpots(
+  spot: Spot,
+  locale: Locale,
+  { excludeIds = [], limit = 6 }: { excludeIds?: string[]; limit?: number } = {},
+): Promise<Spot[]> {
+  const excluded = new Set([spot.id, ...excludeIds]);
+  const candidates = (await getSpots(locale)).filter((s) => !excluded.has(s.id));
+
+  const scored = candidates.map((candidate) => {
+    const sharedVibes = candidate.vibes.filter((v) => spot.vibes.includes(v)).length;
+    const score = (candidate.category === spot.category ? 2 : 0) + sharedVibes;
+    const distanceKm = haversineKm(spot.latitude, spot.longitude, candidate.latitude, candidate.longitude);
+    return { spot: candidate, score, distanceKm };
+  });
+
+  const related = scored
+    .filter((c) => c.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score || (b.spot.rating ?? 0) - (a.spot.rating ?? 0) || a.distanceKm - b.distanceKm,
+    );
+
+  if (related.length >= limit) return related.slice(0, limit).map((c) => c.spot);
+
+  const relatedIds = new Set(related.map((c) => c.spot.id));
+  const filler = scored
+    .filter((c) => !relatedIds.has(c.spot.id))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  return [...related, ...filler].slice(0, limit).map((c) => c.spot);
 }

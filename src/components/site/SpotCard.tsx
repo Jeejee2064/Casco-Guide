@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star, MapPin, Phone, Footprints } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
+import { LoadingImage } from "./LoadingImage";
 import { TAP_SPRING } from "./motion";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { VIBE_META } from "@/lib/vibes";
@@ -52,11 +52,13 @@ export function SpotCard({
       }
       className="card-lift group flex h-full w-full flex-col text-left rounded-[var(--radius-card)] bg-surface border border-border overflow-hidden shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-aqua"
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-aqua/20 to-coral/20">
-        <Image
+      {/* Shorter on mobile (16/10 vs 4/3) — a single-column list of full-width
+          cards makes a 4:3 photo read as oversized; the sm+ grid keeps the
+          taller ratio since those cards are narrower. */}
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-gradient-to-br from-aqua/20 to-coral/20 sm:aspect-[4/3]">
+        <LoadingImage
           src={getSpotImage(spot)}
           alt={spot.name}
-          fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -85,7 +87,7 @@ export function SpotCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col space-y-2.5 p-4">
+      <div className="flex flex-1 flex-col space-y-2 p-3 sm:space-y-2.5 sm:p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-heading text-lg font-bold leading-tight line-clamp-1">
             {spot.name}
@@ -98,15 +100,15 @@ export function SpotCard({
           )}
         </div>
 
-        {/* Fixed 2-line reservation, not conditional — a spot with no
-            description (or a one-liner) must leave the same gap a two-line
-            one does, or its card ends up shorter than its row-mates. Same
-            reasoning for the tags row and the address row below: every
-            optional bit of content gets a fixed-height slot regardless of
-            whether it actually has anything in it, so every card in the
-            grid comes out exactly the same height (bento-style), not just
-            the ones that happen to have full copy. */}
-        <p className="line-clamp-2 min-h-[2.5rem] text-sm text-foreground/70">
+        {/* Description, tags and the address/phone row are desktop-only —
+            on a single-column mobile grid, a full-width card doesn't need
+            this much detail to be scannable, so mobile keeps just name,
+            rating and hours/price. From sm+ (multi-column grid) they're
+            back, and there they get a fixed-height slot regardless of
+            whether they have content, so every card in the grid comes out
+            exactly the same height (bento-style), not just the ones that
+            happen to have full copy. */}
+        <p className="hidden line-clamp-2 min-h-[2.5rem] text-sm text-foreground/70 sm:block">
           {spot.description}
         </p>
 
@@ -117,7 +119,7 @@ export function SpotCard({
             clipped off is a fine trade for every card staying the same
             height — the edge mask fades it out instead of hard-cutting a
             pill mid-word. */}
-        <div className="flex h-[1.375rem] gap-1.5 overflow-hidden [mask-image:linear-gradient(to_right,black_88%,transparent_100%)]">
+        <div className="hidden h-[1.375rem] gap-1.5 overflow-hidden [mask-image:linear-gradient(to_right,black_88%,transparent_100%)] sm:flex">
           {spot.tags?.slice(0, 3).map((tag) => (
             <span
               key={tag}
@@ -135,7 +137,7 @@ export function SpotCard({
           )}
         </div>
 
-        <div className="flex min-h-[1rem] items-center gap-3 pt-1.5 text-xs text-foreground/60">
+        <div className="hidden min-h-[1rem] items-center gap-3 pt-1.5 text-xs text-foreground/60 sm:flex">
           {spot.address && (
             <span className="flex min-w-0 items-center gap-1">
               <MapPin size={12} className="shrink-0" />

@@ -5,7 +5,7 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { JsonLd } from "@/components/site/JsonLd";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
-import { getSpotBySlug, getNearbySpots } from "@/lib/data/spots";
+import { getSpotBySlug, getRelatedSpots, getSpotById, getChildSpots } from "@/lib/data/spots";
 // Events temporarily hidden site-wide — see the commented block below.
 // import { getNearbyEvents } from "@/lib/data/events";
 import { getArticlesForSpot } from "@/lib/data/articles";
@@ -69,13 +69,23 @@ export default async function SpotDetailPage({
   const spot = await getSpotBySlug(slug, locale);
   if (!spot) notFound();
 
-  const [nearbySpots, articles, t, tCategory] = await Promise.all([
-    getNearbySpots(spot.latitude, spot.longitude, locale, { excludeId: spot.id, limit: 6 }),
+  const [articles, t, tCategory, parentSpot, childSpots] = await Promise.all([
     // getNearbyEvents(spot.latitude, spot.longitude, locale, { limit: 4 }),
     getArticlesForSpot(spot.id, locale),
     getTranslations({ locale, namespace: "nav" }),
     getTranslations({ locale, namespace: "category" }),
+    // A spot has at most one of these two — see SpotDetailView's doc comment.
+    spot.parent_id ? getSpotById(spot.parent_id, locale) : Promise.resolve(null),
+    getChildSpots(spot.id, locale),
   ]);
+
+  // Run after the hub lookups above (not folded into that Promise.all) since
+  // it needs their ids to exclude the parent/sibling spots already shown in
+  // the "part of"/"places here" sections from the "you might also like" rail.
+  const relatedSpots = await getRelatedSpots(spot, locale, {
+    excludeIds: [parentSpot?.id, ...childSpots.map((c) => c.id)].filter((id): id is string => Boolean(id)),
+    limit: 6,
+  });
 
   const url = buildAlternates({ pathname: "/spots/[slug]", params: { slug } }, locale)!.canonical as string;
   const homeUrl = buildAlternates("/", locale)!.canonical as string;
@@ -93,9 +103,11 @@ export default async function SpotDetailPage({
       <main className="flex-1">
         <SpotDetailView
           spot={spot}
-          nearbySpots={nearbySpots}
+          nearbySpots={relatedSpots}
           // nearbyEvents intentionally omitted — events hidden site-wide
           articles={articles}
+          parentSpot={parentSpot}
+          childSpots={childSpots}
         />
       </main>
       <Footer />

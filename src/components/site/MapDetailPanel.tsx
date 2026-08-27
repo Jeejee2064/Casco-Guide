@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion, useDragControls, type PanInfo } from "framer-motion";
 import { X } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useRef, type ReactNode } from "react";
 import { EASE_OUT, TAP_SPRING } from "./motion";
+import { LoadingImage } from "./LoadingImage";
 import { cn } from "@/lib/utils";
 
 export interface DetailPanelAction {
@@ -16,6 +16,14 @@ export interface DetailPanelAction {
 /** Domain-agnostic content shape — SpotMap normalizes a Spot or an EventRow
  * into this before handing it to the panel, so this component doesn't need
  * to know about either type. */
+export interface DetailPanelChild {
+  id: string;
+  name: string;
+  categoryLabel: string;
+  categoryIcon: ReactNode;
+  onClick: () => void;
+}
+
 export interface DetailPanelContent {
   photoUrl: string | null;
   /** Shown in place of the photo when `photoUrl` is null. */
@@ -27,6 +35,12 @@ export interface DetailPanelContent {
   subtitle?: string | null;
   metaItems: string[];
   description?: string | null;
+  /** The businesses inside this spot, when it's a hub location (e.g. a
+   * hotel's on-site restaurant and bar) — rendered directly under the
+   * title, on both desktop and mobile (unlike subtitle/meta/description,
+   * `compact` doesn't hide this: it's the reason the pin exists). Omitted
+   * or empty for a standalone spot. */
+  children?: DetailPanelChild[];
   actions: DetailPanelAction[];
 }
 
@@ -215,12 +229,12 @@ function PanelBody({
           // Sized/reformatted by the Next Image optimizer (AVIF/WebP, no
           // longer the full-res original) — a raw CSS `background-image`
           // bypasses that entirely, which is what this replaced.
-          <Image
+          <LoadingImage
             src={content.photoUrl}
             alt=""
-            fill
             sizes="(max-width: 768px) 100vw, 380px"
             className="object-cover"
+            iconClassName="h-7 w-7"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-aqua-dark">
@@ -253,6 +267,30 @@ function PanelBody({
           {content.categoryLabel}
         </span>
         <h3 className="font-heading text-lg font-extrabold leading-tight">{content.title}</h3>
+        {/* The hub's businesses, right under its name — shown on mobile too
+            (see DetailPanelContent.children's doc comment), unlike every
+            other section below which the `compact`/mobile checks trim. */}
+        {content.children && content.children.length > 0 && (
+          <ul className="-mx-1 flex flex-col gap-0.5">
+            {content.children.map((child) => (
+              <li key={child.id}>
+                <button
+                  type="button"
+                  onClick={child.onClick}
+                  className="flex w-full items-center gap-2 rounded-[var(--radius-button)] px-1 py-1.5 text-left text-sm font-semibold transition-colors hover:bg-foreground/5"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-foreground/70">
+                    {child.categoryIcon}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{child.name}</span>
+                  <span className="shrink-0 text-xs font-medium text-foreground/50">
+                    {child.categoryLabel}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {/* Address/date (subtitle) and the fuller description read fine on
             the roomier desktop side panel, but on the mobile sheet they're
             exactly what used to push the close button out of view — mobile

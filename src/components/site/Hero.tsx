@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { ArrowRight, BookOpen, MapIcon, MapPin, Users } from "lucide-react";
 // CalendarDays: only used by the events pill below, currently commented out.
 import { useTranslations } from "next-intl";
@@ -9,6 +8,7 @@ import { HERO_IMAGE } from "@/lib/data/categoryImages";
 import { Link } from "@/i18n/navigation";
 import { staggerContainer, fadeUp } from "./motion";
 import { HeroArticles } from "./HeroArticles";
+import { LoadingImage } from "./LoadingImage";
 import type { Article } from "@/lib/types/database";
 
 /**
@@ -75,10 +75,9 @@ export function Hero({
 
   return (
     <section className="relative isolate overflow-hidden">
-      <Image
+      <LoadingImage
         src={HERO_IMAGE}
         alt=""
-        fill
         preload
         sizes="100vw"
         className="object-cover"

@@ -63,6 +63,12 @@ export interface Spot {
   phone: string | null;
   website: string | null;
   email: string | null;
+  // Self-reference: set when this spot is one of several businesses inside
+  // a shared hub location (e.g. a hotel's on-site restaurant) — points at
+  // that hub's own spot id. `null` for a standalone spot, or for a hub
+  // itself. Capped at two levels (a spot with `parent_id` set never has
+  // children of its own) — enforced in the admin UI, not the DB.
+  parent_id: string | null;
 
   hours_monday: DayHours;
   hours_tuesday: DayHours;

@@ -2,8 +2,8 @@
 
 import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 import { track } from "@/lib/analytics/track";
+import { NIGHT_MODE_STORAGE_KEY as STORAGE_KEY } from "@/lib/nightMode";
 
-const STORAGE_KEY = "casco-night-mode";
 // No native event fires when *this* tab mutates localStorage/classList (the
 // "storage" event only reaches other tabs) — dispatched by `commitNight`
 // below so useSyncExternalStore's subscription notices same-tab toggles too.
@@ -85,7 +85,3 @@ export function useNightMode() {
   if (!ctx) throw new Error("useNightMode must be used within NightModeProvider");
   return ctx;
 }
-
-/** Read by the root layout's beforeInteractive `<Script>` — kept in one place
- * so the storage key can't drift between the two. */
-export const NIGHT_MODE_STORAGE_KEY = STORAGE_KEY;

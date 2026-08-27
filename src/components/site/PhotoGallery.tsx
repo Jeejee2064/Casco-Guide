@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import Image from "next/image";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import { Expand, ImageOff, Images } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { LoadingImage } from "./LoadingImage";
 import { PhotoLightbox } from "./PhotoLightbox";
 import type { Photo } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
@@ -21,16 +21,32 @@ export function PhotoGallery({
   photos,
   alt,
   placeholder,
+  onReady,
 }: {
   photos: Photo[];
   /** Base alt text — combined with a photo's own caption or index. */
   alt: string;
   /** Rendered instead of the gallery when there are no photos yet. */
   placeholder?: ReactNode;
+  /** Fires once the lead photo has actually loaded — for a caller that gates
+   * the rest of its page on the gallery being ready, same idea as
+   * SpotDetailView's `heroLoaded`. Only fires when there's a photo to load
+   * in the first place; a caller with no photos has nothing to wait on and
+   * should start "ready" (see ArticleDetailView's `coverLoaded` init). */
+  onReady?: () => void;
 }) {
   const t = useTranslations("gallery");
   const shown = photos.slice(0, 5);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // The lead photo (index 0) renders once in the mobile carousel and once in
+  // the desktop grid — whichever finishes loading first should fire
+  // `onReady`, but only once.
+  const readyFired = useRef(false);
+  const fireReady = () => {
+    if (readyFired.current) return;
+    readyFired.current = true;
+    onReady?.();
+  };
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: shown.length > 1 });
   const [mobileIndex, setMobileIndex] = useState(0);
@@ -70,13 +86,13 @@ export function PhotoGallery({
                 aria-label={photo.caption ?? `${alt} ${i + 1}`}
                 className="relative h-full min-w-0 flex-[0_0_100%]"
               >
-                <Image
+                <LoadingImage
                   src={photo.url}
                   alt={photo.caption ?? `${alt} ${i + 1}`}
-                  fill
                   sizes="100vw"
                   className="object-cover"
                   preload={i === 0}
+                  onLoad={i === 0 ? fireReady : undefined}
                 />
               </button>
             ))}
@@ -122,13 +138,13 @@ export function PhotoGallery({
               shown.length >= 5 && (i === 0 ? "col-span-2 row-span-2" : "col-span-1 row-span-1"),
             )}
           >
-            <Image
+            <LoadingImage
               src={photo.url}
               alt={photo.caption ?? `${alt} ${i + 1}`}
-              fill
               sizes="(max-width: 1024px) 50vw, 33vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               preload={i === 0}
+              onLoad={i === 0 ? fireReady : undefined}
             />
             <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
           </button>

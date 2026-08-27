@@ -7,14 +7,10 @@ import { motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Field";
+import { addCascoBasemap, CASCO_VIEJO_ATTRIBUTION } from "@/lib/cascoMap";
 
 // Casco Viejo, Panama City — same default as the public SpotMap.
 const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
-
-const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>';
 
 const pinHtml = `<span class="spot-pin" style="background:#ff6b35"><span class="spot-pin__emoji">📍</span></span>`;
 
@@ -86,13 +82,19 @@ export function LocationPickerModal({
       const map = L.map(containerRef.current, {
         center: start,
         zoom: hasInitial ? 17 : 15,
+        attributionControl: false,
       });
+      L.control.attribution({ prefix: false }).addAttribution(CASCO_VIEJO_ATTRIBUTION).addTo(map);
 
       const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      L.tileLayer(prefersDark ? DARK_TILES : LIGHT_TILES, {
-        attribution: TILE_ATTRIBUTION,
-        maxZoom: 20,
-      }).addTo(map);
+      const basemap = await addCascoBasemap(L, map, prefersDark);
+      // A second await (the basemap's own GeoJSON fetch) — re-check in case
+      // this modal closed while it was in flight.
+      if (cancelled) {
+        basemap.destroy();
+        map.remove();
+        return;
+      }
 
       const icon = L.divIcon({
         className: "spot-pin-marker",

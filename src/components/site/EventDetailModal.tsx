@@ -20,6 +20,7 @@ import {
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
@@ -123,10 +124,9 @@ export function EventDetailModal({
                   <div className="flex h-full">
                     {photos.map((photo, i) => (
                       <div key={i} className="relative h-full min-w-0 flex-[0_0_100%]">
-                        <Image
+                        <LoadingImage
                           src={photo.url}
                           alt={photo.caption ?? event.title}
-                          fill
                           sizes="(max-width: 640px) 100vw, 640px"
                           className="object-cover"
                         />

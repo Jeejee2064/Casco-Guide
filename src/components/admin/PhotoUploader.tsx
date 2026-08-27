@@ -9,15 +9,78 @@ import { createClient } from "@/lib/supabase/client";
 import type { Photo } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
+// Longest edge any uploaded photo is downscaled to before it ever leaves the
+// browser, and the JPEG quality it's re-encoded at. Phone camera photos
+// routinely land at 3000x4000px and several MB — uploaded as-is, that's the
+// "original" Next's image optimizer has to download from Supabase and
+// decode on every cache miss (see getSpotImage/next.config.ts's
+// remotePatterns), which is the actual source of a photo taking forever to
+// load, not anything in the optimizer's own config. 1920px covers every slot
+// a photo renders in site-wide with room to spare (SpotDetailView's hero is
+// the widest, at 100vw) — mirrors the `w=1600&q=80` cap already put on the
+// category-fallback Unsplash photos in categoryImages.ts, just applied at
+// upload time instead of via URL params since these are our own files.
+const MAX_UPLOAD_DIMENSION = 1920;
+const UPLOAD_JPEG_QUALITY = 0.82;
+
+// Passed straight through, uncompressed — vector art has no pixel dimensions
+// to downscale, and re-encoding an animated GIF as a static JPEG would
+// silently keep only its first frame.
+const SKIP_COMPRESSION_TYPES = new Set(["image/svg+xml", "image/gif"]);
+
+/** Downscales/re-encodes a photo client-side before upload — see
+ * MAX_UPLOAD_DIMENSION above for why. Falls back to the original file
+ * whenever compression isn't possible or doesn't actually help (a decode
+ * failure, an unsupported format, or a source already smaller than what it
+ * would re-encode to), so a browser quirk can never block an upload
+ * outright. */
+async function compressImage(file: File): Promise<File> {
+  if (SKIP_COMPRESSION_TYPES.has(file.type)) return file;
+
+  try {
+    // `imageOrientation: "from-image"` bakes the EXIF rotation flag into the
+    // decoded pixels — without it, a canvas-redrawn photo taken in portrait
+    // routinely came out sideways, since canvas itself ignores EXIF.
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.round(bitmap.width * scale);
+    const height = Math.round(bitmap.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    // Flattened onto white first — JPEG carries no alpha channel, so any
+    // transparency (e.g. a PNG screenshot) would otherwise turn black.
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", UPLOAD_JPEG_QUALITY),
+    );
+    if (!blob || blob.size >= file.size) return file;
+
+    const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], name, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
 /** Uploads to the shared `spot-photos` bucket and returns its public URL.
  * Exported for reuse outside this file (e.g. inline images inserted from
  * ArticleBodyEditor) — the bucket isn't spot-specific despite its name. */
 export async function uploadFile(file: File): Promise<string> {
   const supabase = createClient();
-  const ext = file.name.split(".").pop();
+  const upload = await compressImage(file);
+  const ext = upload.name.split(".").pop();
   const path = `${crypto.randomUUID()}.${ext}`;
 
-  const { error } = await supabase.storage.from("spot-photos").upload(path, file, {
+  const { error } = await supabase.storage.from("spot-photos").upload(path, upload, {
     cacheControl: "3600",
     upsert: false,
   });
