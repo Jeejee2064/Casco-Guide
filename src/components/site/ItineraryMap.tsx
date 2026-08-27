@@ -2,7 +2,11 @@
 
 import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Map as LeafletMap, Marker as LeafletMarker, Polyline } from "leaflet";
+import type {
+  Map as LeafletMap,
+  Marker as LeafletMarker,
+  Polyline,
+} from "leaflet";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { CalendarDays } from "lucide-react";
@@ -19,6 +23,7 @@ import {
 } from "@/lib/cascoMap";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { formatTime } from "@/lib/hours";
+import { routeBetween } from "@/lib/routing";
 import type { EventRow, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +42,9 @@ const DEFAULT_ZOOM = 15;
 // display-only, doesn't touch the real coordinates used for links/panels.
 const CLUSTER_THRESHOLD_DEG = 0.00015; // ~15-16m at this latitude
 
-function declutter(points: { lat: number; lng: number }[]): { lat: number; lng: number }[] {
+function declutter(
+  points: { lat: number; lng: number }[],
+): { lat: number; lng: number }[] {
   const n = points.length;
   const clusterOf = new Array(n).fill(-1);
   const clusters: number[][] = [];
@@ -48,7 +55,12 @@ function declutter(points: { lat: number; lng: number }[]): { lat: number; lng: 
     clusterOf[i] = clusters.length;
     for (let j = i + 1; j < n; j++) {
       if (clusterOf[j] !== -1) continue;
-      if (Math.hypot(points[i].lat - points[j].lat, points[i].lng - points[j].lng) < CLUSTER_THRESHOLD_DEG) {
+      if (
+        Math.hypot(
+          points[i].lat - points[j].lat,
+          points[i].lng - points[j].lng,
+        ) < CLUSTER_THRESHOLD_DEG
+      ) {
         cluster.push(j);
         clusterOf[j] = clusters.length;
       }
@@ -59,12 +71,17 @@ function declutter(points: { lat: number; lng: number }[]): { lat: number; lng: 
   const result = points.map((p) => ({ ...p }));
   for (const cluster of clusters) {
     if (cluster.length <= 1) continue;
-    const centerLat = cluster.reduce((sum, i) => sum + points[i].lat, 0) / cluster.length;
-    const centerLng = cluster.reduce((sum, i) => sum + points[i].lng, 0) / cluster.length;
+    const centerLat =
+      cluster.reduce((sum, i) => sum + points[i].lat, 0) / cluster.length;
+    const centerLng =
+      cluster.reduce((sum, i) => sum + points[i].lng, 0) / cluster.length;
     const radius = CLUSTER_THRESHOLD_DEG * 0.9;
     cluster.forEach((i, k) => {
       const angle = (2 * Math.PI * k) / cluster.length;
-      result[i] = { lat: centerLat + Math.sin(angle) * radius, lng: centerLng + Math.cos(angle) * radius };
+      result[i] = {
+        lat: centerLat + Math.sin(angle) * radius,
+        lng: centerLng + Math.cos(angle) * radius,
+      };
     });
   }
   return result;
@@ -77,7 +94,9 @@ export interface ItineraryStop {
   latitude: number;
   longitude: number;
   name: string;
-  href: { pathname: "/spots/[slug]"; params: { slug: string } } | { pathname: "/events/[slug]"; params: { slug: string } };
+  href:
+    | { pathname: "/spots/[slug]"; params: { slug: string } }
+    | { pathname: "/events/[slug]"; params: { slug: string } };
   /** Full record, so a click can open the same rich detail panel SpotMap
    * uses — not just navigate straight to the page. */
   place: { kind: "spot"; spot: Spot } | { kind: "event"; event: EventRow };
@@ -85,8 +104,10 @@ export interface ItineraryStop {
 
 /**
  * Route map for an "itinerary"-layout article (see ArticleDetailView) — a
- * numbered pin per stop, in day-plan order, connected by a dashed line so
- * the shape of the route reads at a glance. Clicking a pin opens the same
+ * numbered pin per stop, in day-plan order, connected by a real, street-
+ * traced walking route between each consecutive pair (see lib/routing.ts) —
+ * not a straight as-the-crow-flies line — so the shape of the route reads as
+ * the actual path you'd walk. Clicking a pin opens the same
  * MapDetailPanel SpotMap uses, in its compact form (photo, category, title,
  * "read more") since the article text around the map already carries the
  * description — rather than navigating away immediately. Deliberately not
@@ -116,7 +137,9 @@ export function ItineraryMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const basemapRef = useRef<CascoBasemap | null>(null);
   const markersRef = useRef<LeafletMarker[]>([]);
-  const lineRef = useRef<Polyline | null>(null);
+  // One casing+line pair per leg (consecutive stop pair), not a single
+  // polyline — see the drawing effect below for why.
+  const routeLayersRef = useRef<Polyline[]>([]);
 
   // Mirrors SpotMap/MiniMap's isNightRef — the init effect below only runs
   // once (mount), so it needs a live read of the latest `isNight` at that
@@ -144,9 +167,17 @@ export function ItineraryMap({
     const map = mapRef.current;
     if (!map) return;
     if (isDesktopRef.current) {
-      map.panInside([lat, lng], { paddingTopLeft: [412, 24], paddingBottomRight: [24, 24], animate: true });
+      map.panInside([lat, lng], {
+        paddingTopLeft: [412, 24],
+        paddingBottomRight: [24, 24],
+        animate: true,
+      });
     } else {
-      map.panInside([lat, lng], { paddingTopLeft: [24, 24], paddingBottomRight: [24, 320], animate: true });
+      map.panInside([lat, lng], {
+        paddingTopLeft: [24, 24],
+        paddingBottomRight: [24, 320],
+        animate: true,
+      });
     }
   }, []);
 
@@ -170,11 +201,20 @@ export function ItineraryMap({
         attributionControl: false,
       });
       L.control.zoom({ position: "topright" }).addTo(map);
-      L.control.attribution({ prefix: false }).addAttribution(CASCO_VIEJO_ATTRIBUTION).addTo(map);
+      L.control
+        .attribution({ prefix: false })
+        .addAttribution(CASCO_VIEJO_ATTRIBUTION)
+        .addTo(map);
       map.on("click", () => setSelected(null));
 
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      const basemap = await addCascoBasemap(L, map, isNightRef.current || prefersDark);
+      const prefersDark = window.matchMedia?.(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+      const basemap = await addCascoBasemap(
+        L,
+        map,
+        isNightRef.current || prefersDark,
+      );
       // A second await (the basemap's own GeoJSON fetch) — re-check in case
       // this ItineraryMap unmounted while it was in flight.
       if (cancelled) {
@@ -194,7 +234,7 @@ export function ItineraryMap({
       mapRef.current = null;
       basemapRef.current = null;
       markersRef.current = [];
-      lineRef.current = null;
+      routeLayersRef.current = [];
     };
     // One map per mounted instance — a different article gets a fresh
     // ItineraryMap (keyed by the caller), not a re-init here.
@@ -204,11 +244,13 @@ export function ItineraryMap({
   // the init effect above only reads isNight once, at creation.
   useEffect(() => {
     if (!ready) return;
-    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia?.(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     basemapRef.current?.setDark(isNight || prefersDark);
   }, [ready, isNight]);
 
-  // Draw the numbered pins + connecting line whenever the stop list changes.
+  // Draw the numbered pins + connecting route whenever the stop list changes.
   useEffect(() => {
     if (!ready || !mapRef.current) return;
     let cancelled = false;
@@ -220,23 +262,67 @@ export function ItineraryMap({
 
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
-      lineRef.current?.remove();
-      lineRef.current = null;
+      routeLayersRef.current.forEach((layer) => layer.remove());
+      routeLayersRef.current = [];
 
-      // Declutter for display only — links/panel content below still use
-      // each stop's real latitude/longitude.
-      const displayPoints = declutter(stops.map((s) => ({ lat: s.latitude, lng: s.longitude })));
-      const points: [number, number][] = displayPoints.map((p) => [p.lat, p.lng]);
+      // Declutter for display only — links/panel content, and pin
+      // placement, below still use each stop's real latitude/longitude
+      // (including for the routed path — see the loop below).
+      const displayPoints = declutter(
+        stops.map((s) => ({ lat: s.latitude, lng: s.longitude })),
+      );
+      const points: [number, number][] = displayPoints.map((p) => [
+        p.lat,
+        p.lng,
+      ]);
       if (points.length === 0) return;
 
-      if (points.length > 1) {
-        lineRef.current = L.polyline(points, {
-          color: ROUTE_COLOR,
-          weight: 3,
-          opacity: 0.7,
-          dashArray: "1, 10",
-          lineCap: "round",
-        }).addTo(map);
+      // One real, street-traced walking leg per consecutive stop pair —
+      // not a single straight as-the-crow-flies line across the whole
+      // route (see lib/routing.ts, the same router SpotMap's "get
+      // directions" uses). Each leg gets its own casing+line pair, drawn
+      // in parallel, so a leg the street graph couldn't connect (falls
+      // back to `approximate: true` — see routeBetween) reads as dashed on
+      // its own instead of flattening every other leg's solid, real path
+      // to match it.
+      // Collected below so fitBounds afterward can account for a routed
+      // leg that bows out wider than a straight line between its two pins
+      // would have — bounds based on pins alone could otherwise clip part
+      // of the drawn path.
+      const routePoints: [number, number][] = [];
+
+      if (stops.length > 1) {
+        const legs = await Promise.all(
+          stops
+            .slice(0, -1)
+            .map((from, i) =>
+              routeBetween(
+                { lat: from.latitude, lng: from.longitude },
+                { lat: stops[i + 1].latitude, lng: stops[i + 1].longitude },
+              ),
+            ),
+        );
+        if (cancelled || !mapRef.current) return;
+
+        for (const leg of legs) {
+          const casing = L.polyline(leg.points, {
+            color: "#ffffff",
+            weight: 6,
+            opacity: 0.85,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(map);
+          const line = L.polyline(leg.points, {
+            color: ROUTE_COLOR,
+            weight: 3.5,
+            opacity: 0.95,
+            lineCap: "round",
+            lineJoin: "round",
+            dashArray: leg.approximate ? "2, 10" : undefined,
+          }).addTo(map);
+          routeLayersRef.current.push(casing, line);
+          routePoints.push(...leg.points);
+        }
       }
 
       stops.forEach((stop, i) => {
@@ -257,7 +343,10 @@ export function ItineraryMap({
         markersRef.current.push(marker);
       });
 
-      map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 17 });
+      map.fitBounds(L.latLngBounds([...points, ...routePoints]), {
+        padding: [36, 36],
+        maxZoom: 17,
+      });
     })();
 
     return () => {
@@ -272,11 +361,13 @@ export function ItineraryMap({
   }
 
   const handleOpenSpot = useCallback(
-    (spot: Spot) => router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } }),
+    (spot: Spot) =>
+      router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } }),
     [router],
   );
   const handleOpenEvent = useCallback(
-    (event: EventRow) => router.push({ pathname: "/events/[slug]", params: { slug: event.slug } }),
+    (event: EventRow) =>
+      router.push({ pathname: "/events/[slug]", params: { slug: event.slug } }),
     [router],
   );
 
@@ -306,25 +397,42 @@ export function ItineraryMap({
         subtitle: spot.address,
         metaItems,
         description: spot.description,
-        actions: [{ label: tSpot("readMore"), primary: true, onClick: () => handleOpenSpot(spot) }],
+        actions: [
+          {
+            label: tSpot("readMore"),
+            primary: true,
+            onClick: () => handleOpenSpot(spot),
+          },
+        ],
       };
     }
 
     const event = selected.place.event;
     const meta = EVENT_CATEGORY_META[event.category];
-    const dateLabel = new Intl.DateTimeFormat(locale === "es" ? "es-PA" : "en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }).format(new Date(`${event.date}T00:00:00`));
-    const priceLabel = event.price && event.price > 0 ? `$${event.price}` : tEvents("free");
+    const dateLabel = new Intl.DateTimeFormat(
+      locale === "es" ? "es-PA" : "en-US",
+      {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      },
+    ).format(new Date(`${event.date}T00:00:00`));
+    const priceLabel =
+      event.price && event.price > 0 ? `$${event.price}` : tEvents("free");
 
     const actions: DetailPanelContent["actions"] = [
-      { label: tEvents("viewDetails"), primary: true, onClick: () => handleOpenEvent(event) },
+      {
+        label: tEvents("viewDetails"),
+        primary: true,
+        onClick: () => handleOpenEvent(event),
+      },
     ];
     if (event.booking_url) {
       const bookingUrl = event.booking_url;
-      actions.push({ label: tEvents("book"), onClick: () => window.open(bookingUrl, "_blank", "noopener,noreferrer") });
+      actions.push({
+        label: tEvents("book"),
+        onClick: () => window.open(bookingUrl, "_blank", "noopener,noreferrer"),
+      });
     }
 
     return {
@@ -338,11 +446,26 @@ export function ItineraryMap({
       description: event.description,
       actions,
     };
-  }, [selected, locale, tCategory, tEventCategory, tSpot, tEvents, handleOpenSpot, handleOpenEvent]);
+  }, [
+    selected,
+    locale,
+    tCategory,
+    tEventCategory,
+    tSpot,
+    tEvents,
+    handleOpenSpot,
+    handleOpenEvent,
+  ]);
 
   return (
     <div className={cn("relative", className)}>
-      <div ref={containerRef} className={cn("w-full overflow-hidden rounded-[var(--radius-card)] border border-border", heightClassName)} />
+      <div
+        ref={containerRef}
+        className={cn(
+          "w-full overflow-hidden rounded-[var(--radius-card)] border border-border",
+          heightClassName,
+        )}
+      />
       <MapDetailPanel
         content={panelContent}
         closeLabel={tSpot("close")}

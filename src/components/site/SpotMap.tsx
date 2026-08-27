@@ -76,14 +76,14 @@ const MULTI_VIBE_COLOR_NIGHT = "#ffcf6b";
 const NEUTRAL_PIN_COLOR = "#146b8c";
 
 // ⚠️ TEMPORARY TESTING AID — REMOVE ONCE DONE ⚠️
-// Itinerary mode's "visitor position" comes from real geolocation, which is
-// unusable for testing from outside Panama City (or anywhere geolocation is
-// blocked/denied) — the route would either error out or start from wherever
-// the tester actually is, nowhere near Casco Viejo's street network. Setting
-// this to a coordinate hardcodes that position instead of asking the
-// browser for it, so the whole flow (route line, live dot, distance/time)
-// can be exercised from anywhere. Set back to `null` to restore real
-// geolocation.
+// Itinerary mode always tries the visitor's *real* geolocation first — this
+// is only the fallback for when that fails or is unavailable (denied,
+// times out, no Geolocation API, or the tester just isn't in Panama City),
+// so the whole flow (route line, live dot, distance/time) can still be
+// exercised. A real position, whenever the browser actually hands one back,
+// always wins. Set to `null` to remove the fallback entirely (a real
+// geolocation failure then just shows the panel's own error state, same as
+// before this was added).
 const FAKE_USER_LOCATION_FOR_TESTING: { lat: number; lng: number } | null = {
   lat: CASCO_VIEJO_CENTER[0],
   lng: CASCO_VIEJO_CENTER[1],
@@ -503,61 +503,61 @@ export function SpotMap({
   // again" button forcing this effect to re-subscribe after a timeout/denial.
   useEffect(() => {
     if (!directionsTarget) return;
-    // See FAKE_USER_LOCATION_FOR_TESTING's own comment above — short-circuits
-    // the real watch entirely while set. Only the marker is touched here
-    // (an imperative Leaflet update, not React state) — `effectiveUserLatLng`
-    // below is what actually feeds the fake position into the rest of the
-    // flow, so this doesn't need (and, as an effect, shouldn't do) a
-    // setUserLatLng call of its own.
-    if (FAKE_USER_LOCATION_FOR_TESTING) {
+
+    // Real geolocation failing (denied, timed out) or not existing at all —
+    // falls back to FAKE_USER_LOCATION_FOR_TESTING when one's set (see its
+    // own doc comment above), otherwise surfaces the real error. Real
+    // position success (below) always takes priority over this; it's only
+    // ever reached when there genuinely isn't one to use instead.
+    const useFallbackLocation = () => {
+      if (!FAKE_USER_LOCATION_FOR_TESTING) {
+        setDirectionsStatus("error");
+        return;
+      }
+      setUserLatLng(FAKE_USER_LOCATION_FOR_TESTING);
       upsertMeMarker(
         FAKE_USER_LOCATION_FOR_TESTING.lat,
         FAKE_USER_LOCATION_FOR_TESTING.lng,
         true,
       );
+    };
+
+    if (!("geolocation" in navigator)) {
+      // Deferred, not called directly here — see
+      // react-hooks/set-state-in-effect; this branch (no Geolocation API at
+      // all) is rare, unlike the real watch's own async callbacks below,
+      // which already run outside React's render/effect timing as far as
+      // that rule is concerned.
+      queueMicrotask(useFallbackLocation);
       return;
     }
-    if (!("geolocation" in navigator)) return;
+
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLatLng({ lat: latitude, lng: longitude });
         upsertMeMarker(latitude, longitude, true);
       },
-      () => setDirectionsStatus("error"),
+      useFallbackLocation,
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [directionsTarget, upsertMeMarker, locateRetryTick]);
 
-  // The position everything below actually routes from — the real tracked
-  // fix, unless FAKE_USER_LOCATION_FOR_TESTING overrides it. A derived value
-  // rather than folding the override into `userLatLng` itself, so the state
-  // setter above stays a plain mirror of the real geolocation watch.
-  const effectiveUserLatLng = FAKE_USER_LOCATION_FOR_TESTING ?? userLatLng;
-
   // Recomputes the walking route whenever the visitor's tracked position
   // moves meaningfully, or a new destination is armed — see
   // lastRoutedFromRef's doc comment above for the "meaningfully" part.
   useEffect(() => {
-    if (!directionsTarget || !effectiveUserLatLng) return;
+    if (!directionsTarget || !userLatLng) return;
     const last = lastRoutedFromRef.current;
     if (
       last &&
       last.targetId === directionsTarget.id &&
-      haversineKm(
-        last.lat,
-        last.lng,
-        effectiveUserLatLng.lat,
-        effectiveUserLatLng.lng,
-      ) < 0.015
+      haversineKm(last.lat, last.lng, userLatLng.lat, userLatLng.lng) < 0.015
     ) {
       return;
     }
-    lastRoutedFromRef.current = {
-      ...effectiveUserLatLng,
-      targetId: directionsTarget.id,
-    };
+    lastRoutedFromRef.current = { ...userLatLng, targetId: directionsTarget.id };
 
     let cancelled = false;
     // Only the first computation for this destination shows the
@@ -565,7 +565,7 @@ export function SpotMap({
     // update should swap its numbers in place, not flash back to a loading
     // state every ~15m.
     setDirectionsStatus((s) => (s === "ready" ? s : "routing"));
-    routeBetween(effectiveUserLatLng, {
+    routeBetween(userLatLng, {
       lat: directionsTarget.latitude,
       lng: directionsTarget.longitude,
     })
@@ -580,7 +580,7 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [directionsTarget, effectiveUserLatLng]);
+  }, [directionsTarget, userLatLng]);
 
   // Draws (and re-draws, as the route updates while walking) the route line
   // on the map — a white "casing" underneath a colored line on top, the same
@@ -635,18 +635,23 @@ export function SpotMap({
         // Same asymmetric padding as revealSelection above — the route's
         // own endpoints shouldn't end up hidden behind DirectionsPanel any
         // more than a selected pin should end up behind MapDetailPanel.
+        // maxZoom matches the map's own ceiling (see the `L.map` call
+        // below) rather than an arbitrary lower cap — a short walk (start
+        // and end a block apart) should zoom in as tight as the map allows
+        // while both pins stay in frame, not stop early at a "city-wide"
+        // zoom level picked for longer routes.
         const bounds = L.latLngBounds(latlngs);
         if (isDesktopRef.current) {
           map.fitBounds(bounds, {
             paddingTopLeft: [412, 24],
             paddingBottomRight: [24, 24],
-            maxZoom: 17,
+            maxZoom: 19,
           });
         } else {
           map.fitBounds(bounds, {
             paddingTopLeft: [24, 24],
             paddingBottomRight: [24, 320],
-            maxZoom: 17,
+            maxZoom: 19,
           });
         }
         routeFitDoneRef.current = true;
@@ -1031,6 +1036,16 @@ export function SpotMap({
       const isInitialReveal = !initialPinsRevealedRef.current;
       initialPinsRevealedRef.current = true;
 
+      // Arriving straight from a spot's "Get directions" button (see
+      // initialDirectionsSpot's own doc comment) means itinerary mode is
+      // about to take over the instant the map's ready — every other pin
+      // is about to fade out and go inert anyway (see the dimming effect
+      // below), so the whole cascade-pop-in/fit-to-every-spot flourish
+      // would just be motion nobody has time to actually see before it's
+      // overridden. Skip it and let the map settle straight on the
+      // destination + route instead.
+      const skipInitialFlourish = isInitialReveal && initialDirectionsSpot != null;
+
       const bounds: [number, number][] = [];
 
       filteredSpots.forEach((spot, index) => {
@@ -1098,9 +1113,9 @@ export function SpotMap({
           // Capped — with a lot of pins, a linear per-pin delay would leave
           // the last ones popping in absurdly late; 650ms keeps the whole
           // cascade feeling like one deliberate reveal, not a wait.
-          const staggerDelay = isInitialReveal ? Math.min(index * 28, 650) : 0;
+          const staggerDelay = isInitialReveal && !skipInitialFlourish ? Math.min(index * 28, 650) : 0;
           const icon = L.divIcon({
-            className: cn("spot-pin-marker", "spot-pin-marker--entering"),
+            className: cn("spot-pin-marker", !skipInitialFlourish && "spot-pin-marker--entering"),
             // Featured star hidden site-wide for now — swap back to
             // `spot.is_featured` once there is real featured content.
             html: pinHtml(color, shapes, false, childCount),
@@ -1154,7 +1169,12 @@ export function SpotMap({
 
       // Only steer the viewport if spots are the layer actually on screen —
       // otherwise switching filters in events mode would yank the map back.
-      if (bounds.length > 0 && mode === "spots") {
+      // Also skipped on the direct-to-directions arrival (see
+      // skipInitialFlourish above) — the route-fit effect frames the
+      // destination + visitor far better than "every spot in Casco Viejo"
+      // would, and doing both back to back just reads as the view lurching
+      // twice in a row.
+      if (bounds.length > 0 && mode === "spots" && !skipInitialFlourish) {
         mapRef.current?.fitBounds(bounds, { padding: [48, 48], maxZoom: 16 });
       }
     })();
@@ -1171,6 +1191,7 @@ export function SpotMap({
     activeVibes,
     isNight,
     childrenBySpotId,
+    initialDirectionsSpot,
   ]);
 
   // Render event pins on their own layer, using the /public/icons badges.
