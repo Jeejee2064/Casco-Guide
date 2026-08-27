@@ -39,8 +39,11 @@ import {
   CASCO_VIEJO_ATTRIBUTION,
   CASCO_VIEJO_BOUNDS,
   CASCO_VIEJO_CENTER,
+  CASCO_VIEJO_ENTRY_POINT,
+  isWithinCascoViejo,
   type CascoBasemap,
 } from "@/lib/cascoMap";
+import { setLastKnownUserLocation } from "@/lib/userLocation";
 import type {
   EventRow,
   Spot,
@@ -384,6 +387,11 @@ export function SpotMap({
   const [route, setRoute] = useState<Route | null>(null);
   const [directionsStatus, setDirectionsStatus] =
     useState<DirectionsStatus>("locating");
+  // True once a real geolocation fix places the visitor outside
+  // CASCO_VIEJO_BOUNDS — the route is then started from
+  // CASCO_VIEJO_ENTRY_POINT instead (see the watchPosition effect below),
+  // and DirectionsPanel shows a notice explaining why.
+  const [isOutsideArea, setIsOutsideArea] = useState(false);
   // Bumped by the panel's "try again" button to re-run the geolocation
   // effect below after a timeout/denial — a plain dependency change, since
   // the effect itself has no other reason to re-subscribe.
@@ -444,6 +452,7 @@ export function SpotMap({
       setSelectedSpot(spot);
       setDirectionsTarget(spot);
       setRoute(null);
+      setIsOutsideArea(false);
       setDirectionsStatus(
         FAKE_USER_LOCATION_FOR_TESTING || "geolocation" in navigator
           ? "locating"
@@ -457,6 +466,7 @@ export function SpotMap({
     setDirectionsTarget(null);
     setRoute(null);
     setUserLatLng(null);
+    setIsOutsideArea(false);
   }, []);
 
   const retryLocate = useCallback(() => {
@@ -535,8 +545,30 @@ export function SpotMap({
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        setUserLatLng({ lat: latitude, lng: longitude });
-        upsertMeMarker(latitude, longitude, true);
+        // Cached for MiniMap et al. regardless of bounds below — their
+        // "distance from you" badge should reflect where the visitor
+        // actually is, even while this route itself starts from the
+        // neighborhood entry point instead.
+        setLastKnownUserLocation({ lat: latitude, lng: longitude });
+        if (isWithinCascoViejo(latitude, longitude)) {
+          setIsOutsideArea(false);
+          setUserLatLng({ lat: latitude, lng: longitude });
+          upsertMeMarker(latitude, longitude, true);
+        } else {
+          // Outside the mapped area — don't hand the street-graph
+          // pathfinder a real-world point nowhere near its network (see
+          // routing.ts's nearestNodeKey, which has no distance cutoff and
+          // would otherwise snap it to whatever's closest regardless of how
+          // far that actually is). Start from Casco Viejo's main gateway
+          // instead and let DirectionsPanel explain why.
+          setIsOutsideArea(true);
+          setUserLatLng(CASCO_VIEJO_ENTRY_POINT);
+          upsertMeMarker(
+            CASCO_VIEJO_ENTRY_POINT.lat,
+            CASCO_VIEJO_ENTRY_POINT.lng,
+            true,
+          );
+        }
       },
       useFallbackLocation,
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
@@ -1860,6 +1892,7 @@ export function SpotMap({
               distanceKm={route?.distanceKm ?? null}
               approximate={route?.approximate ?? false}
               steps={route?.steps ?? []}
+              outsideArea={isOutsideArea}
               onClose={exitDirections}
               onRetry={retryLocate}
               topOffsetPx={panelTopOffset}

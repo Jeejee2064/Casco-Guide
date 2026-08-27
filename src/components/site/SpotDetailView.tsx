@@ -39,6 +39,7 @@ import { panamaWhatsAppUrl } from "@/lib/phone";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
 import { useSmartBack } from "@/lib/useSmartBack";
+import { setLastKnownUserLocation } from "@/lib/userLocation";
 
 /** Full public detail page for a spot — gallery, story, hours, contact & directions.
  * `onBack`, when given, replaces the default "back to home" link with a button
@@ -128,11 +129,16 @@ export function SpotDetailView({
     // for it once it mounts after the navigation below — that would make the
     // very first "where am I" prompt show up late, after the map's already
     // loaded, and stall the route on "Locating…" until it's answered.
-    // Fire-and-forget: the result itself is unused here, SpotMap requests
-    // its own (by then either already-granted or instant) fix once it's up.
+    // SpotMap requests its own (by then either already-granted or instant)
+    // fix once it's up; this one's result is cached for MiniMap et al. (see
+    // lib/userLocation.ts) rather than discarded.
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        () => {},
+        (pos) =>
+          setLastKnownUserLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          }),
         () => {},
         { enableHighAccuracy: true, timeout: 10000 },
       );

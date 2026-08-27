@@ -6,9 +6,10 @@ import type { CircleMarker, Map as LeafletMap, Marker as LeafletMarker, Polyline
 import { Ruler } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useNightMode } from "./NightModeContext";
-import { addCascoBasemap, type CascoBasemap } from "@/lib/cascoMap";
+import { addCascoBasemap, isWithinCascoViejo, type CascoBasemap } from "@/lib/cascoMap";
 import { cn } from "@/lib/utils";
 import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
+import { getLastKnownUserLocation, subscribeUserLocation } from "@/lib/userLocation";
 
 // --color-aqua — same fixed blue as ItineraryMap's ROUTE_COLOR/pins, kept
 // consistent across every detail-page mini map instead of the per-category
@@ -35,7 +36,9 @@ export function MiniMap({
   const tMap = useTranslations("map");
   const { isNight } = useNightMode();
   const [ready, setReady] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
+    () => getLastKnownUserLocation(),
+  );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -52,16 +55,24 @@ export function MiniMap({
     isNightRef.current = isNight;
   }, [isNight]);
 
-  // Ask for geolocation once, silently — this is a background enhancement, so
-  // a denial/error just leaves the map centered on the spot (no toast/nag).
-  useEffect(() => {
-    if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true, timeout: 8000 },
-    );
-  }, []);
+  // Never asks for geolocation itself — only "Get Directions" should trigger
+  // that permission prompt. This just picks up whatever fix that flow has
+  // already obtained elsewhere this session (SpotDetailView's pre-warm,
+  // SpotMap's itinerary watch — see lib/userLocation.ts) and stays subscribed
+  // in case one lands after this MiniMap has already mounted. No fix yet (or
+  // ever, if the visitor never asks for directions) just leaves the map
+  // centered on the spot — same as a denial/error would.
+  useEffect(() => subscribeUserLocation(setUserLocation), []);
+
+  // A fix from clear across town (or another country, for a visitor just
+  // checking the site before their trip) isn't "you are here" — it's noise.
+  // Only ever draw the pin/line/distance badge once the visitor is actually
+  // in the neighborhood; otherwise this behaves exactly like having no fix
+  // at all (spot-only view, no badge).
+  const nearbyUserLocation =
+    userLocation && isWithinCascoViejo(userLocation.lat, userLocation.lng)
+      ? userLocation
+      : null;
 
   // Init the map once, client-side only.
   useEffect(() => {
@@ -134,7 +145,7 @@ export function MiniMap({
   // Once we know where the user is, drop their pin, draw the line, and fit
   // the map to both points.
   useEffect(() => {
-    if (!ready || !mapRef.current || !userLocation) return;
+    if (!ready || !mapRef.current || !nearbyUserLocation) return;
     let cancelled = false;
 
     (async () => {
@@ -142,7 +153,7 @@ export function MiniMap({
       if (cancelled || !mapRef.current) return;
       const map = mapRef.current;
       const points: [number, number][] = [
-        [userLocation.lat, userLocation.lng],
+        [nearbyUserLocation.lat, nearbyUserLocation.lng],
         [latitude, longitude],
       ];
 
@@ -177,13 +188,13 @@ export function MiniMap({
     return () => {
       cancelled = true;
     };
-  }, [ready, userLocation, latitude, longitude, tMap]);
+  }, [ready, nearbyUserLocation, latitude, longitude, tMap]);
 
-  // Only real when we actually have the visitor's position — no fallback
-  // center, since a distance/walk-time badge computed against a guessed
-  // origin would just be misleading.
-  const distanceKm = userLocation
-    ? haversineKm(userLocation.lat, userLocation.lng, latitude, longitude)
+  // Only real once we have the visitor's position *and* it's inside Casco
+  // Viejo (see nearbyUserLocation above) — no fallback center, and no
+  // distance/walk-time badge for someone who isn't actually here to walk it.
+  const distanceKm = nearbyUserLocation
+    ? haversineKm(nearbyUserLocation.lat, nearbyUserLocation.lng, latitude, longitude)
     : null;
   const isClose = distanceKm != null && distanceKm < 0.8;
 

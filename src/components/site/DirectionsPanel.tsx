@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowUp,
   ArrowUpDown,
@@ -137,6 +138,11 @@ interface DirectionsPanelProps {
    * just a straight line — the route summary says so rather than presenting
    * a guess as a real walking path. */
   approximate: boolean;
+  /** True once a real fix has placed the visitor outside Casco Viejo — the
+   * route was started from the neighborhood's entry point instead of their
+   * actual position, and a persistent notice says so (see SpotMap's
+   * isWithinCascoViejo check). */
+  outsideArea: boolean;
   /** Turn-by-turn breakdown of the current route (see lib/routing.ts) —
    * empty for an approximate/straight-line route, in which case the
    * disclosure below doesn't render at all (there's nothing real to list). */
@@ -207,6 +213,7 @@ function PanelBody({
   status,
   distanceKm,
   approximate,
+  outsideArea,
   steps,
   onClose,
   onRetry,
@@ -249,6 +256,17 @@ function PanelBody({
           <X size={17} />
         </motion.button>
       </div>
+
+      {outsideArea && (status === "routing" || status === "ready") && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-start gap-2 rounded-[var(--radius-button)] border border-border bg-foreground/[0.03] px-3.5 py-2.5 text-xs font-semibold text-foreground/70"
+        >
+          <AlertTriangle size={14} className="mt-0.5 shrink-0 text-foreground/50" />
+          {tMap("outsideAreaNotice")}
+        </motion.p>
+      )}
 
       <div className="flex items-center gap-2.5 rounded-[var(--radius-button)] border border-border bg-foreground/[0.03] px-3.5 py-3">
         <AnimatePresence mode="wait" initial={false}>

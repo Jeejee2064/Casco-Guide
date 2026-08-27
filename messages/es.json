@@ -169,6 +169,7 @@
     "directionsTo": "Cómo llegar a {name}",
     "calculatingRoute": "Buscando la mejor ruta…",
     "approximateRoute": "Ruta aproximada",
+    "outsideAreaNotice": "Estás fuera de Casco Viejo — este itinerario empieza desde la entrada principal del barrio, Plaza Herrera.",
     "openInGoogleMaps": "Abrir en Google Maps",
     "retry": "Intentar de nuevo",
     "exitDirections": "Salir de la ruta",

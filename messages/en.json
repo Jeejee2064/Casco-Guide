@@ -169,6 +169,7 @@
     "directionsTo": "Directions to {name}",
     "calculatingRoute": "Finding the best route…",
     "approximateRoute": "Approximate route",
+    "outsideAreaNotice": "You're outside Casco Viejo — this route starts from the neighborhood's main entrance, Plaza Herrera.",
     "openInGoogleMaps": "Open in Google Maps instead",
     "retry": "Try again",
     "exitDirections": "Exit directions",

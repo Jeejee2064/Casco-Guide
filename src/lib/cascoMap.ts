@@ -25,6 +25,27 @@ export const CASCO_VIEJO_BOUNDS: [[number, number], [number, number]] = [
 
 export const CASCO_VIEJO_CENTER: [number, number] = [8.9528, -79.5347];
 
+/** True when a coordinate falls inside the mapped area — a plain bbox check
+ * against CASCO_VIEJO_BOUNDS above, not a real polygon. Good enough to tell
+ * "visitor is somewhere in the neighborhood" from "visitor is elsewhere in
+ * Panama City (or further)" for lib/routing.ts's directions flow, without
+ * digitizing and maintaining a separate geofence shape. */
+export function isWithinCascoViejo(lat: number, lng: number): boolean {
+  const [[minLat, minLng], [maxLat, maxLng]] = CASCO_VIEJO_BOUNDS;
+  return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+}
+
+// Plaza Herrera — Casco Viejo's main gateway plaza (same coordinates as the
+// American Trade Hotel spot that fronts it, scripts/seed-casco-viejo.mjs).
+// Used as the directions flow's fallback starting point whenever the
+// visitor's real position is outside CASCO_VIEJO_BOUNDS — routeBetween snaps
+// it to the nearest real street-graph node like any other coordinate, so
+// exact precision here isn't critical.
+export const CASCO_VIEJO_ENTRY_POINT: { lat: number; lng: number } = {
+  lat: 8.9548,
+  lng: -79.5364,
+};
+
 export const CASCO_VIEJO_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
 
