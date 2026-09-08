@@ -4,6 +4,7 @@
     "heroBadge": "Hecho y actualizado por locales de verdad",
     "title": "Tu guía local de Casco Viejo",
     "subtitle": "Restaurantes, bares, cafés y sitios seleccionados — curados por personas que realmente viven y trabajan en el barrio, actualizados todo el año.",
+    "heroVibeTitle": "¿Cuál es tu vibe hoy?",
     "searchPlaceholder": "Busca lugares, etiquetas, cocina…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Cuadrícula",
@@ -42,7 +43,9 @@
     "showLess": "Ver menos",
     "close": "Cerrar",
     "vibesModalTitle": "¿Cuál es tu vibra en Casco hoy?",
-    "vibesHint": "¡Prueba explorar por vibra!"
+    "vibesHint": "¡Prueba explorar por vibra!",
+    "searchPlaces": "Lugares",
+    "searchTags": "Etiquetas"
   },
   "category": {
     "restaurant": "Restaurante",
@@ -381,13 +384,14 @@
       "preview": "Vista previa",
       "previewBadge": "Vista previa · {lang} · sin guardar",
       "sections": {
+        "heroPhoto": "Foto principal",
         "basics": "Datos básicos",
         "location": "Ubicación",
         "parent": "Lugar padre",
         "children": "Lugares dentro",
         "hours": "Horario",
         "details": "Detalles",
-        "media": "Fotos",
+        "media": "Galería",
         "meta": "Etiquetas y estado"
       },
       "name": "Nombre",
@@ -443,6 +447,7 @@
       "acceptsCards": "Acepta tarjetas",
       "parking": "Parqueo",
       "featuredPhoto": "Foto destacada",
+      "heroPhotoHint": "La foto principal de este lugar: aparece en el hero de su página, en las tarjetas del sitio y como miniatura del pin en el mapa.",
       "gallery": "Galería (hasta 5)",
       "uploadHint": "Arrastra o haz clic para subir",
       "tags": "Etiquetas",

@@ -1,29 +1,25 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
+import { ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { HERO_IMAGE } from "@/lib/data/categoryImages";
 import type { Article } from "@/lib/types/database";
-import { fadeUp } from "./motion";
+import { Stagger, StaggerItem } from "./motion";
 import { LoadingImage } from "./LoadingImage";
 
 /**
- * Bento showcase for the 3 latest guides, replacing the old plain "Latest
- * guides" grid section further down the page — this is now the only place
- * the home page surfaces articles, so it doubles as that section's "see
- * all" entry point. Rendered right under Hero's title/pills block, above
- * the search/filter bar.
+ * Homepage teaser into /articles — bento showcase for the latest guides,
+ * previously bolted onto the bottom of Hero (see that component's history)
+ * but moved into its own section, below the fold, so the hero itself can
+ * stay a clean, single-viewport-tall "pick what you're here for" moment.
  *
  * Layout: the most recent article gets the big tile (left on desktop, top
  * on mobile), the next two stack beside it at half height each — classic
  * "featured + 2 up next" bento, not a 3-up grid, so the newest guide reads
- * as the headline rather than one of three equals. On mobile the other two
- * are dropped entirely (not just visually de-emphasized) — one tall image
- * per screen keeps the hero from turning into a long scroll before the
- * search bar even shows up.
+ * as the headline rather than one of three equals.
  */
-export function HeroArticles({ articles }: { articles: Article[] }) {
+export function LatestGuidesSection({ articles }: { articles: Article[] }) {
   const t = useTranslations("articles");
   const locale = useLocale();
 
@@ -39,36 +35,46 @@ export function HeroArticles({ articles }: { articles: Article[] }) {
       : null;
 
   return (
-    <motion.div variants={fadeUp} className="mt-8 sm:mt-10">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-heading text-lg font-bold text-white sm:text-xl">{t("latestTitle")}</h2>
-        <Link href="/articles" className="text-sm font-semibold text-aqua hover:underline">
-          {t("seeAll")} →
+    <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="font-heading text-2xl font-extrabold sm:text-3xl">{t("latestTitle")}</h2>
+          <p className="mt-1 text-foreground/60">{t("subtitle")}</p>
+        </div>
+        <Link
+          href="/articles"
+          className="group flex shrink-0 items-center gap-1.5 text-sm font-semibold text-aqua hover:underline"
+        >
+          {t("seeAll")}
+          <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
         </Link>
       </div>
 
-      <div className="grid gap-4 sm:h-[420px] sm:grid-cols-[1.6fr_1fr]">
-        <ArticleTile
-          article={featured}
-          date={dateLabel(featured)}
-          className="aspect-[4/3] sm:aspect-auto sm:h-full"
-          titleClassName="text-lg sm:text-2xl"
-          showExcerpt
-        />
+      <Stagger className="grid gap-4 sm:h-[420px] sm:grid-cols-[1.6fr_1fr]" amount={0.05}>
+        <StaggerItem className="aspect-[4/3] sm:aspect-auto sm:h-full">
+          <ArticleTile
+            article={featured}
+            date={dateLabel(featured)}
+            className="h-full"
+            titleClassName="text-lg sm:text-2xl"
+            showExcerpt
+          />
+        </StaggerItem>
 
-        <div className="hidden gap-4 sm:grid sm:grid-rows-2">
+        <div className="grid gap-4 sm:grid-rows-2">
           {rest.map((article) => (
-            <ArticleTile
-              key={article.id}
-              article={article}
-              date={dateLabel(article)}
-              className="aspect-video sm:aspect-auto sm:h-full"
-              titleClassName="text-sm sm:text-base"
-            />
+            <StaggerItem key={article.id} className="aspect-video sm:aspect-auto sm:h-full">
+              <ArticleTile
+                article={article}
+                date={dateLabel(article)}
+                className="h-full"
+                titleClassName="text-sm sm:text-base"
+              />
+            </StaggerItem>
           ))}
         </div>
-      </div>
-    </motion.div>
+      </Stagger>
+    </section>
   );
 }
 
@@ -88,7 +94,7 @@ function ArticleTile({
   return (
     <Link
       href={{ pathname: "/articles/[slug]", params: { slug: article.slug } }}
-      className={`card-lift group relative block overflow-hidden rounded-[var(--radius-card)] border border-white/15 ${className}`}
+      className={`card-lift group relative block overflow-hidden rounded-[var(--radius-card)] border border-border ${className}`}
     >
       <LoadingImage
         src={article.cover_photo || HERO_IMAGE}

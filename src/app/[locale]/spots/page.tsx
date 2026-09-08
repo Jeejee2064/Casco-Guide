@@ -61,7 +61,9 @@ export default async function SpotsPage({
   // vibes mode doesn't need its own Suspense boundary the way the old
   // `?view=map` toggle used to. Same params /map's page.tsx reads.
   const vibe = parseVibe(sp.vibe);
-  const initialMode = vibe || sp.mode === "vibes" ? "vibes" : "classic";
+  // Vibes is the default filter mode — only an explicit ?mode=classic (the
+  // Classic toggle's own link, if it ever needs one) opts back out.
+  const initialMode = sp.mode === "classic" ? "classic" : "vibes";
   const autoOpenVibesModal = sp.vibesModal === "1";
 
   return (

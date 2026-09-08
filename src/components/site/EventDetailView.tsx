@@ -31,6 +31,7 @@ import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
 import { useSmartBack } from "@/lib/useSmartBack";
 import type { EventRow, Spot } from "@/lib/types/database";
+import { useHeaderHeight } from "./useHeaderHeight";
 
 /** Full public detail page for an event — gallery, story, ticketing & host venue.
  * `onBack`, when given, replaces the default "back to home" link with a button
@@ -57,6 +58,9 @@ export function EventDetailView({
   const tCat = useTranslations("eventCategory");
   const locale = useLocale();
   const goBack = useSmartBack();
+  // See SpotDetailView for why this starts in normal flow and only
+  // `sticky`s below the header once scrolled to it.
+  const headerHeight = useHeaderHeight(true);
   const categoryMeta = EVENT_CATEGORY_META[event.category];
 
   const photos = event.photos.length > 0 ? event.photos : event.photo ? [{ url: event.photo }] : [];
@@ -106,29 +110,21 @@ export function EventDetailView({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-10 sm:pb-10">
+      <button
+        type="button"
+        onClick={onBack ?? goBack}
+        aria-label={td("back")}
+        style={{ top: (headerHeight ?? 56) + 16 }}
+        className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+      >
+        <ChevronLeft size={20} />
+      </button>
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: EASE_OUT }}
       >
-        {onBack ? (
-          <button
-            type="button"
-            onClick={onBack}
-            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
-          >
-            <ChevronLeft size={16} /> {td("back")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={goBack}
-            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
-          >
-            <ChevronLeft size={16} /> {td("back")}
-          </button>
-        )}
-
         <PhotoGallery
           photos={photos}
           alt={event.title}

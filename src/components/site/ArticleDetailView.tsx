@@ -15,6 +15,7 @@ import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
 import { cn } from "@/lib/utils";
 import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
+import { useHeaderHeight } from "./useHeaderHeight";
 
 /** Full public article page — cover, story (either freeform HTML or
  * structured "list"/"photo-story"/"itinerary" blocks, see Article.layout), and a map of
@@ -36,6 +37,9 @@ export function ArticleDetailView({
   const t = useTranslations("articleDetail");
   const tMap = useTranslations("map");
   const locale = useLocale();
+  // See SpotDetailView for why this starts in normal flow and only
+  // `sticky`s below the header once scrolled to it.
+  const headerHeight = useHeaderHeight(true);
 
   // Gates the reveal of the title/meta block on the cover photo's actual
   // `onLoad` (see SpotDetailView for the same pattern) — with no cover to
@@ -124,13 +128,20 @@ export function ArticleDetailView({
         <button
           type="button"
           onClick={onBack}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
+          aria-label={t("back")}
+          style={{ top: (headerHeight ?? 56) + 16 }}
+          className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
         >
-          <ChevronLeft size={16} /> {t("back")}
+          <ChevronLeft size={20} />
         </button>
       ) : (
-        <Link href="/articles" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground">
-          <ChevronLeft size={16} /> {t("back")}
+        <Link
+          href="/articles"
+          aria-label={t("back")}
+          style={{ top: (headerHeight ?? 56) + 16 }}
+          className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+        >
+          <ChevronLeft size={20} />
         </Link>
       )}
 

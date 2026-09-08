@@ -433,6 +433,17 @@ export function SpotForm({
         <ImportFromScreenshot onExtract={handleExtract} />
       </div>
 
+      <Section title={t("sections.heroPhoto")}>
+        <div>
+          <Label>{t("featuredPhoto")}</Label>
+          <FeaturedPhotoUploader
+            value={values.featured_photo}
+            onChange={(url) => set("featured_photo", url)}
+          />
+          <FieldHint>{t("heroPhotoHint")}</FieldHint>
+        </div>
+      </Section>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4">
         <div>
           <p className="text-sm font-semibold">{t("translationLabel")}</p>
@@ -803,13 +814,6 @@ export function SpotForm({
       </Section>
 
       <Section title={t("sections.media")}>
-        <div>
-          <Label>{t("featuredPhoto")}</Label>
-          <FeaturedPhotoUploader
-            value={values.featured_photo}
-            onChange={(url) => set("featured_photo", url)}
-          />
-        </div>
         <div>
           <Label>{t("gallery")}</Label>
           <GalleryUploader value={values.photos} onChange={(p) => set("photos", p)} />

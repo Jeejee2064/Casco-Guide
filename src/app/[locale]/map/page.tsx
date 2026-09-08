@@ -61,7 +61,9 @@ export default async function MapPage({
   // the picker with nothing chosen yet (?mode=vibes&vibesModal=1) — read
   // here, server-side, same reasoning as /spots's own ?vibe=/?mode= parsing.
   const vibe = parseVibe(sp.vibe);
-  const initialMode = vibe || sp.mode === "vibes" ? "vibes" : "classic";
+  // Vibes is the default filter mode — only an explicit ?mode=classic (the
+  // Classic toggle's own link, if it ever needs one) opts back out.
+  const initialMode = sp.mode === "classic" ? "classic" : "vibes";
   const autoOpenVibesModal = sp.vibesModal === "1";
 
   // SpotDetailView's "Get directions" button, instead of opening Google

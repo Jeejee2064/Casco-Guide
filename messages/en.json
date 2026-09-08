@@ -4,6 +4,7 @@
     "heroBadge": "Made & updated by real locals",
     "title": "Your local guide to Casco Viejo",
     "subtitle": "Handpicked restaurants, bars, cafés and sights — curated by people who actually live and work in the neighborhood, kept current all year round.",
+    "heroVibeTitle": "What's your vibe today?",
     "searchPlaceholder": "Search spots, tags, cuisine…",
     "footerTagline": "Casco Viejo Guide",
     "viewGrid": "Grid",
@@ -42,7 +43,9 @@
     "showLess": "Show less",
     "close": "Close",
     "vibesModalTitle": "What's your vibe in Casco today?",
-    "vibesHint": "Try exploring by vibe!"
+    "vibesHint": "Try exploring by vibe!",
+    "searchPlaces": "Places",
+    "searchTags": "Tags"
   },
   "category": {
     "restaurant": "Restaurant",
@@ -381,13 +384,14 @@
       "preview": "Preview",
       "previewBadge": "Preview · {lang} · not saved yet",
       "sections": {
+        "heroPhoto": "Main photo",
         "basics": "Basics",
         "location": "Location",
         "parent": "Parent location",
         "children": "Places inside",
         "hours": "Hours",
         "details": "Details",
-        "media": "Photos",
+        "media": "Gallery",
         "meta": "Tags & status"
       },
       "name": "Name",
@@ -443,6 +447,7 @@
       "acceptsCards": "Accepts cards",
       "parking": "Parking",
       "featuredPhoto": "Featured photo",
+      "heroPhotoHint": "The main photo for this spot — it's the one shown in the hero on its page, on cards throughout the site, and as the pin thumbnail on the map.",
       "gallery": "Gallery (up to 5)",
       "uploadHint": "Drag & drop or click to upload",
       "tags": "Tags",

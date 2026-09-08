@@ -40,6 +40,7 @@ import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
 import { useSmartBack } from "@/lib/useSmartBack";
 import { setLastKnownUserLocation } from "@/lib/userLocation";
+import { useHeaderHeight } from "./useHeaderHeight";
 
 /** Full public detail page for a spot — gallery, story, hours, contact & directions.
  * `onBack`, when given, replaces the default "back to home" link with a button
@@ -82,6 +83,13 @@ export function SpotDetailView({
   const locale = useLocale();
   const router = useRouter();
   const goBack = useSmartBack();
+  // Sits in normal flow (so it never covers the title on a page with no
+  // hero photo) until scrolling carries it up to `headerHeight`, at which
+  // point `sticky` pins it just below the site header — same "starts in
+  // flow, sticks below the header" contract as the sidebar's `lg:sticky
+  // lg:top-24` further down, just closer in since this is a small pill,
+  // not a boxy card.
+  const headerHeight = useHeaderHeight(true);
 
   const photos =
     spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
@@ -157,23 +165,15 @@ export function SpotDetailView({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 pb-24 sm:px-6 sm:py-10 sm:pb-10">
-      {onBack ? (
-        <button
-          type="button"
-          onClick={onBack}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
-        >
-          <ChevronLeft size={16} /> {td("back")}
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={goBack}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground/60 hover:text-foreground"
-        >
-          <ChevronLeft size={16} /> {td("back")}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onBack ?? goBack}
+        aria-label={td("back")}
+        style={{ top: (headerHeight ?? 56) + 16 }}
+        className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+      >
+        <ChevronLeft size={20} />
+      </button>
 
       {/* The hero itself fades in on mount, same as any other section — it's
           LoadingImage's own skeleton/tower mark that carries the "still

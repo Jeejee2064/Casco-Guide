@@ -7,6 +7,7 @@ import { AboutFaq } from "@/components/site/AboutFaq";
 import { FeaturedSpotsSection } from "@/components/site/FeaturedSpotsSection";
 import { MapTeaserSection } from "@/components/site/MapTeaserSection";
 import { VibeTeaserSection } from "@/components/site/VibeTeaserSection";
+import { LatestGuidesSection } from "@/components/site/LatestGuidesSection";
 import { Hero } from "@/components/site/Hero";
 import { getSpots } from "@/lib/data/spots";
 import { getArticles } from "@/lib/data/articles";
@@ -53,7 +54,15 @@ export default async function HomePage({
     <>
       <Header />
       <main className="flex-1">
-        <Hero eventsCount={0} articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
+        <Hero eventsCount={0} />
+
+        {/* Latest guides come right after the fold — the hero itself stays
+            a clean, single-viewport "pick what you're here for" moment (see
+            Hero's own comment), and this is the first thing that scrolls
+            into view under it. */}
+        <div className="border-t border-border">
+          <LatestGuidesSection articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
+        </div>
 
         {/* Content-forward homepage: history/context, then a teaser into
             each of the three real ways to browse (grid, map, vibes) — the

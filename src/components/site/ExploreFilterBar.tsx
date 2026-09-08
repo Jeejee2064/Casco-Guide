@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutGrid, Search, Sparkles } from "lucide-react";
+import { LayoutGrid, Search, Sparkles, Tag } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { VibesModal } from "./VibesModal";
@@ -18,10 +18,24 @@ import type { Spot, SpotCategory, SpotVibe } from "@/lib/types/database";
 import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 
-// How many name matches the search dropdown shows at once — enough to be
-// useful, not so many it turns into a second, scrollable list competing
-// with the grid/map below.
-const MAX_SUGGESTIONS = 6;
+// How many of each kind the search dropdown shows at once — enough to be
+// useful, not so many the combined list turns into a second, scrollable
+// list competing with the grid/map below. Places get the largest share
+// since "jump straight to a place already in mind" is the dropdown's
+// primary job (see `spots` doc comment below); vibes and tags are a
+// smaller, secondary shortcut into the same search box.
+const MAX_SPOT_SUGGESTIONS = 5;
+const MAX_VIBE_SUGGESTIONS = 2;
+const MAX_TAG_SUGGESTIONS = 3;
+
+// One row in the autocomplete dropdown — a place (jumps straight to its
+// detail page), a vibe (applies it as a real filter, same as a vibe chip),
+// or a tag (completes the search box to that exact tag, since tags aren't
+// a dedicated filter mode — see `selectSuggestion` below).
+type Suggestion =
+  | { kind: "spot"; spot: Spot }
+  | { kind: "vibe"; vibe: SpotVibe }
+  | { kind: "tag"; tag: string };
 
 // Whether the visitor has ever discovered vibes mode before — gates both
 // the "Vibes" toggle's discovery modal (only interrupts the very first
@@ -53,9 +67,10 @@ export function ExploreFilterBar({
   hideFloatingBottomBar = false,
 }: {
   /** Full, unfiltered spot list — powers the search input's autocomplete
-   * dropdown (name matches, regardless of the current category/vibe
-   * selection: someone searching for a specific place wants to jump
-   * straight to it even if it doesn't match whatever's currently active). */
+   * dropdown (name/vibe/tag matches, regardless of the current category/
+   * vibe selection: someone searching for a specific place, vibe or tag
+   * wants to jump straight to it even if it doesn't match whatever's
+   * currently active). */
   spots: Spot[];
   fixed?: boolean;
   /** Opens VibesModal immediately on mount, bypassing the usual "only the
@@ -94,33 +109,96 @@ export function ExploreFilterBar({
 
   const [isVibesModalOpen, setIsVibesModalOpen] = useState(false);
 
-  // Autocomplete dropdown under the search input — name matches only (not
-  // the broader description/cuisine/tags haystack the grid/map filter on
-  // below), since this is a "jump straight to a place you already have in
-  // mind" shortcut, not another view of the filtered results.
+  // Autocomplete dropdown under the search input — a "jump straight to
+  // something you already have in mind" shortcut alongside the broader
+  // name/description/cuisine/tags haystack the grid/map filter on below
+  // (see `filteredSpots` in SpotsExplorerSection/MapExplorerSection), not
+  // another view of those filtered results.
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
 
-  const suggestions = useMemo(() => {
+  // Distinct tags across the full spot list — case-insensitively deduped
+  // (tags are free text entered per-spot in the admin form, so casing isn't
+  // guaranteed consistent), keeping the first-seen casing. Computed once
+  // per `spots` change rather than re-scanned on every keystroke.
+  const allTags = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const spot of spots) {
+      for (const tag of spot.tags ?? []) {
+        const key = tag.toLowerCase();
+        if (!seen.has(key)) seen.set(key, tag);
+      }
+    }
+    return [...seen.values()];
+  }, [spots]);
+
+  const suggestions = useMemo<Suggestion[]>(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    const startsWith: Spot[] = [];
-    const contains: Spot[] = [];
-    for (const spot of spots) {
-      const name = spot.name.toLowerCase();
-      if (name.startsWith(q)) startsWith.push(spot);
-      else if (name.includes(q)) contains.push(spot);
-    }
-    return [...startsWith, ...contains].slice(0, MAX_SUGGESTIONS);
-  }, [query, spots]);
+
+    // Prefix matches outrank mid-string matches within each kind — same
+    // idiom as the old name-only version of this list.
+    const rank = <T,>(items: T[], text: (item: T) => string): T[] => {
+      const startsWith: T[] = [];
+      const contains: T[] = [];
+      for (const item of items) {
+        const value = text(item).toLowerCase();
+        if (value.startsWith(q)) startsWith.push(item);
+        else if (value.includes(q)) contains.push(item);
+      }
+      return [...startsWith, ...contains];
+    };
+
+    const spotMatches = rank(spots, (spot) => spot.name)
+      .slice(0, MAX_SPOT_SUGGESTIONS)
+      .map((spot): Suggestion => ({ kind: "spot", spot }));
+    const vibeMatches = rank(SPOT_VIBES, (v) => tVibe(v))
+      .slice(0, MAX_VIBE_SUGGESTIONS)
+      .map((vibe): Suggestion => ({ kind: "vibe", vibe }));
+    const tagMatches = rank(allTags, (tag) => tag)
+      .slice(0, MAX_TAG_SUGGESTIONS)
+      .map((tag): Suggestion => ({ kind: "tag", tag }));
+
+    // Grouped, not interleaved — places first (the primary use case), then
+    // vibes, then tags, so the dropdown reads as three short labeled
+    // sections rather than a shuffled mix (see the `showHeader` render
+    // below).
+    return [...spotMatches, ...vibeMatches, ...tagMatches];
+  }, [query, spots, allTags, tVibe]);
 
   const showSuggestions = isSearchFocused && suggestions.length > 0;
 
-  const selectSuggestion = (spot: Spot) => {
+  const selectSuggestion = (suggestion: Suggestion) => {
     setIsSearchFocused(false);
+    if (suggestion.kind === "spot") {
+      track("search_performed", { result_count: suggestions.length });
+      router.push({
+        pathname: "/spots/[slug]",
+        params: { slug: suggestion.spot.slug },
+      });
+      return;
+    }
+    if (suggestion.kind === "vibe") {
+      // A vibe suggestion is a real filter, not search text — clears the
+      // query (there's nothing left to search for once the vibe chip is
+      // doing the narrowing) and switches straight into vibes mode, same
+      // as picking the chip itself (toggleVibe below).
+      setQuery("");
+      setVibes([suggestion.vibe]);
+      setMode("vibes");
+      track("filter_applied", {
+        mode: "vibes",
+        kind: "vibe",
+        value: suggestion.vibe,
+      });
+      return;
+    }
+    // Tag — tags aren't a dedicated filter mode like vibes, so this just
+    // completes the search box to the exact tag text and hands off to the
+    // existing name/description/cuisine/tags haystack search below.
+    setQuery(suggestion.tag);
     track("search_performed", { result_count: suggestions.length });
-    router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } });
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -525,9 +603,12 @@ export function ExploreFilterBar({
               className="input-glow glass h-11 w-full rounded-full border border-border pl-10 pr-4 text-sm shadow-lg outline-none"
             />
 
-            {/* Autocomplete dropdown — name matches only, a "jump straight to
-              a place you already have in mind" shortcut alongside the
-              broader live filter below (see `suggestions` above). */}
+            {/* Autocomplete dropdown — place/vibe/tag matches, a "jump
+              straight to something you already have in mind" shortcut
+              alongside the broader live filter below (see `suggestions`
+              above). Grouped into up to three labeled sections rather than
+              one flat list, since each kind does something different on
+              select (see `selectSuggestion`). */}
             <AnimatePresence>
               {showSuggestions && (
                 <motion.div
@@ -539,35 +620,93 @@ export function ExploreFilterBar({
                   transition={{ duration: 0.15 }}
                   className="glass absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-2xl border border-border py-1.5 shadow-lg"
                 >
-                  {suggestions.map((spot, i) => {
-                    const meta = CATEGORY_META[spot.category];
-                    const Icon = meta.icon;
+                  {suggestions.map((suggestion, i) => {
+                    const prevKind = suggestions[i - 1]?.kind;
+                    const showHeader = suggestion.kind !== prevKind;
+                    const key =
+                      suggestion.kind === "spot"
+                        ? `spot-${suggestion.spot.id}`
+                        : suggestion.kind === "vibe"
+                          ? `vibe-${suggestion.vibe}`
+                          : `tag-${suggestion.tag}`;
                     return (
-                      <button
-                        key={spot.id}
-                        id={`explore-search-suggestion-${i}`}
-                        role="option"
-                        aria-selected={i === activeSuggestion}
-                        type="button"
-                        onClick={() => selectSuggestion(spot)}
-                        onMouseEnter={() => setActiveSuggestion(i)}
-                        className={cn(
-                          "flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors",
-                          i === activeSuggestion
-                            ? "bg-foreground/5"
-                            : "hover:bg-foreground/5",
+                      <div key={key}>
+                        {showHeader && (
+                          <div
+                            className={cn(
+                              "px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-foreground/40",
+                              i === 0 && "pt-1",
+                            )}
+                          >
+                            {suggestion.kind === "spot"
+                              ? t("searchPlaces")
+                              : suggestion.kind === "vibe"
+                                ? t("vibes")
+                                : t("searchTags")}
+                          </div>
                         )}
-                      >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/60">
-                          <Icon size={14} strokeWidth={2.5} />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate font-semibold">
-                          {spot.name}
-                        </span>
-                        <span className="shrink-0 text-xs text-foreground/45">
-                          {tCategory(spot.category)}
-                        </span>
-                      </button>
+                        <button
+                          id={`explore-search-suggestion-${i}`}
+                          role="option"
+                          aria-selected={i === activeSuggestion}
+                          type="button"
+                          onClick={() => selectSuggestion(suggestion)}
+                          onMouseEnter={() => setActiveSuggestion(i)}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm transition-colors",
+                            i === activeSuggestion
+                              ? "bg-foreground/5"
+                              : "hover:bg-foreground/5",
+                          )}
+                        >
+                          {suggestion.kind === "spot" &&
+                            (() => {
+                              const meta = CATEGORY_META[suggestion.spot.category];
+                              const Icon = meta.icon;
+                              return (
+                                <>
+                                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/60">
+                                    <Icon size={14} strokeWidth={2.5} />
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate font-semibold">
+                                    {suggestion.spot.name}
+                                  </span>
+                                  <span className="shrink-0 text-xs text-foreground/45">
+                                    {tCategory(suggestion.spot.category)}
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          {suggestion.kind === "vibe" &&
+                            (() => {
+                              const meta = VIBE_META[suggestion.vibe];
+                              const Icon = meta.icon;
+                              return (
+                                <>
+                                  <span
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white"
+                                    style={{ background: meta.color }}
+                                  >
+                                    <Icon size={14} strokeWidth={2.5} />
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate font-semibold">
+                                    {tVibe(suggestion.vibe)}
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          {suggestion.kind === "tag" && (
+                            <>
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground/60">
+                                <Tag size={14} strokeWidth={2.5} />
+                              </span>
+                              <span className="min-w-0 flex-1 truncate font-semibold">
+                                {suggestion.tag}
+                              </span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     );
                   })}
                 </motion.div>

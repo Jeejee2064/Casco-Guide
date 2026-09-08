@@ -7,18 +7,20 @@ import { useTranslations } from "next-intl";
 import { HERO_IMAGE } from "@/lib/data/categoryImages";
 import { Link } from "@/i18n/navigation";
 import { staggerContainer, fadeUp } from "./motion";
-import { HeroArticles } from "./HeroArticles";
 import { LoadingImage } from "./LoadingImage";
-import type { Article } from "@/lib/types/database";
+import { VIBE_META, SPOT_VIBES } from "@/lib/vibes";
 
 /**
  * Full-bleed photo hero — the very first thing anyone sees, on any screen
- * size. It states what the site is (title + subtitle), puts one direct,
+ * size, and capped at exactly one viewport tall (`h-dvh`) so it never
+ * spills into a second scroll before the rest of the homepage shows up. It
+ * states what the site is (title + subtitle), puts one direct,
  * always-visible link to each of spots, guides and the map right in front
  * of the visitor (events dropped from this row while hidden site-wide), and
- * — since it no longer needs to fill the whole first viewport on its own —
- * leads straight into the 3 latest guides (see HeroArticles) before the
- * rest of the homepage's content takes over.
+ * closes with a "what's your vibe today?" prompt + one pill per vibe —
+ * the fastest path into /spots pre-filtered by mood. The latest guides
+ * showcase that used to live here moved out to its own section further
+ * down the homepage (see LatestGuidesSection).
  */
 export function Hero({
   // eventsCount kept in the props type for call-site compatibility while
@@ -28,14 +30,13 @@ export function Hero({
   // counts, cut in favor of three plain, equally-weighted choices, so
   // page.tsx no longer passes them either.
   eventsCount: _eventsCount,
-  articles,
 }: {
   eventsCount: number;
-  articles: Article[];
 }) {
   const t = useTranslations("site");
   const tNav = useTranslations("nav");
   const tDiscover = useTranslations("discover");
+  const tVibe = useTranslations("vibe");
 
   // Four equally-weighted, prominent choices right in the hero (not small
   // pills easy to miss) so a first-time visitor picks one immediately
@@ -74,7 +75,7 @@ export function Hero({
     "group flex flex-1 items-center justify-between gap-3 rounded-2xl border border-white/25 bg-white/10 px-5 py-4 text-left backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-white/45 hover:bg-white/20";
 
   return (
-    <section className="relative isolate overflow-hidden">
+    <section className="relative isolate flex h-dvh flex-col overflow-hidden">
       <LoadingImage
         src={HERO_IMAGE}
         alt=""
@@ -88,7 +89,7 @@ export function Hero({
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="relative mx-auto w-full max-w-6xl px-4 pb-10 pt-10 text-white sm:px-6 sm:pb-14 sm:pt-16"
+        className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-10 text-white sm:justify-start sm:px-6 sm:pb-14 sm:pt-16"
       >
         {/* Eyebrow badge — states the "made by locals, not an algorithm"
             trust signal up front, in its own beat before the headline
@@ -130,7 +131,34 @@ export function Hero({
           ))}
         </motion.div>
 
-        <HeroArticles articles={articles} />
+        <motion.div variants={fadeUp} className="mt-8 sm:mt-10">
+          <h2 className="font-heading text-lg font-bold sm:text-xl">{t("heroVibeTitle")}</h2>
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            {SPOT_VIBES.map((v) => {
+              const meta = VIBE_META[v];
+              const Icon = meta.icon;
+              return (
+                <Link
+                  key={v}
+                  href={{ pathname: "/spots", query: { vibe: v } }}
+                  className="group flex items-center gap-2 rounded-full border py-2 pl-2 pr-4 text-sm font-bold shadow-[0_4px_16px_-6px_rgba(0,0,0,0.5)] backdrop-blur-md transition-all hover:-translate-y-0.5"
+                  style={{
+                    background: `linear-gradient(135deg, ${meta.color}66, ${meta.color}14)`,
+                    borderColor: `${meta.color}59`,
+                  }}
+                >
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-transform duration-200 group-hover:scale-110"
+                    style={{ background: `linear-gradient(135deg, ${meta.color}, ${meta.color}bb)` }}
+                  >
+                    <Icon size={14} strokeWidth={2.25} />
+                  </span>
+                  {tVibe(v)}
+                </Link>
+              );
+            })}
+          </div>
+        </motion.div>
       </motion.div>
     </section>
   );
