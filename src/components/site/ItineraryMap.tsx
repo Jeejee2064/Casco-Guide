@@ -381,7 +381,6 @@ export function ItineraryMap({
       const meta = CATEGORY_META[spot.category];
       const Icon = meta.icon;
       const metaItems: string[] = [];
-      if (spot.rating) metaItems.push(`★ ${spot.rating.toFixed(1)}`);
       if (spot.price_range) metaItems.push(spot.price_range);
 
       return {

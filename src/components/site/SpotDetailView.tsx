@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronDown,
-  Star,
   Mail,
   MapPin,
   Navigation,
@@ -234,17 +233,6 @@ export function SpotDetailView({
                 <CategoryBadge category={spot.category} />
                 <h1 className="font-heading text-3xl font-extrabold sm:text-4xl">{spot.name}</h1>
                 <div className="flex flex-wrap items-center gap-3 text-sm">
-                  {spot.rating && (
-                    <span className="flex items-center gap-1 font-semibold">
-                      <Star size={15} className="fill-gold-dark text-gold-dark dark:fill-gold dark:text-gold" />
-                      {spot.rating.toFixed(1)}
-                      {spot.review_count ? (
-                        <span className="font-normal text-foreground/50">
-                          ({spot.review_count})
-                        </span>
-                      ) : null}
-                    </span>
-                  )}
                   {spot.price_range && (
                     <span className="font-semibold text-foreground/60">{spot.price_range}</span>
                   )}
@@ -256,7 +244,7 @@ export function SpotDetailView({
                 </div>
                 {/* Surfaced here, not just in the sidebar map/CTA further
                     down — "how do I get there" should read at a glance from
-                    the top of the page, same as price/rating/hours, instead
+                    the top of the page, same as price/hours, instead
                     of only after scrolling past the story and hours table. */}
                 {spot.address && (
                   <p className="flex items-center gap-1.5 text-sm text-foreground/60">

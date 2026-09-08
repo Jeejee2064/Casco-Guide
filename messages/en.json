@@ -33,7 +33,6 @@
     "openNow": "Open now",
     "sort": "Sort by",
     "sortNewest": "Newest",
-    "sortRating": "Top rated",
     "sortAlpha": "Alphabetical",
     "sortRandom": "Surprise me",
     "reset": "Reset filters",
@@ -329,7 +328,6 @@
         "category": "Category",
         "coords": "Coordinates",
         "hours": "Hours",
-        "rating": "Rating",
         "verified": "Verified",
         "actions": "Actions"
       },
@@ -452,7 +450,6 @@
       "uploadHint": "Drag & drop or click to upload",
       "tags": "Tags",
       "tagsHint": "Press Enter to add",
-      "rating": "Rating",
       "isFeatured": "Featured spot",
       "isVerified": "Verified — I've checked this info",
       "cancel": "Cancel",

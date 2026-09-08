@@ -37,7 +37,7 @@ interface Picked {
 /**
  * "Import from Google Maps screenshot" — opens a modal, lets the admin drop
  * in up to 5 screenshots of the same place (a single Maps card rarely fits
- * one screenshot: name+rating, address+hours, and the right-click
+ * one screenshot: name+category, address+hours, and the right-click
  * coordinates are usually separate captures), sends them together to
  * `extractSpotFromScreenshot` (Claude vision, one combined request), and
  * hands whatever it could read back to the caller via `onExtract`. The

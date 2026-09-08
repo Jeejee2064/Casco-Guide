@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Star, MapPin, Phone, Footprints } from "lucide-react";
+import { MapPin, Phone, Footprints } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
@@ -88,26 +88,18 @@ export function SpotCard({
       </div>
 
       <div className="flex flex-1 flex-col space-y-2 p-3 sm:space-y-2.5 sm:p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-heading text-lg font-bold leading-tight line-clamp-1">
-            {spot.name}
-          </h3>
-          {spot.rating && (
-            <span className="flex shrink-0 items-center gap-1 text-sm font-semibold transition-transform duration-300 group-hover:scale-110">
-              <Star size={14} className="fill-gold-dark text-gold-dark dark:fill-gold dark:text-gold" />
-              {spot.rating.toFixed(1)}
-            </span>
-          )}
-        </div>
+        <h3 className="font-heading text-lg font-bold leading-tight line-clamp-1">
+          {spot.name}
+        </h3>
 
         {/* Description, tags and the address/phone row are desktop-only —
             on a single-column mobile grid, a full-width card doesn't need
-            this much detail to be scannable, so mobile keeps just name,
-            rating and hours/price. From sm+ (multi-column grid) they're
-            back, and there they get a fixed-height slot regardless of
-            whether they have content, so every card in the grid comes out
-            exactly the same height (bento-style), not just the ones that
-            happen to have full copy. */}
+            this much detail to be scannable, so mobile keeps just name
+            and hours/price. From sm+ (multi-column grid) they're back, and
+            there they get a fixed-height slot regardless of whether they
+            have content, so every card in the grid comes out exactly the
+            same height (bento-style), not just the ones that happen to
+            have full copy. */}
         <p className="hidden line-clamp-2 min-h-[2.5rem] text-sm text-foreground/70 sm:block">
           {spot.description}
         </p>

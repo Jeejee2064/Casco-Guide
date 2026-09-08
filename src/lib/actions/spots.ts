@@ -46,7 +46,6 @@ export interface SpotFormValues {
   photos: Photo[];
   featured_photo: string;
   tags: string[];
-  rating: number | null;
   is_featured: boolean;
   is_verified: boolean;
 }

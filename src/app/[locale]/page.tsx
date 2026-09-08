@@ -17,8 +17,8 @@ import type { Locale } from "@/i18n/routing";
 // How many of the latest published articles to feature on the home page —
 // the rest are one click away via the "see all articles" link to /articles.
 const HOME_ARTICLES_COUNT = 3;
-// How many (highest-rated) spots each homepage teaser leads with — the full
-// set lives one click away on /spots (grid) and /map.
+// How many spots each homepage teaser leads with — the full set lives one
+// click away on /spots (grid) and /map.
 const FEATURED_SPOTS_COUNT = 6;
 const MAP_TEASER_SPOTS_COUNT = 12;
 
@@ -44,11 +44,13 @@ export default async function HomePage({
 
   const [spots, articles] = await Promise.all([getSpots(locale), getArticles(locale)]);
 
-  // Highest-rated first — powers both spot-facing teasers below.
-  // `is_featured` is currently unset for every spot (see the SpotCard/
-  // SpotMap comments this mirrors), so rating is the only real "which
-  // spots to lead with" signal available today.
-  const ratedSpots = [...spots].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+  // Featured spots first — powers both spot-facing teasers below. Nothing
+  // is currently marked `is_featured` (see the SpotCard/SpotMap comments
+  // this mirrors), so until that's set from the admin this is a no-op and
+  // both teasers just lead with `spots` in its existing order.
+  const featuredFirst = [...spots].sort(
+    (a, b) => Number(b.is_featured) - Number(a.is_featured),
+  );
 
   return (
     <>
@@ -75,13 +77,13 @@ export default async function HomePage({
         </div>
         <div className="border-t border-border">
           <FeaturedSpotsSection
-            spots={ratedSpots.slice(0, FEATURED_SPOTS_COUNT)}
+            spots={featuredFirst.slice(0, FEATURED_SPOTS_COUNT)}
             totalCount={spots.length}
           />
         </div>
 
         <div className="border-t border-border">
-          <MapTeaserSection spots={ratedSpots.slice(0, MAP_TEASER_SPOTS_COUNT)} />
+          <MapTeaserSection spots={featuredFirst.slice(0, MAP_TEASER_SPOTS_COUNT)} />
         </div>
 
         <AboutIntro />

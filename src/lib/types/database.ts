@@ -90,8 +90,6 @@ export interface Spot {
   featured_photo: string | null;
 
   tags: string[];
-  rating: number | null;
-  review_count: number;
   is_featured: boolean;
   is_verified: boolean;
 

@@ -61,7 +61,7 @@ const DEFAULT_ZOOM = 15;
 
 // Gold marks a pin whose spot matches *more than one* of the currently
 // selected vibe chips — same warm gold as --color-gold/--night-gold in
-// globals.css (ratings, featured picks), reused here so "this spot is an
+// globals.css (featured picks), reused here so "this spot is an
 // overlap" reads as premium rather than picking one of its matching vibes'
 // colors arbitrarily (which would look inconsistent and jump around as the
 // filter changes).
@@ -1462,8 +1462,6 @@ export function SpotMap({
                 })
               : tHours("closed");
       const metaItems: string[] = [hoursLabel];
-      if (selectedSpot.rating)
-        metaItems.push(`★ ${selectedSpot.rating.toFixed(1)}`);
       if (selectedSpot.price_range) metaItems.push(selectedSpot.price_range);
 
       // This spot's own businesses, if it's a hub — see childrenBySpotId's

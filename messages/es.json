@@ -33,7 +33,6 @@
     "openNow": "Abierto ahora",
     "sort": "Ordenar por",
     "sortNewest": "Más recientes",
-    "sortRating": "Mejor valorados",
     "sortAlpha": "Alfabético",
     "sortRandom": "Sorpréndeme",
     "reset": "Restablecer filtros",
@@ -329,7 +328,6 @@
         "category": "Categoría",
         "coords": "Coordenadas",
         "hours": "Horario",
-        "rating": "Calificación",
         "verified": "Verificado",
         "actions": "Acciones"
       },
@@ -452,7 +450,6 @@
       "uploadHint": "Arrastra o haz clic para subir",
       "tags": "Etiquetas",
       "tagsHint": "Presiona Enter para agregar",
-      "rating": "Calificación",
       "isFeatured": "Lugar destacado",
       "isVerified": "Verificado — revisé esta información",
       "cancel": "Cancelar",

@@ -12,7 +12,7 @@ import type { ExploreFilterMode } from "./ExploreFilterContext";
 import type { PriceRange, Spot, SpotVibe } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
-type SortKey = "newest" | "rating" | "alpha" | "random";
+type SortKey = "newest" | "alpha" | "random";
 const PRICE_LEVELS: PriceRange[] = ["$", "$$", "$$$", "$$$$"];
 // How many spots show before the "show more" toggle — keeps the home page
 // from dumping the entire (potentially huge) list at once. Only applies
@@ -120,9 +120,6 @@ export function SpotExplorer({
     });
 
     switch (sort) {
-      case "rating":
-        result = [...result].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-        break;
       case "alpha":
         result = [...result].sort((a, b) => a.name.localeCompare(b.name));
         break;
@@ -134,7 +131,7 @@ export function SpotExplorer({
         // in vibe-relevance order when a vibe is active — re-sorting by
         // date here would silently discard that (the one thing the whole
         // reorder feature is supposed to make visible). An explicit sort
-        // choice (rating/alpha/random above) still wins either way.
+        // choice (alpha/random above) still wins either way.
         if (activeVibes.length === 0) {
           // No vibe driving the order — so with nothing else to make a
           // Classic↔Vibes toggle flip visually register, shuffle instead of
@@ -227,7 +224,6 @@ export function SpotExplorer({
                     className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold outline-none"
                   >
                     <option value="newest">{t("sortNewest")}</option>
-                    <option value="rating">{t("sortRating")}</option>
                     <option value="alpha">{t("sortAlpha")}</option>
                     <option value="random">{t("sortRandom")}</option>
                   </select>

@@ -124,7 +124,6 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
               <th className="px-4 py-3">{t("columns.name")}</th>
               <th className="px-4 py-3">{t("columns.category")}</th>
               <th className="px-4 py-3">{t("columns.coords")}</th>
-              <th className="px-4 py-3">{t("columns.rating")}</th>
               <th className="px-4 py-3">{t("columns.verified")}</th>
               <th className="px-4 py-3 text-right">{t("columns.actions")}</th>
             </tr>
@@ -148,15 +147,6 @@ export function SpotsTable({ spots: initialSpots }: { spots: Spot[] }) {
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-foreground/60">
                   {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
-                </td>
-                <td className="px-4 py-3">
-                  {spot.rating ? (
-                    <span className="flex items-center gap-1 font-semibold">
-                      <Star size={13} className="fill-coral text-coral" /> {spot.rating}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
                 </td>
                 <td className="px-4 py-3">
                   {spot.is_verified && <CheckCircle2 size={16} className="text-lime" />}

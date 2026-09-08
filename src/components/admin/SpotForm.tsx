@@ -77,9 +77,7 @@ function toPreviewSpot(values: SpotFormValues, lang: Lang, existing?: SpotRecord
     photos: values.photos,
     featured_photo: values.featured_photo || null,
     tags: values.tags,
-    rating: values.rating,
     parent_id: values.parent_id,
-    review_count: existing?.review_count ?? 0,
     is_featured: values.is_featured,
     is_verified: values.is_verified,
     created_at: existing?.created_at ?? new Date().toISOString(),
@@ -124,7 +122,6 @@ const emptyValues = (): SpotFormValues => ({
   photos: [],
   featured_photo: "",
   tags: [],
-  rating: null,
   is_featured: false,
   is_verified: false,
   parent_id: null,
@@ -167,7 +164,6 @@ const fromSpot = (spot: SpotRecord): SpotFormValues => ({
   photos: spot.photos,
   featured_photo: spot.featured_photo ?? "",
   tags: spot.tags,
-  rating: spot.rating,
   is_featured: spot.is_featured,
   is_verified: spot.is_verified,
   parent_id: spot.parent_id,
@@ -354,7 +350,6 @@ export function SpotForm({
     if (data.phone) set("phone", data.phone);
     if (data.website) set("website", data.website);
     if (data.price_range) set("price_range", data.price_range);
-    if (data.rating !== null) set("rating", data.rating);
     if (data.latitude !== null) set("latitude", data.latitude);
     if (data.longitude !== null) set("longitude", data.longitude);
     if (data.cuisine_type) {
@@ -826,19 +821,7 @@ export function SpotForm({
           <TagInput value={values.tags} onChange={(tags) => set("tags", tags)} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <Label htmlFor="rating">{t("rating")}</Label>
-            <Input
-              id="rating"
-              type="number"
-              min={0}
-              max={5}
-              step={0.1}
-              value={values.rating ?? ""}
-              onChange={(e) => set("rating", e.target.value ? parseFloat(e.target.value) : null)}
-            />
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <label className="flex items-center gap-2 self-end pb-2.5 text-sm font-semibold">
             <input
               type="checkbox"

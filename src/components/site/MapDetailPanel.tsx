@@ -294,7 +294,7 @@ function PanelBody({
         {/* Address/date (subtitle) and the fuller description read fine on
             the roomier desktop side panel, but on the mobile sheet they're
             exactly what used to push the close button out of view — mobile
-            keeps only the title, the status/rating-style meta line below,
+            keeps only the title, the status-style meta line below,
             and the Read more action; the rest is one tap away on the full
             page instead of duplicated here. */}
         {!compact && content.subtitle && (
@@ -304,7 +304,7 @@ function PanelBody({
           <div className="flex flex-wrap gap-3 text-sm font-semibold opacity-80">
             {/* First item is always the "is it open right now" status (see
                 SpotMap/ItineraryMap's `metaItems` — hours status first,
-                rating/price after) — the one line mobile keeps; anything
+                price after) — the one line mobile keeps; anything
                 past it is desktop-only. */}
             {content.metaItems.map((item, i) => (
               <span key={item} className={i > 0 ? "hidden md:inline" : undefined}>

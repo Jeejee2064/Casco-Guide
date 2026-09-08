@@ -5,7 +5,7 @@ import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
 
 // schema.org has no single "restaurant/bar/museum/..." vocabulary entry —
 // each spot category maps to the closest concrete type so rich results
-// (star ratings, price range, opening hours) render correctly per category.
+// (price range, opening hours) render correctly per category.
 const CATEGORY_SCHEMA_TYPE: Record<SpotCategory, string> = {
   restaurant: "Restaurant",
   bar: "BarOrPub",
@@ -80,8 +80,8 @@ function openingHoursSpecification(spot: Spot) {
 }
 
 /** One place page's structured data — typed by category (Restaurant,
- * Museum, Hotel, …) with address, geo, hours, price and rating filled in
- * from whatever the spot record has. */
+ * Museum, Hotel, …) with address, geo, hours and price filled in from
+ * whatever the spot record has. */
 export function spotSchema(spot: Spot, url: string) {
   const images = spot.photos.map((p) => absoluteUrl(p.url));
   const image = spot.featured_photo ? absoluteUrl(spot.featured_photo) : images[0];
@@ -117,14 +117,6 @@ export function spotSchema(spot: Spot, url: string) {
     ...(openingHoursSpecification(spot).length > 0 && {
       openingHoursSpecification: openingHoursSpecification(spot),
     }),
-    ...(spot.rating != null &&
-      spot.review_count > 0 && {
-        aggregateRating: {
-          "@type": "AggregateRating",
-          ratingValue: spot.rating,
-          reviewCount: spot.review_count,
-        },
-      }),
   };
 }
 

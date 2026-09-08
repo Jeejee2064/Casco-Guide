@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import {
   X,
-  Star,
   Mail,
   MapPin,
   Navigation,
@@ -180,17 +179,6 @@ export function SpotDetailModal({
                 <CategoryBadge category={spot.category} />
                 <h2 className="font-heading text-2xl font-extrabold">{spot.name}</h2>
                 <div className="flex items-center gap-3 text-sm">
-                  {spot.rating && (
-                    <span className="flex items-center gap-1 font-semibold">
-                      <Star size={15} className="fill-gold-dark text-gold-dark dark:fill-gold dark:text-gold" />
-                      {spot.rating.toFixed(1)}
-                      {spot.review_count ? (
-                        <span className="text-foreground/50 font-normal">
-                          ({spot.review_count})
-                        </span>
-                      ) : null}
-                    </span>
-                  )}
                   {spot.price_range && (
                     <span className="text-foreground/60 font-semibold">
                       {spot.price_range}

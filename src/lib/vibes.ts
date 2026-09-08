@@ -33,13 +33,10 @@ export const SPOT_VIBES = Object.keys(VIBE_META) as SpotVibe[];
 
 /**
  * Relevance score for ranking `spots` by how well they fit a selected vibe
- * (see VibesModal + SpotsExplorerSection) — a direct tag match dominates, rating
- * only breaks ties among otherwise-equal spots. Used to *reorder* the full
- * list (nothing gets excluded), unlike the category filter.
+ * (see VibesModal + SpotsExplorerSection) — a direct tag match is the only
+ * signal today. Used to *reorder* the full list (nothing gets excluded),
+ * unlike the category filter.
  */
 export function vibeRelevanceScore(spot: Spot, vibeId: SpotVibe): number {
-  let score = 0;
-  if (spot.vibes.includes(vibeId)) score += 10;
-  score += (spot.rating ?? 0) * 0.5;
-  return score;
+  return spot.vibes.includes(vibeId) ? 10 : 0;
 }

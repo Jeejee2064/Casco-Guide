@@ -8,7 +8,7 @@ import type { SpotCategory } from "@/lib/types/database";
 
 // Screenshot(s) → structured data for the spot form's "Import from Google
 // Maps screenshot" tool (see components/admin/ImportFromScreenshot.tsx). A
-// single Google Maps place card rarely fits one screenshot — name+rating,
+// single Google Maps place card rarely fits one screenshot — name+category,
 // address+hours, and the right-click coordinates are usually three separate
 // captures — so this takes 1-5 images of the *same place* in one request and
 // asks Claude to combine what each one shows. Runs them through Claude's
@@ -47,7 +47,6 @@ const extractionSchema = z.object({
   phone: z.string().trim().min(1).nullable().default(null),
   website: z.string().trim().min(1).nullable().default(null),
   price_range: z.enum(["$", "$$", "$$$", "$$$$"]).nullable().default(null),
-  rating: z.number().min(0).max(5).nullable().default(null),
   cuisine_type: z.string().trim().min(1).nullable().default(null),
   hours: hoursSchema.default(null),
   latitude: z.number().min(-90).max(90).nullable().default(null),
@@ -84,7 +83,7 @@ interface ImageBlock {
   source: { type: "base64"; media_type: string; data: string };
 }
 
-const EXTRACTION_PROMPT = `You are reading 1-5 screenshots of Google Maps, all of the same place (most likely a business in Panama City). A single place card rarely fits one screenshot, so different images may show different panels — e.g. one with the name/category/rating, another with the address/hours, another with the right-click coordinates. Combine what every image shows into ONE set of facts about this one place, and reply with ONLY a single raw JSON object — no prose, no markdown code fences — matching exactly this shape:
+const EXTRACTION_PROMPT = `You are reading 1-5 screenshots of Google Maps, all of the same place (most likely a business in Panama City). A single place card rarely fits one screenshot, so different images may show different panels — e.g. one with the name/category, another with the address/hours, another with the right-click coordinates. Combine what every image shows into ONE set of facts about this one place, and reply with ONLY a single raw JSON object — no prose, no markdown code fences — matching exactly this shape:
 
 {
   "name": string | null,
@@ -94,7 +93,6 @@ const EXTRACTION_PROMPT = `You are reading 1-5 screenshots of Google Maps, all o
   "phone": string | null,
   "website": string | null,
   "price_range": one of "$" | "$$" | "$$$" | "$$$$" | null,
-  "rating": number between 0 and 5 | null,
   "cuisine_type": string | null,
   "hours": {
     "monday": [{"open":"HH:MM","close":"HH:MM"}] or null,
@@ -107,7 +105,7 @@ const EXTRACTION_PROMPT = `You are reading 1-5 screenshots of Google Maps, all o
 Rules:
 - "category" is your best mapping of Google's place type onto that exact list — always pick the closest one, never invent a new value.
 - "cuisine_type" only applies to restaurants/bars/cafes (e.g. "Italiana", "Mariscos") — a short label, in whatever language the screenshot is in.
-- "phone"/"website": look for the row of small icon buttons under the place's name/rating (phone handset icon, globe/website icon, directions icon) and any "About"/"Overview" panel — read the digits or domain next to them exactly as printed. Keep the phone number's punctuation/formatting as shown. Include the website's scheme if printed (e.g. "https://..."), otherwise just the domain/path as printed.
+- "phone"/"website": look for the row of small icon buttons under the place's name (phone handset icon, globe/website icon, directions icon) and any "About"/"Overview" panel — read the digits or domain next to them exactly as printed. Keep the phone number's punctuation/formatting as shown. Include the website's scheme if printed (e.g. "https://..."), otherwise just the domain/path as printed.
 - "hours": only include a day key if that day's opening hours are explicitly visible (e.g. an expanded weekly-hours panel). Times are 24-hour "HH:MM". A day visibly marked closed maps to null for that key. Omit any day you can't read. If no hours at all are visible, "hours" itself is null.
 - "latitude"/"longitude": only fill these in if explicit decimal coordinates are printed somewhere in the screenshot — e.g. the pair Google Maps shows after right-clicking a point ("What's here?"), or in a visible URL/share link containing "@8.952781,-79.534071" or "q=8.952781,-79.534071". Read the two numbers exactly as printed (first is latitude, second longitude). Never infer coordinates from the pin's pixel position, the address, or the neighborhood — if no explicit decimal pair is visible, both are null.
 - If two screenshots disagree on a field, trust the one where it's shown more explicitly/completely rather than averaging or picking arbitrarily.

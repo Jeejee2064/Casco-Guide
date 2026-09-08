@@ -126,8 +126,8 @@ export async function getNearbySpots(
  * highest — powering the "you might also like" rail on the spot detail page.
  * This replaced a purely distance-based rail there: two spots across town
  * that are both moody rooftop bars are a better recommendation than the
- * nearest unrelated shop. Ties break by rating, then distance, so among
- * equally good matches the more reachable one still wins. `excludeIds` lets
+ * nearest unrelated shop. Ties break by distance, so among equally good
+ * matches the more reachable one still wins. `excludeIds` lets
  * the caller keep spots already shown elsewhere on the page (hub parent/
  * children) out of the rail. Falls back to filling remaining slots with the
  * nearest spots when too few share a category/vibe, so a spot with an
@@ -149,10 +149,7 @@ export async function getRelatedSpots(
 
   const related = scored
     .filter((c) => c.score > 0)
-    .sort(
-      (a, b) =>
-        b.score - a.score || (b.spot.rating ?? 0) - (a.spot.rating ?? 0) || a.distanceKm - b.distanceKm,
-    );
+    .sort((a, b) => b.score - a.score || a.distanceKm - b.distanceKm);
 
   if (related.length >= limit) return related.slice(0, limit).map((c) => c.spot);
 
