@@ -162,7 +162,14 @@ const fromSpot = (spot: SpotRecord): SpotFormValues => ({
   accepts_cards: spot.accepts_cards,
   parking: spot.parking,
   photos: spot.photos,
-  featured_photo: spot.featured_photo ?? "",
+  // Falls back to the first gallery photo when no featured photo was ever
+  // explicitly set — the public detail page already does the same (see
+  // SpotDetailView/SpotDetailModal's `hero` fallback), so a spot that looks
+  // like it "already has a photo" there isn't shown as empty here. Saving
+  // as-is persists that gallery photo as the real featured_photo, which
+  // also fixes it showing up on cards/map (getSpotImage only reads
+  // featured_photo, not the gallery).
+  featured_photo: spot.featured_photo ?? spot.photos[0]?.url ?? "",
   tags: spot.tags,
   is_featured: spot.is_featured,
   is_verified: spot.is_verified,
