@@ -398,7 +398,16 @@
       "description": "Short description",
       "descriptionHint": "1–2 sentences, shown on the card",
       "article": "Full article",
-      "articleHint": "200–500 words — the story of this place",
+      "articleHint": "200–500 words — the story of this place. Select text and use the link button to cite another spot or article.",
+      "linkPlace": "Link another spot or article",
+      "searchPlaceholder": "Search by name…",
+      "noResults": "No results",
+      "linkTypes": {
+        "all": "All",
+        "spot": "Spots",
+        "event": "Events",
+        "article": "Articles"
+      },
       "category": "Category",
       "vibes": "Vibes",
       "address": "Address",

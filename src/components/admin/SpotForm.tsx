@@ -10,7 +10,7 @@ import { Input, Label, Select, Textarea, FieldHint } from "@/components/ui/Field
 import { TagInput } from "./TagInput";
 import { HoursEditor } from "./HoursEditor";
 import { FeaturedPhotoUploader, GalleryUploader } from "./PhotoUploader";
-import { ArticleEditor } from "./ArticleEditor";
+import { ArticleBodyEditor } from "./ArticleBodyEditor";
 import { LangTabs } from "./LangTabs";
 import { LocationPickerModal } from "./LocationPickerModal";
 import { PlaceLinkPicker, type LinkablePlace } from "./PlaceLinkPicker";
@@ -31,7 +31,7 @@ import { upsertSpot, setSpotParent, type SpotFormValues } from "@/lib/actions/sp
 import type { ExtractedSpot } from "@/lib/actions/importSpot";
 import type { Locale } from "@/i18n/routing";
 import { useRouter } from "@/i18n/navigation";
-import { DAY_KEYS, type Spot, type SpotRecord } from "@/lib/types/database";
+import { DAY_KEYS, type Article, type Spot, type SpotRecord } from "@/lib/types/database";
 
 type Lang = "es" | "en";
 type LocalizedField = "name" | "description" | "article" | "cuisine_type" | "hours_note";
@@ -181,6 +181,7 @@ const DIETARY_OPTIONS = ["vegan", "vegetarian", "gluten-free", "halal", "dairy-f
 export function SpotForm({
   spot,
   allSpots = [],
+  articles = [],
   initialParentId,
 }: {
   spot?: SpotRecord;
@@ -189,6 +190,9 @@ export function SpotForm({
    * from it, so the caller can reuse whatever `getSpots(locale)` list it
    * already fetched for the admin list page. */
   allSpots?: Spot[];
+  /** Published articles, linkable from the "full article" editor below —
+   * see `articleLinkPlaces`. */
+  articles?: Article[];
   /** Seeded from `/admin/spots/new?parent_id=...` (see the "Créer un lieu
    * enfant" shortcut on a hub's own form) — prefills the new spot's parent
    * plus its address/coordinates from that hub, since a child is almost
@@ -268,6 +272,17 @@ export function SpotForm({
   const selectedParent = values.parent_id
     ? allSpots.find((s) => s.id === values.parent_id)
     : undefined;
+
+  // Places the "full article" editor can link to — other spots (e.g. a
+  // neighboring business) and published articles. Excludes the spot being
+  // edited itself.
+  const articleLinkPlaces: LinkablePlace[] = useMemo(
+    () => [
+      ...allSpots.filter((s) => s.id !== spot?.id).map((s) => ({ id: s.id, type: "spot" as const, label: s.name, slug: s.slug })),
+      ...articles.map((a) => ({ id: a.id, type: "article" as const, label: a.title, slug: a.slug })),
+    ],
+    [allSpots, articles, spot?.id],
+  );
 
   const handleAttachChild = (place: LinkablePlace) => {
     setChildPickerOpen(false);
@@ -503,10 +518,24 @@ export function SpotForm({
           <Label>
             {t("article")} <span className="font-normal text-foreground/40">· {lang.toUpperCase()}</span>
           </Label>
-          <ArticleEditor
+          <ArticleBodyEditor
             key={lang}
             value={localized("article")}
             onChange={(v) => setLocalized("article", v)}
+            locale={lang}
+            places={articleLinkPlaces}
+            linkLabels={{
+              title: t("linkPlace"),
+              searchPlaceholder: t("searchPlaceholder"),
+              empty: t("noResults"),
+              close: t("close"),
+              typeFilter: {
+                all: t("linkTypes.all"),
+                spot: t("linkTypes.spot"),
+                event: t("linkTypes.event"),
+                article: t("linkTypes.article"),
+              },
+            }}
           />
           <FieldHint>{t("articleHint")}</FieldHint>
         </div>

@@ -398,7 +398,16 @@
       "description": "Descripción corta",
       "descriptionHint": "1–2 frases, se muestra en la tarjeta",
       "article": "Artículo completo",
-      "articleHint": "200–500 palabras — la historia de este lugar",
+      "articleHint": "200–500 palabras — la historia de este lugar. Selecciona texto y usa el botón de enlace para citar otro lugar o artículo.",
+      "linkPlace": "Enlazar otro lugar o artículo",
+      "searchPlaceholder": "Buscar por nombre…",
+      "noResults": "Sin resultados",
+      "linkTypes": {
+        "all": "Todos",
+        "spot": "Lugares",
+        "event": "Eventos",
+        "article": "Artículos"
+      },
       "category": "Categoría",
       "vibes": "Vibes",
       "address": "Dirección",

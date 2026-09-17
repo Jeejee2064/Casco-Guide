@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { SpotForm } from "@/components/admin/SpotForm";
 import { isSupabaseConfigured, getSpots } from "@/lib/data/spots";
+import { getArticles } from "@/lib/data/articles";
 import { MOCK_SPOTS } from "@/lib/data/mock-spots";
 import type { Locale } from "@/i18n/routing";
 import type { SpotRecord } from "@/lib/types/database";
@@ -27,12 +28,12 @@ export default async function EditSpotPage({
 
   if (!spot) notFound();
 
-  const allSpots = await getSpots(locale);
+  const [allSpots, articles] = await Promise.all([getSpots(locale), getArticles(locale)]);
 
   return (
     <div className="max-w-3xl space-y-6">
       <h1 className="font-heading text-2xl font-extrabold">{t("titleEdit")}</h1>
-      <SpotForm spot={spot} allSpots={allSpots} />
+      <SpotForm spot={spot} allSpots={allSpots} articles={articles} />
     </div>
   );
 }
