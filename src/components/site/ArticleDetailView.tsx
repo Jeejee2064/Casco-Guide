@@ -130,7 +130,7 @@ export function ArticleDetailView({
           onClick={onBack}
           aria-label={t("back")}
           style={{ top: (headerHeight ?? 56) + 16 }}
-          className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+          className="glass pill-lift fixed left-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground sm:sticky sm:left-auto sm:mb-4"
         >
           <ChevronLeft size={20} />
         </button>
@@ -139,7 +139,7 @@ export function ArticleDetailView({
           href="/articles"
           aria-label={t("back")}
           style={{ top: (headerHeight ?? 56) + 16 }}
-          className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+          className="glass pill-lift fixed left-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground sm:sticky sm:left-auto sm:mb-4"
         >
           <ChevronLeft size={20} />
         </Link>
@@ -344,9 +344,18 @@ export function ArticleDetailView({
           </StaggerItem>
           <StaggerItem>
             {itineraryStops.length > 0 ? (
-              <ItineraryMap stops={itineraryStops} heightClassName="h-[55vh] min-h-[440px]" />
+              <ItineraryMap
+                stops={itineraryStops}
+                heightClassName="h-[55vh] min-h-[440px]"
+                interactive={false}
+              />
             ) : (
-              <SpotMap spots={citedSpots} events={citedEvents} heightClassName="h-[55vh] min-h-[440px]" />
+              <SpotMap
+                spots={citedSpots}
+                events={citedEvents}
+                heightClassName="h-[55vh] min-h-[440px]"
+                interactive={false}
+              />
             )}
           </StaggerItem>
           <StaggerItem>

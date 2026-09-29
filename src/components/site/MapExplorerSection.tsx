@@ -91,24 +91,38 @@ function MapExplorerContent({
       return true;
     };
 
-    // A hub pin stays on screen if it matches directly, or if any business
-    // inside it does — otherwise filtering to e.g. "bar" would hide a hotel
-    // that happens to have a bar attached, defeating the point of grouping
-    // them under one pin.
-    const matched = topLevel.filter((spot) => {
+    if (mode === "vibes" && vibes.length > 0) {
+      // Vibes mode: a hub's grouped pin only stands in for its children when
+      // the hub *itself* carries the vibe — that's the only case where
+      // showing one colored pin with a child-count badge actually reflects
+      // what matched. When only a business inside the hub carries it, the
+      // hub's own pin has no vibe of its own to color with (SpotMap falls
+      // back to the neutral tone, which reads as a stray mismatched pin next
+      // to every correctly-colored one) and the badge just says "N inside"
+      // without saying which one — so surface that business's own pin
+      // instead, correctly colored, rather than hiding it behind the hub.
+      const result: Spot[] = [];
+      for (const spot of topLevel) {
+        if (matchesFilters(spot)) {
+          result.push(spot);
+          continue;
+        }
+        const children = childrenByParent.get(spot.id) ?? [];
+        result.push(...children.filter(matchesFilters));
+      }
+      const scoreOf = (spot: Spot) =>
+        Math.max(...vibes.map((v) => vibeRelevanceScore(spot, v)));
+      return result.sort((a, b) => scoreOf(b) - scoreOf(a));
+    }
+
+    // Classic mode: a hub pin stays on screen if it matches directly, or if
+    // any business inside it does — otherwise filtering to e.g. "bar" would
+    // hide a hotel that happens to have a bar attached, defeating the point
+    // of grouping them under one pin.
+    return topLevel.filter((spot) => {
       const children = childrenByParent.get(spot.id) ?? [];
       return matchesFilters(spot) || children.some(matchesFilters);
     });
-
-    if (mode !== "vibes" || vibes.length === 0) return matched;
-    const scoreOf = (spot: Spot) => {
-      const children = childrenByParent.get(spot.id) ?? [];
-      const scores = [spot, ...children].map((s) =>
-        Math.max(...vibes.map((v) => vibeRelevanceScore(s, v))),
-      );
-      return Math.max(...scores);
-    };
-    return [...matched].sort((a, b) => scoreOf(b) - scoreOf(a));
   }, [topLevel, childrenByParent, mode, categories, vibes, query]);
 
   const activeVibes = mode === "vibes" ? vibes : NO_VIBES;

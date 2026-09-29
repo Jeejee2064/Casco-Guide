@@ -118,10 +118,17 @@ export function ItineraryMap({
   stops,
   className,
   heightClassName = "h-[45vh] min-h-[320px]",
+  interactive = true,
 }: {
   stops: ItineraryStop[];
   className?: string;
   heightClassName?: string;
+  /** false locks the map in place — no drag/pinch/scroll-wheel pan or zoom,
+   * so a touch swipe starting over the map scrolls the page instead of
+   * panning it. Pins stay fully clickable/tappable either way (marker
+   * clicks are a separate DOM event, not gated by these handlers). Used by
+   * the article "Places mentioned" map so it doesn't trap mobile scroll. */
+  interactive?: boolean;
 }) {
   const router = useRouter();
   const locale = useLocale();
@@ -197,8 +204,13 @@ export function ItineraryMap({
         maxBounds: CASCO_VIEJO_BOUNDS,
         maxBoundsViscosity: 0.6,
         zoomControl: false,
-        scrollWheelZoom: false,
         attributionControl: false,
+        dragging: interactive,
+        touchZoom: interactive,
+        scrollWheelZoom: interactive,
+        doubleClickZoom: interactive,
+        boxZoom: interactive,
+        keyboard: interactive,
       });
       L.control.zoom({ position: "topright" }).addTo(map);
       L.control
@@ -237,7 +249,9 @@ export function ItineraryMap({
       routeLayersRef.current = [];
     };
     // One map per mounted instance — a different article gets a fresh
-    // ItineraryMap (keyed by the caller), not a re-init here.
+    // ItineraryMap (keyed by the caller), not a re-init here. `interactive`
+    // is likewise read once by design, not meant to toggle live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Swaps the basemap's colors live if Night Mode is toggled after mount —

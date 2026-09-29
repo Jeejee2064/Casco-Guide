@@ -27,13 +27,20 @@ export function MiniMap({
   latitude,
   longitude,
   className,
+  onGetDirections,
 }: {
   name: string;
   latitude: number;
   longitude: number;
   className?: string;
+  /** Renders a "Get directions" button in the pin's popup, wired to the
+   * same handler as the page's own Get Directions button — omit to fall
+   * back to the old name-only tooltip (e.g. the admin preview, which has
+   * nothing real to route directions to). */
+  onGetDirections?: () => void;
 }) {
   const tMap = useTranslations("map");
+  const tSpot = useTranslations("spot");
   const { isNight } = useNightMode();
   const [ready, setReady] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
@@ -54,6 +61,15 @@ export function MiniMap({
   useEffect(() => {
     isNightRef.current = isNight;
   }, [isNight]);
+
+  // Same live-ref treatment: the popup's button (built once, in the init
+  // effect below) closes over this ref rather than the prop directly, so a
+  // parent re-render that hands down a new `onGetDirections` identity (none
+  // of the four callers memoize it) still reaches the latest handler.
+  const onGetDirectionsRef = useRef(onGetDirections);
+  useEffect(() => {
+    onGetDirectionsRef.current = onGetDirections;
+  }, [onGetDirections]);
 
   // Never asks for geolocation itself — only "Get Directions" should trigger
   // that permission prompt. This just picks up whatever fix that flow has
@@ -112,9 +128,33 @@ export function MiniMap({
         iconSize: [26, 26],
         iconAnchor: [13, 26],
       });
-      spotMarkerRef.current = L.marker([latitude, longitude], { icon })
-        .bindTooltip(name)
-        .addTo(map);
+      const marker = L.marker([latitude, longitude], { icon }).addTo(map);
+
+      // Built once from plain DOM nodes (not an HTML string) so the button
+      // gets a real click listener instead of a fragile inline `onclick=`
+      // attribute — Leaflet just wants an Element/string for popup content,
+      // either works, but this way `name` (user-authored spot data) also
+      // never needs to pass through innerHTML.
+      const content = document.createElement("div");
+      content.className = "spot-mini-popup";
+      const title = document.createElement("p");
+      title.className = "spot-mini-popup__title";
+      title.textContent = name;
+      content.appendChild(title);
+      if (onGetDirectionsRef.current) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "spot-mini-popup__button";
+        button.textContent = tSpot("getDirections");
+        L.DomEvent.on(button, "click", (e) => {
+          L.DomEvent.stop(e);
+          onGetDirectionsRef.current?.();
+        });
+        content.appendChild(button);
+      }
+      marker.bindPopup(content, { closeButton: false, offset: [0, -6] });
+
+      spotMarkerRef.current = marker;
 
       mapRef.current = map;
       setReady(true);

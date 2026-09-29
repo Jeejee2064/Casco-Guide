@@ -115,7 +115,7 @@ export function EventDetailView({
         onClick={onBack ?? goBack}
         aria-label={td("back")}
         style={{ top: (headerHeight ?? 56) + 16 }}
-        className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+        className="glass pill-lift fixed left-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground sm:sticky sm:left-auto sm:mb-4"
       >
         <ChevronLeft size={20} />
       </button>
@@ -239,7 +239,12 @@ export function EventDetailView({
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
           <Stagger className="space-y-4" show={galleryReady} delay={0.15}>
             <StaggerItem>
-              <MiniMap name={event.title} latitude={event.latitude} longitude={event.longitude} />
+              <MiniMap
+                name={event.title}
+                latitude={event.latitude}
+                longitude={event.longitude}
+                onGetDirections={directions}
+              />
             </StaggerItem>
 
             <StaggerItem>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
 import {
   X,
@@ -24,6 +24,7 @@ import { HoursBadge } from "./HoursBadge";
 import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
+import { EASE_OUT } from "./motion";
 import { Button } from "@/components/ui/Button";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Spot } from "@/lib/types/database";
@@ -45,6 +46,7 @@ export function SpotDetailModal({
   const locale = useLocale();
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [hoursOpen, setHoursOpen] = useState(false);
 
   const photos = spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
 
@@ -205,32 +207,73 @@ export function SpotDetailModal({
                 "is it open right now", so the full week table is one tap
                 away instead of pushing the map/address/contact below it
                 down inside an already-scrollable modal. */}
-            <details className="group rounded-xl border border-border p-4 text-sm">
-              <summary className="font-heading flex cursor-pointer list-none items-center justify-between font-bold [&::-webkit-details-marker]:hidden">
+            <div className="rounded-xl border border-border p-4 text-sm">
+              <button
+                type="button"
+                onClick={() => setHoursOpen((open) => !open)}
+                aria-expanded={hoursOpen}
+                aria-controls="week-schedule-panel-modal"
+                className="font-heading flex w-full items-center justify-between font-bold"
+              >
                 {th("weekSchedule")}
-                <ChevronDown
-                  size={16}
-                  className="text-foreground/40 transition-transform group-open:rotate-180"
-                />
-              </summary>
-              <ul className="mt-3 space-y-1">
-                {DAY_KEYS.map((day) => (
-                  <li key={day} className="flex justify-between gap-4">
-                    <span className="text-foreground/60">{th(`days.${day}`)}</span>
-                    <span className="font-medium">
-                      {formatDaySlots(spot[`hours_${day}`], locale)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {spot.hours_note && (
-                <p className="text-xs text-foreground/60 mt-3 pt-1 border-t border-border">
-                  {th("note")}: {spot.hours_note}
-                </p>
-              )}
-            </details>
+                <motion.span
+                  animate={{ rotate: hoursOpen ? 180 : 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT }}
+                  className="text-foreground/40"
+                >
+                  <ChevronDown size={16} />
+                </motion.span>
+              </button>
+              <AnimatePresence initial={false}>
+                {hoursOpen && (
+                  <motion.div
+                    key="content"
+                    id="week-schedule-panel-modal"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: 0.4, ease: EASE_OUT },
+                      opacity: { duration: 0.25, ease: EASE_OUT, delay: hoursOpen ? 0.05 : 0 },
+                    }}
+                    className="overflow-hidden"
+                  >
+                    <motion.ul
+                      variants={{ show: { transition: { staggerChildren: 0.03, delayChildren: 0.08 } } }}
+                      initial="hidden"
+                      animate="show"
+                      className="mt-3 space-y-1"
+                    >
+                      {DAY_KEYS.map((day) => (
+                        <motion.li
+                          key={day}
+                          variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+                          transition={{ duration: 0.25, ease: EASE_OUT }}
+                          className="flex justify-between gap-4"
+                        >
+                          <span className="text-foreground/60">{th(`days.${day}`)}</span>
+                          <span className="font-medium">
+                            {formatDaySlots(spot[`hours_${day}`], locale)}
+                          </span>
+                        </motion.li>
+                      ))}
+                    </motion.ul>
+                    {spot.hours_note && (
+                      <p className="text-xs text-foreground/60 mt-3 pt-1 border-t border-border">
+                        {th("note")}: {spot.hours_note}
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-            <MiniMap name={spot.name} latitude={spot.latitude} longitude={spot.longitude} />
+            <MiniMap
+              name={spot.name}
+              latitude={spot.latitude}
+              longitude={spot.longitude}
+              onGetDirections={directions}
+            />
 
             <div className="grid gap-2 text-sm">
               {spot.address && (

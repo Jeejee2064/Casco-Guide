@@ -45,46 +45,56 @@ export function NearbySection({
   if (nearbySpots.length === 0 && nearbyEvents.length === 0) return null;
 
   return (
-    <div className="mt-12 space-y-10 border-t border-border pt-8 sm:mt-16 sm:pt-10">
-      {nearbyEvents.length > 0 && (
-        <section>
-          <h2 className="font-heading mb-4 text-xl font-extrabold">{t("relatedEvents")}</h2>
-          <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-            {nearbyEvents.map((event) => (
-              <StaggerItem key={event.id} className="w-[320px] shrink-0 sm:w-[360px]">
-                <EventCard event={event} />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </section>
-      )}
+    <div className="isolate relative mt-12 py-8 sm:mt-16 sm:py-10">
+      {/* Full-bleed to the viewport edge regardless of this component's own
+          nesting inside the page's `max-w-6xl` column — see `.section-surface`
+          in globals.css for why this rail needs a visibly different surface
+          from the gallery/info sections above it, not just a border. */}
+      <div
+        aria-hidden
+        className="section-surface absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 border-y border-border"
+      />
+      <div className="space-y-10">
+        {nearbyEvents.length > 0 && (
+          <section>
+            <h2 className="font-heading mb-4 text-xl font-extrabold">{t("relatedEvents")}</h2>
+            <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+              {nearbyEvents.map((event) => (
+                <StaggerItem key={event.id} className="w-[320px] shrink-0 sm:w-[360px]">
+                  <EventCard event={event} />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </section>
+        )}
 
-      {nearbySpots.length > 0 && (
-        <section>
-          <h2 className="font-heading mb-4 text-xl font-extrabold">
-            {t(spotsAreNearby ? "nearbySpots" : "relatedSpots")}
-          </h2>
-          <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-            {nearbySpots.map((spot) => (
-              <StaggerItem key={spot.id} className="w-[240px] shrink-0 sm:w-[260px]">
-                <SpotCard
-                  spot={spot}
-                  walkMinutes={
-                    spotsAreNearby
-                      ? walkingMinutes(
-                          haversineKm(origin.lat, origin.lng, spot.latitude, spot.longitude),
-                        )
-                      : undefined
-                  }
-                  onClick={() =>
-                    router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
-                  }
-                />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </section>
-      )}
+        {nearbySpots.length > 0 && (
+          <section>
+            <h2 className="font-heading mb-4 text-xl font-extrabold">
+              {t(spotsAreNearby ? "nearbySpots" : "relatedSpots")}
+            </h2>
+            <Stagger className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+              {nearbySpots.map((spot) => (
+                <StaggerItem key={spot.id} className="w-[240px] shrink-0 sm:w-[260px]">
+                  <SpotCard
+                    spot={spot}
+                    walkMinutes={
+                      spotsAreNearby
+                        ? walkingMinutes(
+                            haversineKm(origin.lat, origin.lng, spot.latitude, spot.longitude),
+                          )
+                        : undefined
+                    }
+                    onClick={() =>
+                      router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
+                    }
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

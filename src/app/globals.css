@@ -436,6 +436,22 @@ html[data-night] .chip-surface {
   background: color-mix(in srgb, var(--color-aqua) 24%, var(--surface) 76%);
 }
 
+/* Full-bleed tinted band behind the "you might also like" / "nearby spots"
+   rail at the bottom of a spot or event detail page (NearbySection) — the
+   gallery and info sections above it sit directly on the page's own
+   backdrop with no background of their own, so a plain border wasn't enough
+   to keep this rail from reading as the same surface. A light aqua tint
+   (not a flat `--surface` white, which would blend right back into the
+   page's own near-white backdrop) lets the white SpotCard/EventCard rails
+   sitting on top of it still pop, in both light and Night Mode. */
+.section-surface {
+  background: color-mix(in srgb, var(--color-aqua) 6%, var(--surface) 94%);
+}
+
+html[data-night] .section-surface {
+  background: color-mix(in srgb, var(--color-aqua) 12%, var(--surface) 88%);
+}
+
 .card-lift {
   transition:
     transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -613,6 +629,61 @@ html[data-night] .header-logotype {
   color: var(--color-aqua-dark) !important;
 }
 
+/* MiniMap's pin popup (name + "Get directions") — chrome-less wrapper so it
+   reads as one of this app's own cards, not the default Leaflet box. */
+.leaflet-popup-content-wrapper {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-button) !important;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.18) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--surface) !important;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-left: none;
+}
+
+.spot-mini-popup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.spot-mini-popup__title {
+  margin: 0;
+  font-family: var(--font-heading), var(--font-sans), sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  max-width: 180px;
+}
+
+.spot-mini-popup__button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--color-aqua);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+.spot-mini-popup__button:hover {
+  background: var(--color-aqua-dark);
+}
+
 .spot-pin {
   position: relative;
   display: flex;
@@ -708,14 +779,21 @@ html[data-night] .header-logotype {
 }
 
 /* Itinerary mode (SpotMap.tsx's directionsTarget) — every pin other than
-   the one actually being routed to fades out and ignores clicks, so the
-   route reads as the only thing on the map worth tapping. Transition-only
-   (no animation) since this is a state toggle, not a one-off entrance. */
+   the one actually being routed to fades out, so the route reads as the
+   main thing on the map worth tapping. Transition-only (no animation)
+   since this is a state toggle, not a one-off entrance. Spot pins stay
+   clickable despite the dimming — tapping one re-arms directions to it
+   (see the marker click handler in SpotMap.tsx) instead of being a dead
+   end; event pins have no directions of their own yet, so those stay
+   inert. */
 .spot-pin-marker--dimmed,
 .event-pin-marker--dimmed {
   opacity: 0.3;
-  pointer-events: none;
   transition: opacity 200ms ease;
+}
+
+.event-pin-marker--dimmed {
+  pointer-events: none;
 }
 
 /* Event pins — full-color /public/icons badges. These are already

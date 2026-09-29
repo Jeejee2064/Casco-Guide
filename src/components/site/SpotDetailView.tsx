@@ -27,7 +27,7 @@ import { ExploreMapCard } from "./ExploreMapCard";
 import { NearbySection } from "./NearbySection";
 import { SpotCard } from "./SpotCard";
 import { ArticleCard } from "./ArticleCard";
-import { Stagger, StaggerItem, fadeUp } from "./motion";
+import { Stagger, StaggerItem, fadeUp, EASE_OUT } from "./motion";
 import { Button } from "@/components/ui/Button";
 import { VIBE_META } from "@/lib/vibes";
 import { DAY_KEYS } from "@/lib/types/database";
@@ -94,6 +94,7 @@ export function SpotDetailView({
     spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
   const [hero, ...rest] = photos;
   const [heroLightboxOpen, setHeroLightboxOpen] = useState(false);
+  const [hoursOpen, setHoursOpen] = useState(false);
   // Gates the reveal of everything below the hero photo — rather than
   // fading the whole page in on a timer, we wait for the actual image
   // `onLoad` and chain the rest of the page off of it (see Stagger's
@@ -169,7 +170,7 @@ export function SpotDetailView({
         onClick={onBack ?? goBack}
         aria-label={td("back")}
         style={{ top: (headerHeight ?? 56) + 16 }}
-        className="glass pill-lift sticky z-30 mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground"
+        className="glass pill-lift fixed left-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border text-foreground/70 shadow-[var(--shadow-sm)] hover:text-foreground sm:sticky sm:left-auto sm:mb-4"
       >
         <ChevronLeft size={20} />
       </button>
@@ -215,7 +216,7 @@ export function SpotDetailView({
       </AnimatePresence>
 
       <div className="mt-6 grid gap-8 lg:mt-10 lg:grid-cols-[1fr_360px]">
-        <Stagger className="space-y-8" show={heroLoaded} delay={0.15}>
+        <Stagger className="min-w-0 space-y-8" show={heroLoaded} delay={0.15}>
           <StaggerItem>
             {parentSpot && (
               <button
@@ -320,28 +321,66 @@ export function SpotDetailView({
                 "is it open right now", so the full 7-day table is detail
                 worth one tap to expand, not something everyone has to
                 scroll past to reach the map/contact info below. */}
-            <details className="group rounded-[var(--radius-card)] border border-border p-5 text-sm">
-              <summary className="font-heading flex cursor-pointer list-none items-center justify-between font-bold [&::-webkit-details-marker]:hidden">
+            <div className="rounded-[var(--radius-card)] border border-border p-5 text-sm">
+              <button
+                type="button"
+                onClick={() => setHoursOpen((open) => !open)}
+                aria-expanded={hoursOpen}
+                aria-controls="week-schedule-panel"
+                className="font-heading flex w-full items-center justify-between font-bold"
+              >
                 {th("weekSchedule")}
-                <ChevronDown
-                  size={16}
-                  className="text-foreground/40 transition-transform group-open:rotate-180"
-                />
-              </summary>
-              <ul className="mt-3 space-y-1.5">
-                {DAY_KEYS.map((day) => (
-                  <li key={day} className="flex justify-between gap-4">
-                    <span className="text-foreground/60">{th(`days.${day}`)}</span>
-                    <span className="font-medium">{formatDaySlots(spot[`hours_${day}`], locale)}</span>
-                  </li>
-                ))}
-              </ul>
-              {spot.hours_note && (
-                <p className="mt-3 border-t border-border pt-2 text-xs text-foreground/60">
-                  {th("note")}: {spot.hours_note}
-                </p>
-              )}
-            </details>
+                <motion.span
+                  animate={{ rotate: hoursOpen ? 180 : 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT }}
+                  className="text-foreground/40"
+                >
+                  <ChevronDown size={16} />
+                </motion.span>
+              </button>
+              <AnimatePresence initial={false}>
+                {hoursOpen && (
+                  <motion.div
+                    key="content"
+                    id="week-schedule-panel"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: 0.4, ease: EASE_OUT },
+                      opacity: { duration: 0.25, ease: EASE_OUT, delay: hoursOpen ? 0.05 : 0 },
+                    }}
+                    className="overflow-hidden"
+                  >
+                    <motion.ul
+                      variants={{ show: { transition: { staggerChildren: 0.03, delayChildren: 0.08 } } }}
+                      initial="hidden"
+                      animate="show"
+                      className="mt-3 space-y-1.5"
+                    >
+                      {DAY_KEYS.map((day) => (
+                        <motion.li
+                          key={day}
+                          variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+                          transition={{ duration: 0.25, ease: EASE_OUT }}
+                          className="flex justify-between gap-4"
+                        >
+                          <span className="text-foreground/60">{th(`days.${day}`)}</span>
+                          <span className="font-medium">
+                            {formatDaySlots(spot[`hours_${day}`], locale)}
+                          </span>
+                        </motion.li>
+                      ))}
+                    </motion.ul>
+                    {spot.hours_note && (
+                      <p className="mt-3 border-t border-border pt-2 text-xs text-foreground/60">
+                        {th("note")}: {spot.hours_note}
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </StaggerItem>
 
           <StaggerItem>
@@ -375,7 +414,12 @@ export function SpotDetailView({
         <aside className="h-fit lg:sticky lg:top-24">
           <Stagger className="space-y-4" show={heroLoaded} delay={0.15}>
             <StaggerItem>
-              <MiniMap name={spot.name} latitude={spot.latitude} longitude={spot.longitude} />
+              <MiniMap
+                name={spot.name}
+                latitude={spot.latitude}
+                longitude={spot.longitude}
+                onGetDirections={directions}
+              />
             </StaggerItem>
 
             <StaggerItem>

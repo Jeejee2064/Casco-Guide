@@ -91,6 +91,14 @@ export function EventDetailModal({
     window.open(event.booking_url!, "_blank");
   };
 
+  const directions = () => {
+    track("directions_click", { entity: "event", entity_id: event.id, entity_slug: event.slug });
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}`,
+      "_blank",
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -201,7 +209,12 @@ export function EventDetailModal({
               />
             )}
 
-            <MiniMap name={event.title} latitude={event.latitude} longitude={event.longitude} />
+            <MiniMap
+              name={event.title}
+              latitude={event.latitude}
+              longitude={event.longitude}
+              onGetDirections={directions}
+            />
 
             <div className="grid gap-2 text-sm">
               {event.address && (
@@ -260,21 +273,7 @@ export function EventDetailModal({
               <ExternalLink size={16} /> {t("book")}
             </Button>
           )}
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => {
-              track("directions_click", {
-                entity: "event",
-                entity_id: event.id,
-                entity_slug: event.slug,
-              });
-              window.open(
-                `https://www.google.com/maps/search/?api=1&query=${event.latitude},${event.longitude}`,
-                "_blank",
-              );
-            }}
-          >
+          <Button variant="outline" className="flex-1" onClick={directions}>
             <Navigation size={16} /> {tSpot("getDirections")}
           </Button>
           <ShareMenu

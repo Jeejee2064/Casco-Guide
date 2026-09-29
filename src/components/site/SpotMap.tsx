@@ -59,6 +59,14 @@ type MapMode = "spots" | "events";
 const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
 const DEFAULT_ZOOM = 15;
 
+// The historic core's pins sit within a couple hundred meters of
+// CASCO_VIEJO_CENTER. A pin outside that (e.g. the seafood market out on
+// Cinta Costera) is still within CASCO_VIEJO_BOUNDS and still gets a marker,
+// but letting it into the auto-fit bounds would dezoom the whole map just to
+// keep one distant pin on screen — so bounds-fitting ignores anything
+// farther than this from center and frames the core instead.
+const BOUNDS_FIT_RADIUS_KM = 0.6;
+
 // Gold marks a pin whose spot matches *more than one* of the currently
 // selected vibe chips — same warm gold as --color-gold/--night-gold in
 // globals.css (featured picks), reused here so "this spot is an
@@ -232,6 +240,7 @@ export function SpotMap({
   onSelectionChange,
   childrenBySpotId,
   initialDirectionsSpot = null,
+  interactive = true,
 }: {
   spots: Spot[];
   /** Optional — rendered as a second pin layer using the /public/icons badges. */
@@ -290,6 +299,12 @@ export function SpotMap({
    * Resolved once (see the effect below), so switching back to `null` later
    * doesn't re-trigger it. */
   initialDirectionsSpot?: Spot | null;
+  /** false locks the map in place — no drag/pinch/scroll-wheel pan or zoom,
+   * so a touch swipe starting over the map scrolls the page instead of
+   * panning it. Pins stay fully clickable/tappable either way (marker
+   * clicks are a separate DOM event, not gated by these handlers). Used by
+   * the article "Places mentioned" map so it doesn't trap mobile scroll. */
+  interactive?: boolean;
 }) {
   const tSpot = useTranslations("spot");
   const tCategory = useTranslations("category");
@@ -380,6 +395,14 @@ export function SpotMap({
   // mode is active; `route` lags behind it slightly while the first fix/path
   // is still being worked out (see `directionsStatus`).
   const [directionsTarget, setDirectionsTarget] = useState<Spot | null>(null);
+  // Mirrors `directionsTarget` for the spot-marker click handler below, which
+  // is bound once per marker (see the marker-creation effect) and would
+  // otherwise close over whatever `directionsTarget` was at creation time
+  // instead of its current value.
+  const directionsTargetRef = useRef<Spot | null>(null);
+  useEffect(() => {
+    directionsTargetRef.current = directionsTarget;
+  }, [directionsTarget]);
   const [userLatLng, setUserLatLng] = useState<{
     lat: number;
     lng: number;
@@ -892,6 +915,12 @@ export function SpotMap({
         maxBoundsViscosity: 0.6,
         zoomControl: false,
         attributionControl: false,
+        dragging: interactive,
+        touchZoom: interactive,
+        scrollWheelZoom: interactive,
+        doubleClickZoom: interactive,
+        boxZoom: interactive,
+        keyboard: interactive,
       });
       L.control.zoom({ position: "topright" }).addTo(map);
       L.control
@@ -950,6 +979,9 @@ export function SpotMap({
       spotMatchState.clear();
       spotSignatures.clear();
     };
+    // `interactive` is read once here by design — it's a static prop from
+    // the caller, not meant to toggle the map's pan/zoom handlers live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Clicking empty map (not a pin) dismisses the open panel/sheet, same as
@@ -1159,6 +1191,19 @@ export function SpotMap({
           const marker = L.marker([spot.latitude, spot.longitude], { icon });
           marker.on("click", () => {
             track("map_spot_click", { spot_id: spot.id, spot_slug: spot.slug });
+            // Itinerary mode active and this is a *different* spot than the
+            // one currently being routed to — re-arm directions for it
+            // instead of the normal select-and-open-panel behavior, so
+            // tapping another pin switches the walking route rather than
+            // doing nothing (see spot-pin-marker--dimmed in globals.css,
+            // which used to make every non-target pin unclickable here).
+            if (
+              directionsTargetRef.current &&
+              directionsTargetRef.current.id !== spot.id
+            ) {
+              startDirections(spot);
+              return;
+            }
             setSelectedEvent(null);
             setSelectedSpot(spot);
             revealSelection(spot.latitude, spot.longitude);
@@ -1196,7 +1241,12 @@ export function SpotMap({
           spotMarkersRef.current.set(spot.id, marker);
         }
 
-        bounds.push([spot.latitude, spot.longitude]);
+        if (
+          haversineKm(spot.latitude, spot.longitude, CASCO_VIEJO_CENTER[0], CASCO_VIEJO_CENTER[1]) <=
+          BOUNDS_FIT_RADIUS_KM
+        ) {
+          bounds.push([spot.latitude, spot.longitude]);
+        }
       });
 
       // Only steer the viewport if spots are the layer actually on screen —
@@ -1224,6 +1274,7 @@ export function SpotMap({
     isNight,
     childrenBySpotId,
     initialDirectionsSpot,
+    startDirections,
   ]);
 
   // Render event pins on their own layer, using the /public/icons badges.
@@ -1259,7 +1310,12 @@ export function SpotMap({
       const bounds: [number, number][] = [];
 
       filteredEvents.forEach((event) => {
-        bounds.push([event.latitude, event.longitude]);
+        if (
+          haversineKm(event.latitude, event.longitude, CASCO_VIEJO_CENTER[0], CASCO_VIEJO_CENTER[1]) <=
+          BOUNDS_FIT_RADIUS_KM
+        ) {
+          bounds.push([event.latitude, event.longitude]);
+        }
         if (eventMarkersRef.current.has(event.id)) return;
 
         const meta = EVENT_CATEGORY_META[event.category];
