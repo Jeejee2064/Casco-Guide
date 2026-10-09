@@ -22,7 +22,6 @@ export function ExploreMapCard() {
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-heading font-bold">{t("exploreMap")}</p>
-        <p className="text-sm text-foreground/60">{t("exploreMapSubtitle")}</p>
       </div>
       <ArrowRight size={18} className="shrink-0 text-foreground/40" />
     </Link>

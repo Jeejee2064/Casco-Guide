@@ -265,10 +265,11 @@ export function SpotDetailView({
                   return (
                     <span
                       key={v}
-                      className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-white shadow-sm"
+                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold leading-none text-white shadow-sm"
                       style={{ background: gradient }}
                     >
-                      <Icon size={12} /> {tVibe(v)}
+                      <Icon size={12} className="shrink-0" />
+                      <span>{tVibe(v)}</span>
                     </span>
                   );
                 })}

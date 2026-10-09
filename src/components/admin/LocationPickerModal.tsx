@@ -80,6 +80,14 @@ export function LocationPickerModal({
       if (cancelled || !containerRef.current) return;
 
       const map = L.map(containerRef.current, {
+        // Leaflet's SVG renderer only draws the viewport + 10% padding and
+        // redraws on moveend, so panning exposed blank edges. Extra
+        // padding (40%) keeps the basemap drawn ahead of the pan without making
+        // every zoom redraw a huge SVG (1.0 caused visible jank on zoom).
+        renderer: L.svg({ padding: 0.4 }),
+        // Mouse wheel: more pixels of scroll per zoom level = gentler zoom
+        // (Leaflet default is 60, which feels too fast).
+        wheelPxPerZoomLevel: 200,
         center: start,
         zoom: hasInitial ? 17 : 15,
         attributionControl: false,

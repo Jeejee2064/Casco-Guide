@@ -59,13 +59,13 @@ type MapMode = "spots" | "events";
 const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
 const DEFAULT_ZOOM = 15;
 
-// The historic core's pins sit within a couple hundred meters of
-// CASCO_VIEJO_CENTER. A pin outside that (e.g. the seafood market out on
-// Cinta Costera) is still within CASCO_VIEJO_BOUNDS and still gets a marker,
-// but letting it into the auto-fit bounds would dezoom the whole map just to
-// keep one distant pin on screen — so bounds-fitting ignores anything
-// farther than this from center and frames the core instead.
-const BOUNDS_FIT_RADIUS_KM = 0.6;
+// Fixed framing used on arrival: the whole Casco Viejo peninsula around its
+// center, independent of which pins are shown (so an outlier like the
+// Mercado de Mariscos can't pull the view).
+const CASCO_ARRIVAL_BOUNDS: [[number, number], [number, number]] = [
+  [8.9495, -79.5405],
+  [8.9565, -79.5295],
+];
 
 // Gold marks a pin whose spot matches *more than one* of the currently
 // selected vibe chips — same warm gold as --color-gold/--night-gold in
@@ -373,6 +373,7 @@ export function SpotMap({
   // pops in, just all at once, since a stagger only reads as "the map
   // finished loading" the first time, not on every subsequent filter change.
   const initialPinsRevealedRef = useRef(false);
+  const eventsFittedRef = useRef(false);
   // Serialized `activeVibes` from the last time the marker effect ran — a
   // change here means the user just picked/switched a vibe chip, so every
   // pin that matches *now* gets the bounce/halo even if it already matched
@@ -907,6 +908,14 @@ export function SpotMap({
       if (cancelled || !containerRef.current) return;
 
       const map = L.map(containerRef.current, {
+        // Leaflet's SVG renderer only draws the viewport + 10% padding and
+        // redraws on moveend, so panning exposed blank edges. Extra
+        // padding (40%) keeps the basemap drawn ahead of the pan without making
+        // every zoom redraw a huge SVG (1.0 caused visible jank on zoom).
+        renderer: L.svg({ padding: 0.4 }),
+        // Mouse wheel: more pixels of scroll per zoom level = gentler zoom
+        // (Leaflet default is 60, which feels too fast).
+        wheelPxPerZoomLevel: 200,
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
         minZoom: 14,
@@ -1110,7 +1119,6 @@ export function SpotMap({
       // destination + route instead.
       const skipInitialFlourish = isInitialReveal && initialDirectionsSpot != null;
 
-      const bounds: [number, number][] = [];
 
       filteredSpots.forEach((spot, index) => {
         // Neutral by default — "All", a classic category filter, or vibes
@@ -1241,23 +1249,13 @@ export function SpotMap({
           spotMarkersRef.current.set(spot.id, marker);
         }
 
-        if (
-          haversineKm(spot.latitude, spot.longitude, CASCO_VIEJO_CENTER[0], CASCO_VIEJO_CENTER[1]) <=
-          BOUNDS_FIT_RADIUS_KM
-        ) {
-          bounds.push([spot.latitude, spot.longitude]);
-        }
       });
 
-      // Only steer the viewport if spots are the layer actually on screen —
-      // otherwise switching filters in events mode would yank the map back.
-      // Also skipped on the direct-to-directions arrival (see
-      // skipInitialFlourish above) — the route-fit effect frames the
-      // destination + visitor far better than "every spot in Casco Viejo"
-      // would, and doing both back to back just reads as the view lurching
-      // twice in a row.
-      if (bounds.length > 0 && mode === "spots" && !skipInitialFlourish) {
-        mapRef.current?.fitBounds(bounds, { padding: [48, 48], maxZoom: 16 });
+      // Auto-zoom only on arrival — later filter/vibe changes must not move
+      // the view. Skipped on the direct-to-directions arrival, where the
+      // route-fit effect frames the destination instead.
+      if (isInitialReveal && mode === "spots" && !skipInitialFlourish) {
+        mapRef.current?.fitBounds(CASCO_ARRIVAL_BOUNDS, { padding: [24, 24] });
       }
     })();
 
@@ -1307,15 +1305,10 @@ export function SpotMap({
         }
       });
 
-      const bounds: [number, number][] = [];
+
+      const isFirstEventsReveal = !eventsFittedRef.current;
 
       filteredEvents.forEach((event) => {
-        if (
-          haversineKm(event.latitude, event.longitude, CASCO_VIEJO_CENTER[0], CASCO_VIEJO_CENTER[1]) <=
-          BOUNDS_FIT_RADIUS_KM
-        ) {
-          bounds.push([event.latitude, event.longitude]);
-        }
         if (eventMarkersRef.current.has(event.id)) return;
 
         const meta = EVENT_CATEGORY_META[event.category];
@@ -1347,10 +1340,10 @@ export function SpotMap({
         eventMarkersRef.current.set(event.id, marker);
       });
 
-      // Mirror the spot layer's behavior: only refit while events are the
-      // visible layer, so filtering spots elsewhere can't move this view.
-      if (bounds.length > 0 && mode === "events") {
-        mapRef.current?.fitBounds(bounds, { padding: [48, 48], maxZoom: 16 });
+      // Auto-zoom only the first time events are shown, not on filter changes.
+      if (mode === "events" && isFirstEventsReveal) {
+        eventsFittedRef.current = true;
+        mapRef.current?.fitBounds(CASCO_ARRIVAL_BOUNDS, { padding: [24, 24] });
       }
     })();
 

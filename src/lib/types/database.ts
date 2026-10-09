@@ -27,9 +27,9 @@ export type SpotVibe =
   | "rooftop_party"
   | "nomad_work"
   | "romantic_sunset"
-  | "local_heritage"
+  | "shopping_boutiques"
   | "gastro_trendy"
-  | "chill_coffee";
+  | "arts_culture";
 
 export type PriceRange = "$" | "$$" | "$$$" | "$$$$";
 export type ParkingType = "street" | "paid-lot" | "none";

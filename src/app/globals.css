@@ -1,4 +1,12 @@
 @import "tailwindcss";
+
+@font-face {
+  font-family: "Technova";
+  src: url("/technova/Technova.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 @plugin "@tailwindcss/typography";
 
 :root {
@@ -88,6 +96,7 @@
 
   --font-heading: var(--font-poppins);
   --font-sans: var(--font-inter);
+  --font-display: var(--font-instrument-serif);
 
   --radius-card: 20px;
   --radius-button: 12px;
@@ -669,6 +678,7 @@ html[data-night] .header-logotype {
 
 .spot-mini-popup__button {
   display: flex;
+  align-self: center;
   align-items: center;
   gap: 6px;
   border-radius: 999px;

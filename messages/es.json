@@ -60,17 +60,17 @@
     "rooftop_party": "Azoteas y Vida Nocturna",
     "nomad_work": "Trabajo y Café",
     "romantic_sunset": "Romántico y Atardecer",
-    "local_heritage": "Local y Auténtico",
+    "shopping_boutiques": "Shopping y Boutiques",
     "gastro_trendy": "Foodie y Gastro",
-    "chill_coffee": "Arte y Cultura"
+    "arts_culture": "Arte y Cultura"
   },
   "vibeDescriptors": {
     "rooftop_party": "Bares • Clubes • Energía nocturna",
     "nomad_work": "WiFi • Coworking • Tranquilo • Buen café",
     "romantic_sunset": "Velas • Vistas al atardecer • Propuestas",
-    "local_heritage": "Comida callejera • Panamá real • Sin turistas",
+    "shopping_boutiques": "Boutiques • Concept stores • Artesanía local",
     "gastro_trendy": "Alta cocina • Chefs • Culinario",
-    "chill_coffee": "Galerías • Museos • Música en vivo"
+    "arts_culture": "Galerías • Museos • Música en vivo"
   },
   "price": {
     "$": "Económico",
@@ -196,8 +196,7 @@
     "nearbySpots": "Lugares cercanos",
     "relatedSpots": "También te puede gustar",
     "relatedEvents": "Eventos relacionados",
-    "exploreMap": "Explora el mapa completo",
-    "exploreMapSubtitle": "Descubre todos los lugares y eventos de Casco Viejo"
+    "exploreMap": "Explora el mapa"
   },
   "gallery": {
     "viewAll": "Ver las {count} fotos",

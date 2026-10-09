@@ -100,7 +100,7 @@ export function SpotCard({
             have content, so every card in the grid comes out exactly the
             same height (bento-style), not just the ones that happen to
             have full copy. */}
-        <p className="hidden line-clamp-2 min-h-[2.5rem] text-sm text-foreground/70 sm:block">
+        <p className="hidden min-h-[2.5rem] text-sm text-foreground/70 sm:line-clamp-2">
           {spot.description}
         </p>
 

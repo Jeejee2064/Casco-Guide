@@ -69,35 +69,13 @@ export function SpotExplorer({
   // only starts shuffling once there's actually a switch to react to.
   const [freshnessSeed, setFreshnessSeed] = useState<number | null>(null);
 
-  // Brief opacity dip whenever the card order is about to visibly change —
-  // either the vibe reorder (a new vibe selected) or the Classic↔Vibes
-  // toggle itself (mode flip, even with "All" selected on both sides — see
-  // freshnessSeed above, and the sort switch below where it's consumed).
-  // The layout-position animation (StaggerItem's `layout` prop, already on
-  // every card) handles the actual reshuffle; this just adds the fade so it
-  // doesn't silently snap into place. Skipped on mount and on vibe -> null.
-  const [isReordering, setIsReordering] = useState(false);
-  // Sorted + joined so the comparison below is by content, not array
-  // identity — SpotsExplorerSection/MapExplorerSection can (and do) hand down a new array
-  // reference for the same set of vibes across renders.
-  const vibesKey = (vs: SpotVibe[]) => [...vs].sort().join(",");
-  const prevVibesKeyRef = useRef(vibesKey(activeVibes));
   const prevModeRef = useRef(mode);
   useEffect(() => {
-    const modeChanged = mode !== prevModeRef.current;
-    const currentKey = vibesKey(activeVibes);
-    const vibeChanged = activeVibes.length > 0 && currentKey !== prevVibesKeyRef.current;
-    if (modeChanged || vibeChanged) {
-      setIsReordering(true);
-      const timer = setTimeout(() => setIsReordering(false), 220);
-      if (modeChanged) setFreshnessSeed(Math.random());
-      prevVibesKeyRef.current = currentKey;
+    if (mode !== prevModeRef.current) {
       prevModeRef.current = mode;
-      return () => clearTimeout(timer);
+      setFreshnessSeed(Math.random());
     }
-    prevVibesKeyRef.current = currentKey;
-    prevModeRef.current = mode;
-  }, [activeVibes, mode]);
+  }, [mode]);
 
   const toggle = <T,>(list: T[], value: T, setter: (v: T[]) => void) =>
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -150,6 +128,20 @@ export function SpotExplorer({
   }, [spots, prices, openNow, sort, shuffleSeed, activeVibes, freshnessSeed]);
 
   const hasActiveFilters = prices.length > 0 || openNow;
+
+  // Identity of the current result set/order. When it changes (any filter,
+  // vibe, search, mode flip...) the grid is remounted under this key so the
+  // old cards vanish at once and the new ones stagger in one after another,
+  // and the page is scrolled back to the top so we never land mid-list.
+  const gridKey = useMemo(() => filtered.map((s) => s.id).join("|"), [filtered]);
+  const firstGridKey = useRef(true);
+  useEffect(() => {
+    if (firstGridKey.current) {
+      firstGridKey.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [gridKey]);
 
   // Truncate only the unfiltered, default list — once someone searches or
   // filters, show every match, since that's the result set they asked for.
@@ -245,34 +237,23 @@ export function SpotExplorer({
 
       {filtered.length > 0 ? (
         <>
-          {/* Opacity-only dip on vibe change — the actual reshuffle is the
-              layout-position animation each StaggerItem below already does
-              (`layout`), this just makes the reorder itself readable instead
-              of an instant snap. Independent of Stagger's own
-              variants/trigger, hence the separate wrapping motion.div. */}
-          <motion.div
-            animate={{ opacity: isReordering ? 0.3 : 1 }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
+          <Stagger
+            key={gridKey}
+            className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            amount={0.05}
           >
-            <Stagger
-              className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              amount={0.05}
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                {visibleSpots.map((spot) => (
-                  <StaggerItem key={spot.id} layout>
-                    <SpotCard
-                      spot={spot}
-                      activeVibes={activeVibes}
-                      onClick={() =>
-                        router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
-                      }
-                    />
-                  </StaggerItem>
-                ))}
-              </AnimatePresence>
-            </Stagger>
-          </motion.div>
+            {visibleSpots.map((spot) => (
+              <StaggerItem key={spot.id}>
+                <SpotCard
+                  spot={spot}
+                  activeVibes={activeVibes}
+                  onClick={() =>
+                    router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
+                  }
+                />
+              </StaggerItem>
+            ))}
+          </Stagger>
 
           {canCollapse && (
             <div className="mt-6 flex justify-center">

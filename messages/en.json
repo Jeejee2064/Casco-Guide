@@ -60,17 +60,17 @@
     "rooftop_party": "Rooftops & Nightlife",
     "nomad_work": "Work & Coffee",
     "romantic_sunset": "Romantic & Sunset",
-    "local_heritage": "Local & Authentic",
+    "shopping_boutiques": "Shopping & Boutiques",
     "gastro_trendy": "Foodie & Gastro",
-    "chill_coffee": "Arts & Culture"
+    "arts_culture": "Arts & Culture"
   },
   "vibeDescriptors": {
     "rooftop_party": "Bars • Clubs • Late-night energy",
     "nomad_work": "WiFi • Coworking • Quiet • Good coffee",
     "romantic_sunset": "Candlelit • Sunset views • Proposals",
-    "local_heritage": "Street food • Real Panama • No tourists",
+    "shopping_boutiques": "Boutiques • Concept stores • Local crafts",
     "gastro_trendy": "Fine dining • Chefs • Culinary",
-    "chill_coffee": "Galleries • Museums • Live music"
+    "arts_culture": "Galleries • Museums • Live music"
   },
   "price": {
     "$": "Budget",
@@ -196,8 +196,7 @@
     "nearbySpots": "Nearby spots",
     "relatedSpots": "You might also like",
     "relatedEvents": "Related events",
-    "exploreMap": "Explore the full map",
-    "exploreMapSubtitle": "See every spot & event around Casco Viejo"
+    "exploreMap": "Explore the map"
   },
   "gallery": {
     "viewAll": "View all {count} photos",
