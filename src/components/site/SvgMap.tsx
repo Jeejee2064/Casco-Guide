@@ -763,14 +763,18 @@ export const SvgMap = forwardRef<
         </div>
       )}
 
+      {/* Credit required by OpenStreetMap's ODbL licence (the basemap and
+          routing data come from OSM) — kept small, but always on the map. */}
       <a
         data-nodrag
         href="https://www.openstreetmap.org/copyright"
         target="_blank"
         rel="noreferrer"
-        className="absolute bottom-0 right-0 z-20 rounded-tl-md bg-surface/85 px-1.5 py-0.5 text-[10px] text-foreground"
+        aria-label="© OpenStreetMap contributors"
+        title="© OpenStreetMap contributors"
+        className="absolute bottom-0 right-0 z-20 rounded-tl-md bg-surface/60 px-1.5 py-px text-[9px] leading-tight text-foreground/60 hover:text-foreground"
       >
-        © OpenStreetMap contributors
+        © OSM
       </a>
     </div>
   );
