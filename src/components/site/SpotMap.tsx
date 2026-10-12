@@ -306,6 +306,7 @@ export function SpotMap({
   childrenBySpotId,
   initialDirectionsSpot = null,
   interactive = true,
+  onDirectionsChange,
 }: {
   spots: Spot[];
   /** Optional — rendered as a second pin layer using the /public/icons badges. */
@@ -370,6 +371,12 @@ export function SpotMap({
    * clicks are a separate DOM event, not gated by these handlers). Used by
    * the article "Places mentioned" map so it doesn't trap mobile scroll. */
   interactive?: boolean;
+  /** Fires when itinerary mode starts (true) or ends (false) — lets a parent
+   * hide its own floating UI (the explore filters) that would otherwise sit
+   * on top of the directions panel. Only called on real transitions, never
+   * on mount, so a parent can seed its own initial state from
+   * `initialDirectionsSpot` without a flash. */
+  onDirectionsChange?: (active: boolean) => void;
 }) {
   const tSpot = useTranslations("spot");
   const tCategory = useTranslations("category");
@@ -479,6 +486,16 @@ export function SpotMap({
   // visitor is free to pan/zoom while walking without the map fighting them
   // back into place on every position update.
   const routeFitDoneRef = useRef(false);
+
+  // Reports itinerary mode starting/ending to the parent — transitions only,
+  // so mounting (not in directions) tells it nothing.
+  const directionsReportedRef = useRef(false);
+  useEffect(() => {
+    const active = directionsTarget != null;
+    if (active === directionsReportedRef.current) return;
+    directionsReportedRef.current = active;
+    onDirectionsChange?.(active);
+  }, [directionsTarget, onDirectionsChange]);
 
   const upsertMeMarker = useCallback(
     (lat: number, lng: number, live: boolean) => setMeDot({ lat, lng, live }),

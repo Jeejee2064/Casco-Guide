@@ -132,6 +132,10 @@ function MapExplorerContent({
   // on the filter bar's bottom shelf can ever put it above that sheet, so
   // hiding the shelf while a pin is selected is the actual fix.
   const [hasSelection, setHasSelection] = useState(false);
+  // Itinerary mode takes over the screen (DirectionsPanel sits where the
+  // filters do), so the filters step aside for it. Seeded from the deep link
+  // so arriving via "Get directions" never flashes them first.
+  const [inDirections, setInDirections] = useState(initialDirectionsSpot != null);
 
   return (
     <div>
@@ -140,6 +144,7 @@ function MapExplorerContent({
         fixed
         autoOpenVibesModal={autoOpenVibesModal}
         hideFloatingBottomBar={hasSelection}
+        hideFilters={inDirections}
       />
       <SpotMap
         spots={filteredSpots}
@@ -150,6 +155,7 @@ function MapExplorerContent({
         childrenBySpotId={childrenByParent}
         initialDirectionsSpot={initialDirectionsSpot}
         onSelectionChange={setHasSelection}
+        onDirectionsChange={setInDirections}
       />
     </div>
   );

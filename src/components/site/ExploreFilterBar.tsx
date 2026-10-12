@@ -65,6 +65,7 @@ export function ExploreFilterBar({
   fixed = false,
   autoOpenVibesModal = false,
   hideFloatingBottomBar = false,
+  hideFilters = false,
 }: {
   /** Full, unfiltered spot list — powers the search input's autocomplete
    * dropdown (name/vibe/tag matches, regardless of the current category/
@@ -89,6 +90,12 @@ export function ExploreFilterBar({
    * the node, and so it can fade back in as the sheet slides back down
    * instead of popping back in already-open. */
   hideFloatingBottomBar?: boolean;
+  /** Hides the whole bar — search on top, mode toggle and chips at the
+   * bottom — while SpotMap's itinerary mode owns the screen (its directions
+   * panel sits in the same corner). Stays mounted (display:none up top, the
+   * same slide-out as above at the bottom) so filter state, search text and
+   * SpotMap's measurements of both survive and it comes straight back. */
+  hideFilters?: boolean;
 }) {
   const t = useTranslations("filters");
   const tSite = useTranslations("site");
@@ -562,6 +569,7 @@ export function ExploreFilterBar({
         data-explore-filter-bar
         className={cn(
           "inset-x-0 z-40 space-y-3 px-4 py-3 sm:px-6",
+          hideFilters && "hidden",
           fixed
             ? // /map: no panel background at all — the map fills the entire
               // strip below the header, and this bar is just a transparent
@@ -793,7 +801,9 @@ export function ExploreFilterBar({
           data-explore-filter-bottom-bar
           initial={false}
           animate={
-            hideFloatingBottomBar ? { opacity: 0, y: 40 } : { opacity: 1, y: 0 }
+            hideFloatingBottomBar || hideFilters
+              ? { opacity: 0, y: 40 }
+              : { opacity: 1, y: 0 }
           }
           transition={{ duration: 0.28, ease: EASE_OUT }}
           className={cn(
@@ -802,7 +812,7 @@ export function ExploreFilterBar({
             // MapDetailPanel) — the two swap places in one motion: this
             // shelf fades/slides down out of the way as the sheet slides up
             // over it, and the reverse on close.
-            hideFloatingBottomBar && "pointer-events-none",
+            (hideFloatingBottomBar || hideFilters) && "pointer-events-none",
           )}
         >
           {renderModeToggle(true)}
