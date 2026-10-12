@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { formatDistance, walkingMinutes } from "@/lib/geo";
 import type { RouteStep, RouteStepKind } from "@/lib/routing";
+import { cn } from "@/lib/utils";
 
 export type DirectionsStatus = "locating" | "routing" | "ready" | "error";
 
@@ -87,30 +88,54 @@ function StepsList({
   tMap: (key: string, values?: Record<string, string>) => string;
 }) {
   return (
-    <ol className="max-h-48 space-y-2.5 overflow-y-auto text-sm">
-      {steps.map((step, i) => {
-        const Icon = STEP_ICONS[step.kind];
-        return (
-          // Index as key: steps are a fixed, ordered breakdown of one
-          // route, never reordered/filtered — nothing else uniquely
-          // identifies one over another.
-          <li key={i} className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground/5 text-foreground/60">
-              <Icon size={13} />
-            </span>
-            <span className="min-w-0 flex-1">
-              {stepInstruction(step, tMap)}
-              {step.distanceKm > 0.01 && (
-                <span className="text-foreground/45">
-                  {" "}
-                  · {formatDistance(step.distanceKm)}
-                </span>
+    <ol className="max-h-48 space-y-1 overflow-y-auto text-sm">
+      {/* The route is recomputed from the visitor's position as they walk
+          (see SpotMap's ROUTE_REFRESH_KM), so the first step is always the
+          one they're on — highlighted — and steps already behind them simply
+          drop off the top. Keyed by street (+ nth time it appears) rather
+          than by index, so a step stays the same element as the list
+          shifts up and only the finished ones animate out. */}
+      <AnimatePresence initial={false}>
+        {steps.map((step, i) => {
+          const Icon = STEP_ICONS[step.kind];
+          const current = i === 0;
+          const label = step.streetName ?? step.kind;
+          const nth = steps.slice(0, i).filter((s) => (s.streetName ?? s.kind) === label).length;
+          return (
+            <motion.li
+              key={`${label}#${nth}`}
+              layout="position"
+              initial={false}
+              exit={{ opacity: 0, height: 0, marginTop: 0, paddingTop: 0, paddingBottom: 0 }}
+              transition={{ duration: 0.25, ease: EASE_OUT }}
+              className={cn(
+                "flex items-start gap-2.5 overflow-hidden rounded-xl px-1.5 py-1.5 transition-colors",
+                current && "bg-aqua/10 font-semibold",
               )}
-            </span>
-          </li>
-        );
-      })}
-      <li className="flex items-start gap-2.5 font-semibold">
+              aria-current={current ? "step" : undefined}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                  current ? "bg-aqua text-white" : "bg-foreground/5 text-foreground/60",
+                )}
+              >
+                <Icon size={13} />
+              </span>
+              <span className="min-w-0 flex-1">
+                {stepInstruction(step, tMap)}
+                {step.distanceKm > 0.01 && (
+                  <span className="font-normal text-foreground/45">
+                    {" "}
+                    · {formatDistance(step.distanceKm)}
+                  </span>
+                )}
+              </span>
+            </motion.li>
+          );
+        })}
+      </AnimatePresence>
+      <li className="flex items-start gap-2.5 px-1.5 py-1.5 font-semibold">
         <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-lime/15 text-lime-readable">
           <Flag size={13} />
         </span>

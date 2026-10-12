@@ -63,6 +63,12 @@ const CASCO_ARRIVAL_BOUNDS: [[number, number], [number, number]] = [
 const MULTI_VIBE_COLOR = "#d4a24c";
 const MULTI_VIBE_COLOR_NIGHT = "#ffcf6b";
 
+// How far (km) the visitor has to walk before the route is recomputed from
+// their new position — every recompute drops the steps already behind them,
+// so this is also how often the step list visibly advances. ~7m is above
+// typical high-accuracy GPS jitter, so a standing-still dot doesn't churn.
+const ROUTE_REFRESH_KM = 0.007;
+
 // Default pin tone whenever nothing singles a spot out — "All"/a classic
 // category filter, or vibes mode with no chip picked yet. Same brand blue as
 // the rest of the site's chrome (--color-aqua, globals.css — the mode toggle
@@ -644,7 +650,7 @@ export function SpotMap({
     if (
       last &&
       last.targetId === directionsTarget.id &&
-      haversineKm(last.lat, last.lng, userLatLng.lat, userLatLng.lng) < 0.015
+      haversineKm(last.lat, last.lng, userLatLng.lat, userLatLng.lng) < ROUTE_REFRESH_KM
     ) {
       return;
     }
