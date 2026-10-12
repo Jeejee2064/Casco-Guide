@@ -1,45 +1,27 @@
 import { getTranslations } from "next-intl/server";
-import { MapIcon, ArrowRight } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { MapTeaserCanvas } from "./MapTeaserCanvas";
+import type { Spot } from "@/lib/types/database";
 
 /**
- * Homepage teaser into /map — just a static image of the map (pre-rendered
- * from the basemap geojson into /map/preview.svg) linking to the real map
- * page, so the homepage doesn't load Leaflet or any of SpotMap's code.
+ * Homepage teaser into /map — the real map, read-only and framed on every
+ * pin, with one big button in the middle linking to the full page. The map
+ * itself is a client island that only loads when the section nears the
+ * viewport (see MapTeaserCanvas), so the homepage stays light.
  */
-export async function MapTeaserSection() {
+export async function MapTeaserSection({ spots }: { spots: Spot[] }) {
   const t = await getTranslations("home.mapTeaser");
   const tDiscover = await getTranslations("discover");
+
+  const points = spots
+    .filter((s) => s.latitude != null && s.longitude != null)
+    .map((s) => ({ id: s.id, lat: s.latitude, lng: s.longitude }));
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <h2 className="font-heading mb-6 text-2xl font-extrabold sm:text-3xl">{t("title")}</h2>
-      <Link
-        href="/map"
-        className="card-lift group relative block h-[400px] overflow-hidden rounded-[var(--radius-card)] border border-border sm:h-[480px]"
-      >
-        {/* eslint-disable @next/next/no-img-element */}
-        <img
-          src="/map/preview.svg"
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-cover [html[data-night]_&]:hidden"
-        />
-        <img
-          src="/map/preview-night.svg"
-          alt=""
-          loading="lazy"
-          className="hidden h-full w-full object-cover [html[data-night]_&]:block"
-        />
-        {/* eslint-enable @next/next/no-img-element */}
-        <span className="absolute inset-x-4 bottom-4 flex items-center gap-3 rounded-[var(--radius-card)] bg-surface/95 p-4 shadow-lg backdrop-blur">
-          <span className="brand-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white">
-            <MapIcon size={20} />
-          </span>
-          <span className="font-heading min-w-0 flex-1 font-bold">{tDiscover("exploreMap")}</span>
-          <ArrowRight size={18} className="shrink-0 text-foreground/40" />
-        </span>
-      </Link>
+      <div className="card-lift group relative h-[400px] overflow-hidden rounded-[var(--radius-card)] border border-border sm:h-[480px]">
+        <MapTeaserCanvas points={points} label={tDiscover("exploreMap")} />
+      </div>
     </section>
   );
 }

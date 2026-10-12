@@ -65,6 +65,12 @@ export default async function HomePage({
           <LatestGuidesSection articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
         </div>
 
+        {/* The map right under the guides — the other big "start exploring"
+            door, with every spot already pinned on it. */}
+        <div className="border-t border-border">
+          <MapTeaserSection spots={spots} />
+        </div>
+
         {/* Content-forward homepage: history/context, then a teaser into
             each of the three real ways to browse (grid, map, vibes) — the
             grid and map themselves moved out to their own /spots and /map
@@ -79,10 +85,6 @@ export default async function HomePage({
             spots={featuredFirst.slice(0, FEATURED_SPOTS_COUNT)}
             totalCount={spots.length}
           />
-        </div>
-
-        <div className="border-t border-border">
-          <MapTeaserSection />
         </div>
 
         <AboutIntro />
