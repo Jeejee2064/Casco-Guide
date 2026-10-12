@@ -216,7 +216,7 @@ export function SpotDetailView({
       </AnimatePresence>
 
       <div className="mt-6 grid gap-8 lg:mt-10 lg:grid-cols-[1fr_360px]">
-        <Stagger className="min-w-0 space-y-8" show={heroLoaded} delay={0.15}>
+        <Stagger className="min-w-0 space-y-8 lg:col-start-1 lg:row-start-1" show={heroLoaded} delay={0.15}>
           <StaggerItem>
             {parentSpot && (
               <button
@@ -412,7 +412,21 @@ export function SpotDetailView({
           </StaggerItem>
         </Stagger>
 
-        <aside className="h-fit lg:sticky lg:top-24">
+        {/* Between the story and the sidebar map in DOM order, so on mobile
+            (single column) the gallery comes before the map. On desktop the
+            explicit grid placement keeps it full-width under both columns. */}
+        {rest.length > 0 && (
+          <Stagger className="min-w-0 lg:col-span-2 lg:row-start-2 lg:mt-6">
+            <StaggerItem>
+              <h2 className="font-heading mb-3 text-xl font-bold">{td("gallery")}</h2>
+            </StaggerItem>
+            <StaggerItem>
+              <PhotoGallery photos={rest} alt={spot.name} />
+            </StaggerItem>
+          </Stagger>
+        )}
+
+        <aside className="h-fit lg:col-start-2 lg:row-start-1 lg:sticky lg:top-24">
           <Stagger className="space-y-4" show={heroLoaded} delay={0.15}>
             <StaggerItem>
               <MiniMap
@@ -463,17 +477,6 @@ export function SpotDetailView({
           </Stagger>
         </aside>
       </div>
-
-      {rest.length > 0 && (
-        <Stagger className="mt-10 lg:mt-14">
-          <StaggerItem>
-            <h2 className="font-heading mb-3 text-xl font-bold">{td("gallery")}</h2>
-          </StaggerItem>
-          <StaggerItem>
-            <PhotoGallery photos={rest} alt={spot.name} />
-          </StaggerItem>
-        </Stagger>
-      )}
 
       {articles.length > 0 && (
         <div className="mt-10 lg:mt-14">
