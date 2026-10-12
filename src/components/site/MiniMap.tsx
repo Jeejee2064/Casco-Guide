@@ -1,14 +1,14 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
-import { useEffect, useRef, useState } from "react";
-import type { CircleMarker, Map as LeafletMap, Marker as LeafletMarker, Polyline } from "leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Ruler } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useNightMode } from "./NightModeContext";
-import { addCascoBasemap, isWithinCascoViejo, type CascoBasemap } from "@/lib/cascoMap";
+import { SvgMap, type HtmlPin, type SvgMapHandle, type SvgPin } from "./SvgMap";
+import { isWithinCascoViejo } from "@/lib/cascoMap";
 import { cn } from "@/lib/utils";
 import { formatDistance, haversineKm, walkingMinutes } from "@/lib/geo";
+import { project, latLngsToPath, zoomToScale } from "@/lib/svgMap/projection";
 import { getLastKnownUserLocation, subscribeUserLocation } from "@/lib/userLocation";
 
 // --color-aqua — same fixed blue as ItineraryMap's ROUTE_COLOR/pins, kept
@@ -42,34 +42,21 @@ export function MiniMap({
   const tMap = useTranslations("map");
   const tSpot = useTranslations("spot");
   const { isNight } = useNightMode();
-  const [ready, setReady] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
     () => getLastKnownUserLocation(),
   );
+  const [popupOpen, setPopupOpen] = useState(false);
+  const mapRef = useRef<SvgMapHandle | null>(null);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const basemapRef = useRef<CascoBasemap | null>(null);
-  const spotMarkerRef = useRef<LeafletMarker | null>(null);
-  const meMarkerRef = useRef<CircleMarker | null>(null);
-  const lineRef = useRef<Polyline | null>(null);
-
-  // Mirrors SpotMap's isNightRef — the init effect below only runs once
-  // (mount), so it needs a live read of the latest `isNight` at that
-  // instant rather than whatever it closed over at first render.
-  const isNightRef = useRef(isNight);
+  // Same dark check the Leaflet version made: Night Mode or the OS scheme.
+  const [prefersDark, setPrefersDark] = useState(false);
   useEffect(() => {
-    isNightRef.current = isNight;
-  }, [isNight]);
-
-  // Same live-ref treatment: the popup's button (built once, in the init
-  // effect below) closes over this ref rather than the prop directly, so a
-  // parent re-render that hands down a new `onGetDirections` identity (none
-  // of the four callers memoize it) still reaches the latest handler.
-  const onGetDirectionsRef = useRef(onGetDirections);
-  useEffect(() => {
-    onGetDirectionsRef.current = onGetDirections;
-  }, [onGetDirections]);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => setPrefersDark(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   // Never asks for geolocation itself — only "Get Directions" should trigger
   // that permission prompt. This just picks up whatever fix that flow has
@@ -90,145 +77,98 @@ export function MiniMap({
       ? userLocation
       : null;
 
-  // Init the map once, client-side only.
+  const spotWorld = useMemo(() => project(latitude, longitude), [latitude, longitude]);
+
+  // Frame the spot alone, or — once we know where the visitor is — both
+  // points. `nearbyUserLocation` is a new object per location event, so key
+  // the effect on its coordinates.
+  // Extra headroom on top so the pin's popup (which opens above it) fits
+  // inside the 200px box instead of being clipped.
+  const userLat = nearbyUserLocation?.lat;
+  const userLng = nearbyUserLocation?.lng;
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !containerRef.current) return;
-
-      const map = L.map(containerRef.current, {
-        center: [latitude, longitude],
-        zoom: 15,
-        zoomControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        touchZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        attributionControl: false,
+    if (userLat == null || userLng == null) {
+      mapRef.current?.fitBounds([...spotWorld, ...spotWorld], {
+        padding: { top: 70, right: 0, bottom: 0, left: 0 },
+        maxScale: zoomToScale(15),
       });
+      return;
+    }
+    const me = project(userLat, userLng);
+    mapRef.current?.fitBounds(
+      [
+        Math.min(me[0], spotWorld[0]),
+        Math.min(me[1], spotWorld[1]),
+        Math.max(me[0], spotWorld[0]),
+        Math.max(me[1], spotWorld[1]),
+      ],
+      {
+        padding: { top: 70, right: 28, bottom: 28, left: 28 },
+        maxScale: zoomToScale(16),
+      },
+    );
+  }, [userLat, userLng, spotWorld]);
 
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      const basemap = await addCascoBasemap(L, map, isNightRef.current || prefersDark);
-      // A second await (the basemap's own GeoJSON fetch) — re-check in case
-      // this MiniMap unmounted while it was in flight.
-      if (cancelled) {
-        basemap.destroy();
-        map.remove();
-        return;
-      }
-      basemapRef.current = basemap;
+  const spotPin: HtmlPin = {
+    id: "spot",
+    x: spotWorld[0],
+    y: spotWorld[1],
+    width: 26,
+    height: 26,
+    anchor: [13, 26],
+    className: "spot-pin-marker",
+    label: name,
+    onSelect: () => setPopupOpen((open) => !open),
+    node: (
+      <>
+        <span className="spot-pin" style={{ background: PIN_COLOR }} />
+        {popupOpen && (
+          <div
+            className="spot-mini-popup-card"
+            // Clicking inside the popup mustn't bubble to the pin's own
+            // toggle-on-click.
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="spot-mini-popup">
+              <p className="spot-mini-popup__title">{name}</p>
+              {onGetDirections && (
+                <button
+                  type="button"
+                  className="spot-mini-popup__button"
+                  onClick={onGetDirections}
+                >
+                  {tSpot("getDirections")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    ),
+  };
 
-      const icon = L.divIcon({
-        className: "spot-pin-marker",
-        html: `<span class="spot-pin" style="background:${PIN_COLOR}"></span>`,
-        iconSize: [26, 26],
-        iconAnchor: [13, 26],
-      });
-      const marker = L.marker([latitude, longitude], { icon }).addTo(map);
+  const mePin: SvgPin | null = nearbyUserLocation
+    ? (() => {
+        const [x, y] = project(nearbyUserLocation.lat, nearbyUserLocation.lng);
+        return {
+          id: "me",
+          x,
+          y,
+          label: tMap("youAreHere"),
+          onSelect: () => {},
+          node: (
+            <circle r={7} fill="#1f6f6b" stroke="#ffffff" strokeWidth={2} />
+          ),
+        };
+      })()
+    : null;
 
-      // Built once from plain DOM nodes (not an HTML string) so the button
-      // gets a real click listener instead of a fragile inline `onclick=`
-      // attribute — Leaflet just wants an Element/string for popup content,
-      // either works, but this way `name` (user-authored spot data) also
-      // never needs to pass through innerHTML.
-      const content = document.createElement("div");
-      content.className = "spot-mini-popup";
-      const title = document.createElement("p");
-      title.className = "spot-mini-popup__title";
-      title.textContent = name;
-      content.appendChild(title);
-      if (onGetDirectionsRef.current) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "spot-mini-popup__button";
-        button.textContent = tSpot("getDirections");
-        L.DomEvent.on(button, "click", (e) => {
-          L.DomEvent.stop(e);
-          onGetDirectionsRef.current?.();
-        });
-        content.appendChild(button);
-      }
-      marker.bindPopup(content, { closeButton: false, offset: [0, -6] });
-
-      spotMarkerRef.current = marker;
-
-      mapRef.current = map;
-      setReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-      mapRef.current?.remove();
-      mapRef.current = null;
-      basemapRef.current = null;
-      spotMarkerRef.current = null;
-      meMarkerRef.current = null;
-      lineRef.current = null;
-    };
-    // The map is created once for this spot/event; a different one gets a
-    // fresh MiniMap instance (key'd by the caller), not a re-init here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Swaps the basemap's colors live if Night Mode is toggled after mount —
-  // the init effect above only reads isNight once, at creation.
-  useEffect(() => {
-    if (!ready) return;
-    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    basemapRef.current?.setDark(isNight || prefersDark);
-  }, [ready, isNight]);
-
-  // Once we know where the user is, drop their pin, draw the line, and fit
-  // the map to both points.
-  useEffect(() => {
-    if (!ready || !mapRef.current || !nearbyUserLocation) return;
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !mapRef.current) return;
-      const map = mapRef.current;
-      const points: [number, number][] = [
+  const linePath = nearbyUserLocation
+    ? latLngsToPath([
         [nearbyUserLocation.lat, nearbyUserLocation.lng],
         [latitude, longitude],
-      ];
-
-      if (meMarkerRef.current) {
-        meMarkerRef.current.setLatLng(points[0]);
-      } else {
-        meMarkerRef.current = L.circleMarker(points[0], {
-          radius: 7,
-          color: "#ffffff",
-          weight: 2,
-          fillColor: "#1f6f6b",
-          fillOpacity: 1,
-        })
-          .bindTooltip(tMap("youAreHere"))
-          .addTo(map);
-      }
-
-      if (lineRef.current) {
-        lineRef.current.setLatLngs(points);
-      } else {
-        lineRef.current = L.polyline(points, {
-          color: "#b5573a",
-          weight: 2,
-          opacity: 0.8,
-          dashArray: "5, 6",
-        }).addTo(map);
-      }
-
-      map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 16 });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, nearbyUserLocation, latitude, longitude, tMap]);
+      ])
+    : null;
 
   // Only real once we have the visitor's position *and* it's inside Casco
   // Viejo (see nearbyUserLocation above) — no fallback center, and no
@@ -240,10 +180,28 @@ export function MiniMap({
 
   return (
     <div className={cn("space-y-2.5", className)}>
-      <div
-        ref={containerRef}
-        className="h-[200px] w-full overflow-hidden rounded-[var(--radius-card)] border border-border"
-      />
+      <SvgMap
+        ref={mapRef}
+        dark={isNight || prefersDark}
+        interactive={false}
+        controls={false}
+        htmlPins={[spotPin]}
+        pins={mePin ? [mePin] : []}
+        onBackgroundClick={() => setPopupOpen(false)}
+        className="h-[200px] w-full rounded-[var(--radius-card)] border border-border"
+      >
+        {linePath && (
+          <path
+            className="svgmap-line"
+            d={linePath}
+            fill="none"
+            stroke="#b5573a"
+            strokeOpacity={0.8}
+            strokeWidth={2}
+            strokeDasharray="5 6"
+          />
+        )}
+      </SvgMap>
       {distanceKm != null && (
         <div
           className={cn(

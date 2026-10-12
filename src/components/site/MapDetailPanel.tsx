@@ -141,19 +141,10 @@ export function MapDetailPanel({
         )}
       </AnimatePresence>
 
-      {/* Mobile — dimmed backdrop behind the sheet, tap to dismiss. */}
-      <AnimatePresence>
-        {content && (
-          <motion.div
-            key="map-sheet-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-[1240] bg-black/30 backdrop-blur-[2px] md:hidden"
-          />
-        )}
-      </AnimatePresence>
+      {/* Mobile — deliberately no backdrop: no dimming, no blur. The map stays
+          fully visible and live above the sheet so the selected pin (see
+          SpotMap's revealSelection, which keeps it clear of the sheet) is
+          readable next to the info it belongs to. Tapping the map dismisses. */}
 
       {/* Mobile — bottom sheet, viewport-anchored (not scoped to the map
           box) so it comes up from the true bottom of the screen. */}
@@ -181,7 +172,7 @@ export function MapDetailPanel({
               }
             }}
             className={cn(
-              "map-detail-panel safe-bottom fixed inset-x-0 bottom-0 z-[1250] flex max-h-[75vh] flex-col overflow-hidden rounded-t-[var(--radius-card)] border-t border-border bg-surface shadow-2xl outline-none md:hidden",
+              "map-detail-panel safe-bottom fixed inset-x-0 bottom-0 z-[1250] flex max-h-[55vh] flex-col overflow-hidden rounded-t-[var(--radius-card)] border-t border-border bg-surface shadow-2xl outline-none md:hidden",
               content.featuredLabel && "map-detail-panel--featured",
             )}
           >
@@ -291,12 +282,11 @@ function PanelBody({
             ))}
           </ul>
         )}
-        {/* Address/date (subtitle) and the fuller description read fine on
-            the roomier desktop side panel, but on the mobile sheet they're
-            exactly what used to push the close button out of view — mobile
-            keeps only the title, the status-style meta line below,
-            and the Read more action; the rest is one tap away on the full
-            page instead of duplicated here. */}
+        {/* Address/date (subtitle) read fine on the roomier desktop side
+            panel, but on the mobile sheet they used to push the close button
+            out of view — mobile keeps the title, the status-style meta line,
+            a three-line description teaser and the actions; the rest is one tap
+            away on the full page. */}
         {!compact && content.subtitle && (
           <p className="hidden text-sm text-foreground/60 md:block">{content.subtitle}</p>
         )}
@@ -314,7 +304,10 @@ function PanelBody({
           </div>
         )}
         {!compact && content.description && (
-          <p className="hidden text-sm leading-relaxed text-foreground/70 md:block">{content.description}</p>
+          // Mobile: clamped to three lines with an ellipsis; desktop shows it all.
+          <p className="line-clamp-3 text-sm leading-relaxed text-foreground/70 md:line-clamp-none">
+            {content.description}
+          </p>
         )}
 
         <div className={cn("flex gap-2 pt-1", !compact && content.description && "md:pt-3")}>

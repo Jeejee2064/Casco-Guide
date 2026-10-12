@@ -1,14 +1,7 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import type {
-  LayerGroup,
-  Map as LeafletMap,
-  Marker as LeafletMarker,
-  Polyline as LeafletPolyline,
-} from "leaflet";
 import { useLocale, useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
@@ -26,6 +19,7 @@ import { MapDetailPanel, type DetailPanelContent } from "./MapDetailPanel";
 import { DirectionsPanel, type DirectionsStatus } from "./DirectionsPanel";
 import { useHeaderHeight } from "./useHeaderHeight";
 import { useNightMode } from "./NightModeContext";
+import { SvgMap, type HtmlPin, type SvgMapHandle } from "./SvgMap";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META } from "@/lib/categories";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
@@ -35,14 +29,11 @@ import { formatTime, getHoursStatus } from "@/lib/hours";
 import { haversineKm } from "@/lib/geo";
 import { routeBetween, type Route } from "@/lib/routing";
 import {
-  addCascoBasemap,
-  CASCO_VIEJO_ATTRIBUTION,
-  CASCO_VIEJO_BOUNDS,
   CASCO_VIEJO_CENTER,
   CASCO_VIEJO_ENTRY_POINT,
   isWithinCascoViejo,
-  type CascoBasemap,
 } from "@/lib/cascoMap";
+import { latLngsToPath, project, zoomToScale } from "@/lib/svgMap/projection";
 import { setLastKnownUserLocation } from "@/lib/userLocation";
 import type {
   EventRow,
@@ -54,10 +45,6 @@ import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 
 type MapMode = "spots" | "events";
-
-// Casco Viejo, Panama City — used when there's nothing to fit bounds to.
-const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
-const DEFAULT_ZOOM = 15;
 
 // Fixed framing used on arrival: the whole Casco Viejo peninsula around its
 // center, independent of which pins are shown (so an outlier like the
@@ -110,8 +97,7 @@ const MAP_REVEAL_VARIANTS = {
   visible: { opacity: 1, scale: 1 },
 };
 
-/** Shape data for a Lucide glyph, minimal enough to stamp into an HTML
- * string — Leaflet's marker/popup APIs take raw HTML, not React nodes. */
+/** Shape data for a Lucide glyph, drawn by ShapeIcon below. */
 type IconShape =
   | { d: string }
   | { cx: string; cy: string; r: string }
@@ -183,48 +169,127 @@ const CATEGORY_ICON_SHAPES: Record<SpotCategory, IconShape[]> = {
   ],
 };
 
-/** Renders 24x24 stroke-based Lucide shape data to an inline SVG string, for
- * use inside Leaflet's HTML-string marker/popup APIs. */
-function iconSvg(shapes: IconShape[], size = 15): string {
-  const body = shapes
-    .map((s) => {
-      if ("d" in s) return `<path d="${s.d}"/>`;
-      if ("cx" in s)
-        return `<circle cx="${s.cx}" cy="${s.cy}" r="${s.r}" fill="currentColor"/>`;
-      return `<rect x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" rx="${s.rx}"/>`;
-    })
-    .join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
+/** Renders 24x24 stroke-based Lucide shape data as an inline SVG, so map
+ * pins use the same glyphs as the rest of the UI instead of an emoji. */
+function ShapeIcon({ shapes, size = 15 }: { shapes: IconShape[]; size?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {shapes.map((sh, i) => {
+        if ("d" in sh) return <path key={i} d={sh.d} />;
+        if ("cx" in sh)
+          return <circle key={i} cx={sh.cx} cy={sh.cy} r={sh.r} fill="currentColor" />;
+        return (
+          <rect key={i} x={sh.x} y={sh.y} width={sh.width} height={sh.height} rx={sh.rx} />
+        );
+      })}
+    </svg>
+  );
 }
 
-function pinHtml(
-  color: string,
-  shapes: IconShape[],
-  featured: boolean,
-  childCount = 0,
-): string {
-  // `color` (not just `background`) is set here so Night Mode's glow rule
-  // (globals.css) can pick it up via `currentColor` — one box-shadow rule
-  // then matches whichever category/vibe a pin belongs to, no per-category CSS.
-  return `
-    <span class="spot-pin" style="background:${color};color:${color}">
-      <span class="spot-pin__icon">${iconSvg(shapes)}</span>
-      ${featured ? '<span class="spot-pin__star">★</span>' : ""}
-      ${childCount > 0 ? `<span class="spot-pin__count">${childCount}</span>` : ""}
+/** One spot's pin. Mounted once per spot and updated in place (never
+ * rebuilt), so a recolor has a "from" state for the CSS transition to
+ * animate away from. Entrance pop and the vibe-match pulse are CSS
+ * animations driven from here. */
+function SpotPinView({
+  color,
+  shapes,
+  childCount,
+  active,
+  entering,
+  delayMs,
+  pulseKey,
+}: {
+  color: string;
+  shapes: IconShape[];
+  childCount: number;
+  active: boolean;
+  /** Plays the pop-in on mount. */
+  entering: boolean;
+  /** Stagger for the initial load's cascade. */
+  delayMs: number;
+  /** Non-empty while this pin is an active vibe match — a change replays the
+   * bounce/halo (but never on the pin's own creation). */
+  pulseKey: string;
+}) {
+  const pulseRef = useRef<HTMLSpanElement | null>(null);
+  const [isEntering, setIsEntering] = useState(entering);
+  useEffect(() => {
+    if (!entering) return;
+    // Dropped once the pop has played: `--entering` and `--match-pulse` both
+    // set `animation`, so leaving it on would replay the pop when a pulse
+    // later ends.
+    const t = window.setTimeout(() => setIsEntering(false), 400 + delayMs);
+    return () => window.clearTimeout(t);
+    // Only ever relevant at mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    const el = pulseRef.current;
+    if (!pulseKey || !el) return;
+    el.classList.remove("spot-pin-marker--match-pulse");
+    // Force a reflow so re-adding the class replays the animation even if a
+    // previous pulse on this same pin is still mid-flight.
+    void el.offsetWidth;
+    el.classList.add("spot-pin-marker--match-pulse");
+    const t = window.setTimeout(
+      () => el.classList.remove("spot-pin-marker--match-pulse"),
+      650,
+    );
+    return () => window.clearTimeout(t);
+  }, [pulseKey]);
+
+  return (
+    <span
+      className={cn("block h-full w-full", isEntering && "spot-pin-marker--entering")}
+    >
+      <span ref={pulseRef} className="block h-full w-full">
+        <span
+          className={cn("spot-pin", active && "spot-pin--active")}
+          style={{
+            background: color,
+            color,
+            animationDelay: isEntering && delayMs > 0 ? `${delayMs}ms` : undefined,
+          }}
+        >
+          <span className="spot-pin__icon">
+            <ShapeIcon shapes={shapes} />
+          </span>
+          {childCount > 0 && <span className="spot-pin__count">{childCount}</span>}
+        </span>
+      </span>
     </span>
-  `;
+  );
 }
 
 /** The /public/icons badges are already fully-drawn pins (balloon shape,
  * pointer tail, drop shadow baked into the artwork) — render them as-is
  * instead of nesting them inside another pin shape. */
-function eventPinHtml(iconSrc: string, featured: boolean): string {
-  return `
-    <span class="event-pin">
-      <img class="event-pin__icon" src="${iconSrc}" alt="" width="36" height="36" />
-      ${featured ? '<span class="event-pin__star">★</span>' : ""}
+function EventPinView({ iconSrc }: { iconSrc: string }) {
+  return (
+    <span className="event-pin-marker--entering block h-full w-full">
+      <span className="event-pin">
+        {/* eslint-disable-next-line @next/next/no-img-element -- already a
+            tiny local badge asset, same as the old HTML-string pin. */}
+        <img className="event-pin__icon" src={iconSrc} alt="" width={36} height={36} />
+      </span>
     </span>
-  `;
+  );
 }
 
 export function SpotMap({
@@ -337,49 +402,37 @@ export function SpotMap({
   const [locating, setLocating] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const basemapRef = useRef<CascoBasemap | null>(null);
-  // Mirrors `isNight` for the scheme-change listener below, which is
-  // attached once (empty-deps effect) and would otherwise close over a
-  // stale value if Night Mode is toggled after mount.
-  const isNightRef = useRef(isNight);
+  const mapRef = useRef<SvgMapHandle | null>(null);
+
+  // Night Mode, or the OS scheme when Night Mode is off.
+  const [prefersDark, setPrefersDark] = useState(false);
   useEffect(() => {
-    isNightRef.current = isNight;
-  }, [isNight]);
-  const markerLayerRef = useRef<LayerGroup | null>(null);
-  const eventLayerRef = useRef<LayerGroup | null>(null);
-  // A divIcon marker (not a circleMarker) so the "you are here" dot can carry
-  // a pulsing halo via CSS (see upsertMeMarker below) — shared by the
-  // one-shot locate-me button and itinerary mode's live position tracking,
-  // rather than each keeping its own marker.
-  const meMarkerRef = useRef<LeafletMarker | null>(null);
-  const routeCasingRef = useRef<LeafletPolyline | null>(null);
-  const routeLineRef = useRef<LeafletPolyline | null>(null);
-  // Keyed by id so the active-pin-highlight effect (below) can find a
-  // marker again after the filtered-set effects rebuild the layer.
-  const spotMarkersRef = useRef<Map<string, LeafletMarker>>(new Map());
-  const eventMarkersRef = useRef<Map<string, LeafletMarker>>(new Map());
-  // Last-known "is this pin an active vibe match" per spot id, and the
-  // content signature (category+childCount) last painted into its marker —
-  // both read by the spot-marker effect below to tell an actual state
-  // transition (→ replay the bounce/halo, or rebuild the inner markup) apart
-  // from an unrelated re-render (e.g. Night Mode toggling) that shouldn't
-  // touch either.
-  const spotMatchStateRef = useRef<Map<string, boolean>>(new Map());
-  const spotSignatureRef = useRef<Map<string, string>>(new Map());
-  // Flips true after the marker effect's first run — only that first batch
-  // of pins gets the staggered "cascade in" entrance (see the effect below);
-  // every pin added afterward (a filter narrowing the set further) still
-  // pops in, just all at once, since a stagger only reads as "the map
-  // finished loading" the first time, not on every subsequent filter change.
-  const initialPinsRevealedRef = useRef(false);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => setPrefersDark(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  // Flips true a moment after the first pins appear — only that first batch
+  // gets the staggered "cascade in" entrance; every pin added afterward (a
+  // filter narrowing the set further) still pops in, just all at once, since
+  // a stagger only reads as "the map finished loading" the first time.
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (!ready) return;
+    const t = window.setTimeout(() => setRevealed(true), 1200);
+    return () => window.clearTimeout(t);
+  }, [ready]);
   const eventsFittedRef = useRef(false);
-  // Serialized `activeVibes` from the last time the marker effect ran — a
-  // change here means the user just picked/switched a vibe chip, so every
-  // pin that matches *now* gets the bounce/halo even if it already matched
-  // before (e.g. switching straight from one vibe to another it also
-  // carries), not just pins newly appearing on the map.
-  const prevVibesKeyRef = useRef<string>("");
+
+  // The "you are here" dot, shared by the one-shot locate-me button and
+  // itinerary mode's live position tracking.
+  const [meDot, setMeDot] = useState<{
+    lat: number;
+    lng: number;
+    live: boolean;
+  } | null>(null);
 
   // The pin currently shown in the detail panel — spot and event are
   // mutually exclusive, same as the spots/events layers themselves.
@@ -396,14 +449,6 @@ export function SpotMap({
   // mode is active; `route` lags behind it slightly while the first fix/path
   // is still being worked out (see `directionsStatus`).
   const [directionsTarget, setDirectionsTarget] = useState<Spot | null>(null);
-  // Mirrors `directionsTarget` for the spot-marker click handler below, which
-  // is bound once per marker (see the marker-creation effect) and would
-  // otherwise close over whatever `directionsTarget` was at creation time
-  // instead of its current value.
-  const directionsTargetRef = useRef<Spot | null>(null);
-  useEffect(() => {
-    directionsTargetRef.current = directionsTarget;
-  }, [directionsTarget]);
   const [userLatLng, setUserLatLng] = useState<{
     lat: number;
     lng: number;
@@ -436,28 +481,8 @@ export function SpotMap({
   const routeFitDoneRef = useRef(false);
 
   const upsertMeMarker = useCallback(
-    async (lat: number, lng: number, live: boolean) => {
-      const { default: L } = await import("leaflet");
-      if (!mapRef.current) return;
-      if (meMarkerRef.current) {
-        meMarkerRef.current.setLatLng([lat, lng]);
-        meMarkerRef.current
-          .getElement()
-          ?.querySelector(".me-dot")
-          ?.classList.toggle("me-dot--live", live);
-      } else {
-        const icon = L.divIcon({
-          className: "me-dot-marker",
-          html: `<span class="me-dot${live ? " me-dot--live" : ""}"></span>`,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        });
-        meMarkerRef.current = L.marker([lat, lng], { icon })
-          .bindTooltip(tMap("youAreHere"))
-          .addTo(mapRef.current);
-      }
-    },
-    [tMap],
+    (lat: number, lng: number, live: boolean) => setMeDot({ lat, lng, live }),
+    [],
   );
 
   // Kept free of ref reads/writes (those live in the effects below, keyed
@@ -488,6 +513,8 @@ export function SpotMap({
 
   const exitDirections = useCallback(() => {
     setDirectionsTarget(null);
+    // The live-position dot is of no use outside directions mode.
+    setMeDot(null);
     setRoute(null);
     setUserLatLng(null);
     setIsOutsideArea(false);
@@ -505,15 +532,6 @@ export function SpotMap({
   useEffect(() => {
     routeFitDoneRef.current = false;
     lastRoutedFromRef.current = null;
-  }, [directionsTarget]);
-
-  // Drops the live-position marker once directions mode ends (it's of no use
-  // outside it — locateMe's own one-shot marker gets created fresh next time
-  // it's tapped anyway).
-  useEffect(() => {
-    if (directionsTarget) return;
-    meMarkerRef.current?.remove();
-    meMarkerRef.current = null;
   }, [directionsTarget]);
 
   // Arms itinerary mode once, straight from the /map?directions=<slug> deep
@@ -638,86 +656,39 @@ export function SpotMap({
     };
   }, [directionsTarget, userLatLng]);
 
-  // Draws (and re-draws, as the route updates while walking) the route line
-  // on the map — a white "casing" underneath a colored line on top, the same
-  // technique real map apps use to keep a route legible over any basemap
-  // color underneath it. Dashed when `approximate` (see routeBetween) so a
-  // straight-line fallback still visibly reads as a guess, not a real path.
+  // The route line, redrawn as the route updates while walking — a white
+  // "casing" underneath a colored line on top, the same technique real map
+  // apps use to keep a route legible over any basemap color underneath it.
+  // Dashed when `approximate` (see routeBetween) so a straight-line fallback
+  // still visibly reads as a guess, not a real path.
+  const routeD = useMemo(
+    () => (route ? latLngsToPath(route.points) : null),
+    [route],
+  );
+
+  // The route is only fitted into view once per itinerary (see
+  // routeFitDoneRef). Same asymmetric padding as revealSelection below — the
+  // route's own endpoints shouldn't end up hidden behind DirectionsPanel any
+  // more than a selected pin should end up behind MapDetailPanel. No scale
+  // cap beyond the map's own ceiling: a short walk (start and end a block
+  // apart) should zoom in as tight as the map allows while both pins stay in
+  // frame.
   useEffect(() => {
-    if (!ready || !mapRef.current) return;
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !mapRef.current) return;
-      const map = mapRef.current;
-
-      if (!route) {
-        routeCasingRef.current?.remove();
-        routeCasingRef.current = null;
-        routeLineRef.current?.remove();
-        routeLineRef.current = null;
-        return;
-      }
-
-      const latlngs = route.points;
-      if (routeCasingRef.current) {
-        routeCasingRef.current.setLatLngs(latlngs);
-      } else {
-        routeCasingRef.current = L.polyline(latlngs, {
-          color: "#ffffff",
-          weight: 7,
-          opacity: 0.9,
-          lineCap: "round",
-          lineJoin: "round",
-        }).addTo(map);
-      }
-      const lineStyle = {
-        color: NEUTRAL_PIN_COLOR,
-        weight: 4.5,
-        opacity: 0.95,
-        lineCap: "round" as const,
-        lineJoin: "round" as const,
-        dashArray: route.approximate ? "2, 10" : undefined,
-      };
-      if (routeLineRef.current) {
-        routeLineRef.current.setLatLngs(latlngs);
-        routeLineRef.current.setStyle(lineStyle);
-      } else {
-        routeLineRef.current = L.polyline(latlngs, lineStyle).addTo(map);
-      }
-
-      if (!routeFitDoneRef.current) {
-        // Same asymmetric padding as revealSelection above — the route's
-        // own endpoints shouldn't end up hidden behind DirectionsPanel any
-        // more than a selected pin should end up behind MapDetailPanel.
-        // maxZoom matches the map's own ceiling (see the `L.map` call
-        // below) rather than an arbitrary lower cap — a short walk (start
-        // and end a block apart) should zoom in as tight as the map allows
-        // while both pins stay in frame, not stop early at a "city-wide"
-        // zoom level picked for longer routes.
-        const bounds = L.latLngBounds(latlngs);
-        if (isDesktopRef.current) {
-          map.fitBounds(bounds, {
-            paddingTopLeft: [412, 24],
-            paddingBottomRight: [24, 24],
-            maxZoom: 19,
-          });
-        } else {
-          map.fitBounds(bounds, {
-            paddingTopLeft: [24, 24],
-            paddingBottomRight: [24, 320],
-            maxZoom: 19,
-          });
-        }
-        routeFitDoneRef.current = true;
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, route]);
+    if (!route || routeFitDoneRef.current) return;
+    const pts = route.points.map(([lat, lng]) => project(lat, lng));
+    const xs = pts.map((q) => q[0]);
+    const ys = pts.map((q) => q[1]);
+    mapRef.current?.fitBounds(
+      [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+      {
+        padding: isDesktopRef.current
+          ? { top: 24, left: 412, right: 24, bottom: 24 }
+          : { top: 88, left: 24, right: 24, bottom: Math.round(window.innerHeight * 0.55) + 24 },
+        animate: true,
+      },
+    );
+    routeFitDoneRef.current = true;
+  }, [route]);
 
   // Tracked in a ref (not state) — only read at click-time to decide how
   // much room to leave for the side panel vs. the bottom sheet, so it
@@ -737,23 +708,15 @@ export function SpotMap({
   // panel/sheet that's about to cover it — mirrors panInside's own padding
   // idea, just reserving space for our own chrome instead of map controls.
   const revealSelection = useCallback((lat: number, lng: number) => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (isDesktopRef.current) {
-      // Panel is 380px wide, offset 16px from the left edge.
-      map.panInside([lat, lng], {
-        paddingTopLeft: [412, 24],
-        paddingBottomRight: [24, 24],
-        animate: true,
-      });
-    } else {
-      // Sheet height varies with content; 320px comfortably covers it.
-      map.panInside([lat, lng], {
-        paddingTopLeft: [24, 24],
-        paddingBottomRight: [24, 320],
-        animate: true,
-      });
-    }
+    mapRef.current?.panInside(
+      project(lat, lng),
+      isDesktopRef.current
+        ? // Panel is 380px wide, offset 16px from the left edge.
+          { top: 24, left: 412, right: 24, bottom: 24 }
+        : // The sheet is at most 55vh (see MapDetailPanel); the top clears the
+          // search bar and leaves room for the pin's body above its tip.
+          { top: 88, left: 24, right: 24, bottom: Math.round(window.innerHeight * 0.55) + 24 },
+    );
   }, []);
 
   // The detail panel's primary action — called from a real onClick, not a
@@ -899,110 +862,37 @@ export function SpotMap({
   const visibleCount =
     mode === "spots" ? filteredSpots.length : filteredEvents.length;
 
-  // Init the map once, client-side only.
+  // Clicking empty map (not a pin) dismisses the open panel/sheet, same as
+  // clicking its own backdrop/close button. In itinerary mode the visible
+  // card is DirectionsPanel, not the detail panel — so an empty-map click
+  // leaves itinerary mode too (back to the default map, nothing selected),
+  // without touching the camera/zoom.
+  const handleMapClick = () => {
+    if (directionsTarget) exitDirections();
+    closePanel();
+  };
+
+  // Fixed framing on arrival (the whole peninsula, independent of which pins
+  // are shown) — skipped on the direct-to-directions arrival, where the
+  // route-fit effect frames the destination instead. Later filter/vibe
+  // changes never move the view.
+  const fitArrival = useCallback(() => {
+    const [x0, y1] = project(CASCO_ARRIVAL_BOUNDS[0][0], CASCO_ARRIVAL_BOUNDS[0][1]);
+    const [x1, y0] = project(CASCO_ARRIVAL_BOUNDS[1][0], CASCO_ARRIVAL_BOUNDS[1][1]);
+    mapRef.current?.fitBounds([x0, y0, x1, y1], { padding: 24 });
+  }, []);
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !containerRef.current) return;
-
-      const map = L.map(containerRef.current, {
-        // Leaflet's SVG renderer only draws the viewport + 10% padding and
-        // redraws on moveend, so panning exposed blank edges. Extra
-        // padding (40%) keeps the basemap drawn ahead of the pan without making
-        // every zoom redraw a huge SVG (1.0 caused visible jank on zoom).
-        renderer: L.svg({ padding: 0.4 }),
-        // Mouse wheel: more pixels of scroll per zoom level = gentler zoom
-        // (Leaflet default is 60, which feels too fast).
-        wheelPxPerZoomLevel: 200,
-        center: DEFAULT_CENTER,
-        zoom: DEFAULT_ZOOM,
-        minZoom: 14,
-        maxZoom: 19,
-        maxBounds: CASCO_VIEJO_BOUNDS,
-        maxBoundsViscosity: 0.6,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: interactive,
-        touchZoom: interactive,
-        scrollWheelZoom: interactive,
-        doubleClickZoom: interactive,
-        boxZoom: interactive,
-        keyboard: interactive,
-      });
-      L.control.zoom({ position: "topright" }).addTo(map);
-      L.control
-        .attribution({ prefix: false })
-        .addAttribution(CASCO_VIEJO_ATTRIBUTION)
-        .addTo(map);
-
-      const prefersDark = window.matchMedia?.(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      const basemap = await addCascoBasemap(
-        L,
-        map,
-        isNightRef.current || prefersDark,
-      );
-      // The basemap fetch is a second await — the component could have
-      // unmounted while it was in flight (the guard above only covers the
-      // first one, importing Leaflet).
-      if (cancelled) {
-        basemap.destroy();
-        map.remove();
-        return;
-      }
-      basemapRef.current = basemap;
-
-      // Not added to the map yet — the mode-sync effect below adds whichever
-      // one is active, so spots and events never render at the same time.
-      markerLayerRef.current = L.layerGroup();
-      eventLayerRef.current = L.layerGroup();
-      mapRef.current = map;
-      setReady(true);
-    })();
-
-    // Night Mode always wins: once it's on, OS scheme changes shouldn't pull
-    // the basemap back to its light colors.
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const onSchemeChange = (e: MediaQueryListEvent) => {
-      basemapRef.current?.setDark(isNightRef.current || e.matches);
-    };
-    mq?.addEventListener("change", onSchemeChange);
-
-    const spotMarkers = spotMarkersRef.current;
-    const eventMarkers = eventMarkersRef.current;
-    const spotMatchState = spotMatchStateRef.current;
-    const spotSignatures = spotSignatureRef.current;
-    return () => {
-      cancelled = true;
-      mq?.removeEventListener("change", onSchemeChange);
-      mapRef.current?.remove();
-      mapRef.current = null;
-      basemapRef.current = null;
-      markerLayerRef.current = null;
-      eventLayerRef.current = null;
-      spotMarkers.clear();
-      eventMarkers.clear();
-      spotMatchState.clear();
-      spotSignatures.clear();
-    };
-    // `interactive` is read once here by design — it's a static prop from
-    // the caller, not meant to toggle the map's pan/zoom handlers live.
+    if (initialDirectionsSpot != null) return;
+    fitArrival();
+    // Once, on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Clicking empty map (not a pin) dismisses the open panel/sheet, same as
-  // clicking its own backdrop/close button.
+  // Events get the same framing the first time that layer is shown.
   useEffect(() => {
-    const map = mapRef.current;
-    if (!ready || !map) return;
-    map.on("click", closePanel);
-    return () => {
-      map.off("click", closePanel);
-    };
-  }, [ready, closePanel]);
+    if (mode !== "events" || eventsFittedRef.current) return;
+    eventsFittedRef.current = true;
+    fitArrival();
+  }, [mode, fitArrival]);
 
   // Deselect whenever the mode toggle flips, or the active pin drops out of
   // the currently-filtered set (e.g. a filter now excludes it). Adjusted
@@ -1022,376 +912,145 @@ export function SpotMap({
     setSelectedEvent(null);
   }
 
-  // Flip the basemap to its dark colors the instant Night Mode is toggled
-  // (not just on the next OS scheme-change event) — re-checks the OS
-  // preference too, so turning Night Mode back off doesn't fight a system
-  // that's independently in dark mode.
-  useEffect(() => {
-    if (!ready) return;
-    const prefersDark = window.matchMedia?.(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    basemapRef.current?.setDark(isNight || prefersDark);
-  }, [ready, isNight]);
-
-  // Swap which layer is actually attached to the map when the mode toggle
-  // flips — this (not visibility CSS) is what keeps spots and events from
-  // ever showing at once.
-  useEffect(() => {
-    const map = mapRef.current;
-    const spotLayer = markerLayerRef.current;
-    const eventLayer = eventLayerRef.current;
-    if (!ready || !map || !spotLayer || !eventLayer) return;
-
-    if (mode === "spots") {
-      if (map.hasLayer(eventLayer)) map.removeLayer(eventLayer);
-      if (!map.hasLayer(spotLayer)) map.addLayer(spotLayer);
-    } else {
-      if (map.hasLayer(spotLayer)) map.removeLayer(spotLayer);
-      if (!map.hasLayer(eventLayer)) map.addLayer(eventLayer);
-    }
-  }, [ready, mode]);
-
-  // Re-render markers whenever the filtered set changes. Pins carry no
-  // text, so unlike before this no longer needs to depend on locale/labels —
-  // those only apply to the detail panel now, built separately on selection.
-  //
-  // Markers are diffed against spotMarkersRef rather than torn down and
-  // rebuilt wholesale (as this used to do) for two reasons: it lets a pin
-  // dropping out of the filtered set animate out (`--leaving`, below)
-  // instead of vanishing on the spot, and it lets an already-mounted pin's
-  // color/match state update in place, on the same DOM node, so a CSS
-  // transition actually has a "from" state to animate away from — a fresh
-  // node painted directly into its final state has nothing to transition
-  // from and would just snap there.
-  useEffect(() => {
-    if (!ready || !mapRef.current || !markerLayerRef.current) return;
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled) return;
-      const layer = markerLayerRef.current;
-      if (!layer) return;
-
-      const nextIds = new Set(filteredSpots.map((spot) => spot.id));
-
-      // Pins that dropped out of the filtered set (search/category/vibe —
-      // see MapExplorerSection) shrink+fade out instead of disappearing
-      // outright, then actually detach once that's visibly finished (240ms,
-      // matched by the `--leaving` transition duration in globals.css).
-      spotMarkersRef.current.forEach((marker, id) => {
-        if (nextIds.has(id)) return;
-        const el = marker.getElement();
-        spotMarkersRef.current.delete(id);
-        spotMatchStateRef.current.delete(id);
-        spotSignatureRef.current.delete(id);
-        if (el) {
-          el.classList.add("spot-pin-marker--leaving");
-          window.setTimeout(() => layer.removeLayer(marker), 240);
-        } else {
-          layer.removeLayer(marker);
-        }
-      });
-
-      // A vibe was just picked or switched (vs. this effect re-running for
-      // an unrelated reason, e.g. Night Mode) — every pin matching *now*
-      // gets the bounce/halo below, not just ones newly appearing on the
-      // map, so switching directly between two vibes a spot both carries
-      // still visibly re-announces it.
-      const vibesKey = activeVibes.slice().sort().join("|");
-      const vibesChanged = vibesKey !== prevVibesKeyRef.current;
-      prevVibesKeyRef.current = vibesKey;
-
-      // Only this run's freshly-created pins (see the `else` branch below)
-      // get a staggered delay — every later run flips this ref, so a filter
-      // change afterward pops its pins in together instead of re-cascading.
-      const isInitialReveal = !initialPinsRevealedRef.current;
-      initialPinsRevealedRef.current = true;
-
-      // Arriving straight from a spot's "Get directions" button (see
-      // initialDirectionsSpot's own doc comment) means itinerary mode is
-      // about to take over the instant the map's ready — every other pin
-      // is about to fade out and go inert anyway (see the dimming effect
-      // below), so the whole cascade-pop-in/fit-to-every-spot flourish
-      // would just be motion nobody has time to actually see before it's
-      // overridden. Skip it and let the map settle straight on the
-      // destination + route instead.
-      const skipInitialFlourish = isInitialReveal && initialDirectionsSpot != null;
-
-
-      filteredSpots.forEach((spot, index) => {
-        // Neutral by default — "All", a classic category filter, or vibes
-        // mode with nothing picked yet all render every pin in the same
-        // NEUTRAL_PIN_COLOR, so the white glyph (always the spot's category
-        // icon, CATEGORY_ICON_SHAPES below) is the only thing telling pins
-        // apart. Only once a vibe chip is actually selected does color come
-        // back: each matching pin lights up in that vibe's hue, or gold for
-        // a spot matching more than one (everything on screen here already
-        // matches at least one — see MapExplorerSection's filteredSpots,
-        // which drops non-matching pins from the map entirely, same as a
-        // classic-mode category filter — so there's no "doesn't match" case
-        // left to fall back on).
-        const matchingVibes = activeVibes.filter((v) => spot.vibes.includes(v));
-        let color: string;
-        if (!useVibeIcons || matchingVibes.length === 0) {
-          color = NEUTRAL_PIN_COLOR;
-        } else if (matchingVibes.length > 1) {
-          color = isNight ? MULTI_VIBE_COLOR_NIGHT : MULTI_VIBE_COLOR;
-        } else {
-          color = VIBE_META[matchingVibes[0]].color;
-        }
-        const isMatch =
-          useVibeIcons && activeVibes.length > 0 && matchingVibes.length > 0;
-
-        const shapes = CATEGORY_ICON_SHAPES[spot.category];
-        const childCount = childrenBySpotId?.get(spot.id)?.length ?? 0;
-        const signature = `${spot.category}|${childCount}`;
-
-        const existing = spotMarkersRef.current.get(spot.id);
-        const wasMatch = spotMatchStateRef.current.get(spot.id) ?? false;
-        spotMatchStateRef.current.set(spot.id, isMatch);
-
-        if (existing) {
-          const el = existing.getElement();
-          const pinEl = el?.querySelector<HTMLElement>(".spot-pin");
-          if (pinEl) {
-            pinEl.style.background = color;
-            pinEl.style.color = color;
-          }
-          // Category/child-count rarely change on an already-mounted pin,
-          // but resync the inner markup when they do — only the inner
-          // `.spot-pin` node is replaced, never the wrapper Leaflet actually
-          // animates, so the match-pulse class below (which lives on that
-          // wrapper) survives untouched.
-          if (el && spotSignatureRef.current.get(spot.id) !== signature) {
-            el.innerHTML = pinHtml(color, shapes, false, childCount);
-          }
-          spotSignatureRef.current.set(spot.id, signature);
-
-          if (isMatch && (vibesChanged || !wasMatch)) {
-            el?.classList.remove("spot-pin-marker--match-pulse");
-            // Force a reflow so re-adding the class replays the animation
-            // even if a previous pulse on this same pin is still mid-flight.
-            void el?.offsetWidth;
-            el?.classList.add("spot-pin-marker--match-pulse");
-            window.setTimeout(
-              () => el?.classList.remove("spot-pin-marker--match-pulse"),
-              650,
-            );
-          }
-        } else {
-          spotSignatureRef.current.set(spot.id, signature);
-          // Capped — with a lot of pins, a linear per-pin delay would leave
-          // the last ones popping in absurdly late; 650ms keeps the whole
-          // cascade feeling like one deliberate reveal, not a wait.
-          const staggerDelay = isInitialReveal && !skipInitialFlourish ? Math.min(index * 28, 650) : 0;
-          const icon = L.divIcon({
-            className: cn("spot-pin-marker", !skipInitialFlourish && "spot-pin-marker--entering"),
-            // Featured star hidden site-wide for now — swap back to
-            // `spot.is_featured` once there is real featured content.
-            html: pinHtml(color, shapes, false, childCount),
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -32],
-          });
-
-          const marker = L.marker([spot.latitude, spot.longitude], { icon });
-          marker.on("click", () => {
-            track("map_spot_click", { spot_id: spot.id, spot_slug: spot.slug });
-            // Itinerary mode active and this is a *different* spot than the
-            // one currently being routed to — re-arm directions for it
-            // instead of the normal select-and-open-panel behavior, so
-            // tapping another pin switches the walking route rather than
-            // doing nothing (see spot-pin-marker--dimmed in globals.css,
-            // which used to make every non-target pin unclickable here).
-            if (
-              directionsTargetRef.current &&
-              directionsTargetRef.current.id !== spot.id
-            ) {
-              startDirections(spot);
-              return;
-            }
-            setSelectedEvent(null);
-            setSelectedSpot(spot);
-            revealSelection(spot.latitude, spot.longitude);
-          });
-          // Bound once at creation — fires whenever the marker's element
-          // actually mounts (immediately if its layer is already on the
-          // map, or later once the spots/events mode toggle attaches it).
-          // Deliberately does *not* also add `--match-pulse` here even when
-          // `isMatch` is true (unlike the `existing` branch above) — both
-          // classes set `.spot-pin`'s `animation` property, so a brand-new
-          // pin carrying both at once played the entrance pop, then replayed
-          // a second bounce from scratch the moment `--entering` was removed
-          // and `--match-pulse` became the only rule left applying (a fresh
-          // `animation-name` restarts the animation). The entrance pop's own
-          // overshoot already reads as "here it is" — vibes mode doesn't
-          // need a second bounce layered on for a pin that's brand new here.
-          marker.on("add", () => {
-            const el = marker.getElement();
-            if (staggerDelay > 0) {
-              // Set on `.spot-pin` itself, not the outer wrapper — Leaflet's
-              // wrapper is only what the `--entering` *class* lives on, the
-              // pop animation runs on the inner span (see globals.css), and
-              // `animation-delay` isn't inherited by a descendant the way a
-              // property like `color` would be.
-              const pinEl = el?.querySelector<HTMLElement>(".spot-pin");
-              if (pinEl) pinEl.style.animationDelay = `${staggerDelay}ms`;
-            }
-            window.setTimeout(
-              () => el?.classList.remove("spot-pin-marker--entering"),
-              400 + staggerDelay,
-            );
-          });
-
-          marker.addTo(layer);
-          spotMarkersRef.current.set(spot.id, marker);
-        }
-
-      });
-
-      // Auto-zoom only on arrival — later filter/vibe changes must not move
-      // the view. Skipped on the direct-to-directions arrival, where the
-      // route-fit effect frames the destination instead.
-      if (isInitialReveal && mode === "spots" && !skipInitialFlourish) {
-        mapRef.current?.fitBounds(CASCO_ARRIVAL_BOUNDS, { padding: [24, 24] });
+  // Pins are plain React now — built from state, so selection, dimming and
+  // vibe color are just props rather than classes toggled onto markers.
+  const vibesKey = activeVibes.slice().sort().join("|");
+  const spotPins: HtmlPin[] = useMemo(() => {
+    if (!ready) return [];
+    // Arriving straight from a spot's "Get directions" button (see
+    // initialDirectionsSpot) means itinerary mode is about to take over the
+    // instant the map's ready — the cascade-in flourish would just be motion
+    // nobody has time to see before it's overridden.
+    const skipFlourish = initialDirectionsSpot != null;
+    return filteredSpots.map((spot, index) => {
+      // Neutral by default — "All", a classic category filter, or vibes mode
+      // with nothing picked yet all render every pin in the same
+      // NEUTRAL_PIN_COLOR, so the white glyph (always the spot's category
+      // icon) is the only thing telling pins apart. Only once a vibe chip is
+      // actually selected does color come back: each matching pin lights up
+      // in that vibe's hue, or gold for a spot matching more than one.
+      const matchingVibes = activeVibes.filter((v) => spot.vibes.includes(v));
+      let color: string;
+      if (!useVibeIcons || matchingVibes.length === 0) {
+        color = NEUTRAL_PIN_COLOR;
+      } else if (matchingVibes.length > 1) {
+        color = isNight ? MULTI_VIBE_COLOR_NIGHT : MULTI_VIBE_COLOR;
+      } else {
+        color = VIBE_META[matchingVibes[0]].color;
       }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+      const isMatch =
+        useVibeIcons && activeVibes.length > 0 && matchingVibes.length > 0;
+      const active = selectedSpot?.id === spot.id;
+      const dimmed = directionsTarget != null && spot.id !== directionsTarget.id;
+      // With a place open in the panel, every other pin steps back so the
+      // selected one is what the eye lands on.
+      const faded = selectedSpot != null && !active && !dimmed;
+      return {
+        id: spot.id,
+        x: project(spot.latitude, spot.longitude)[0],
+        y: project(spot.latitude, spot.longitude)[1],
+        width: 34,
+        height: 34,
+        anchor: [17, 34],
+        label: spot.name,
+        className: cn(
+          "spot-pin-marker",
+          active && "spot-pin-marker--active",
+          dimmed && "spot-pin-marker--dimmed",
+          faded && "spot-pin-marker--faded",
+        ),
+        node: (
+          <SpotPinView
+            color={color}
+            shapes={CATEGORY_ICON_SHAPES[spot.category]}
+            childCount={childrenBySpotId?.get(spot.id)?.length ?? 0}
+            active={active}
+            entering={!skipFlourish}
+            // Capped — with a lot of pins, a linear per-pin delay would leave
+            // the last ones popping in absurdly late.
+            delayMs={revealed || skipFlourish ? 0 : Math.min(index * 28, 650)}
+            pulseKey={isMatch ? vibesKey : ""}
+          />
+        ),
+        onSelect: () => {
+          track("map_spot_click", { spot_id: spot.id, spot_slug: spot.slug });
+          // Itinerary mode active and this is a *different* spot than the
+          // one being routed to — re-arm directions for it instead of the
+          // normal select-and-open-panel behavior, so tapping another pin
+          // switches the walking route rather than doing nothing.
+          if (directionsTarget && directionsTarget.id !== spot.id) {
+            startDirections(spot);
+            return;
+          }
+          setSelectedEvent(null);
+          setSelectedSpot(spot);
+          revealSelection(spot.latitude, spot.longitude);
+        },
+      };
+    });
   }, [
     ready,
+    revealed,
     filteredSpots,
-    mode,
-    revealSelection,
-    useVibeIcons,
     activeVibes,
+    vibesKey,
+    useVibeIcons,
     isNight,
     childrenBySpotId,
     initialDirectionsSpot,
+    selectedSpot,
+    directionsTarget,
+    revealSelection,
     startDirections,
   ]);
 
-  // Render event pins on their own layer, using the /public/icons badges.
-  // Diffed against eventMarkersRef (not cleared/rebuilt wholesale) for the
-  // same reason as the spot-marker effect above: it lets a pin dropping out
-  // of the filtered set animate out instead of vanishing on the spot.
-  // Event pins have no color/match state to preserve across renders, so
-  // unlike spots, an already-mounted marker is simply left untouched.
-  useEffect(() => {
-    if (!ready || !mapRef.current || !eventLayerRef.current) return;
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled) return;
-      const layer = eventLayerRef.current;
-      if (!layer) return;
-
-      const nextIds = new Set(filteredEvents.map((event) => event.id));
-
-      eventMarkersRef.current.forEach((marker, id) => {
-        if (nextIds.has(id)) return;
-        const el = marker.getElement();
-        eventMarkersRef.current.delete(id);
-        if (el) {
-          el.classList.add("event-pin-marker--leaving");
-          window.setTimeout(() => layer.removeLayer(marker), 240);
-        } else {
-          layer.removeLayer(marker);
-        }
-      });
-
-
-      const isFirstEventsReveal = !eventsFittedRef.current;
-
-      filteredEvents.forEach((event) => {
-        if (eventMarkersRef.current.has(event.id)) return;
-
-        const meta = EVENT_CATEGORY_META[event.category];
-        const icon = L.divIcon({
-          className: "event-pin-marker event-pin-marker--entering",
-          // Featured star hidden site-wide for now — swap back to
-          // `event.is_featured` once there is real featured content.
-          html: eventPinHtml(meta.icon, false),
-          iconSize: [36, 36],
-          iconAnchor: [18, 36],
-          popupAnchor: [0, -32],
-        });
-
-        const marker = L.marker([event.latitude, event.longitude], { icon });
-        marker.on("click", () => {
+  const eventPins: HtmlPin[] = useMemo(() => {
+    if (!ready) return [];
+    return filteredEvents.map((event) => {
+      const active = selectedEvent?.id === event.id;
+      const [x, y] = project(event.latitude, event.longitude);
+      return {
+        id: event.id,
+        x,
+        y,
+        width: 36,
+        height: 36,
+        anchor: [18, 36],
+        label: event.title,
+        // Events have no directions of their own (yet) — any event pin on
+        // screen during itinerary mode is equally beside the point.
+        className: cn(
+          "event-pin-marker",
+          active && "event-pin-marker--active",
+          selectedEvent != null && !active && "event-pin-marker--faded",
+          directionsTarget != null && "event-pin-marker--dimmed",
+        ),
+        node: <EventPinView iconSrc={EVENT_CATEGORY_META[event.category].icon} />,
+        onSelect: () => {
           setSelectedSpot(null);
           setSelectedEvent(event);
           revealSelection(event.latitude, event.longitude);
-        });
-        marker.on("add", () => {
-          const el = marker.getElement();
-          window.setTimeout(
-            () => el?.classList.remove("event-pin-marker--entering"),
-            400,
-          );
-        });
+        },
+      };
+    });
+  }, [ready, filteredEvents, selectedEvent, directionsTarget, revealSelection]);
 
-        marker.addTo(layer);
-        eventMarkersRef.current.set(event.id, marker);
-      });
-
-      // Auto-zoom only the first time events are shown, not on filter changes.
-      if (mode === "events" && isFirstEventsReveal) {
-        eventsFittedRef.current = true;
-        mapRef.current?.fitBounds(CASCO_ARRIVAL_BOUNDS, { padding: [24, 24] });
+  const mePin: HtmlPin | null = meDot
+    ? {
+        id: "me",
+        x: project(meDot.lat, meDot.lng)[0],
+        y: project(meDot.lat, meDot.lng)[1],
+        width: 22,
+        height: 22,
+        anchor: [11, 11],
+        className: "me-dot-marker",
+        label: tMap("youAreHere"),
+        node: <span className={cn("me-dot", meDot.live && "me-dot--live")} />,
       }
-    })();
+    : null;
 
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, filteredEvents, mode, revealSelection]);
-
-  // Reflects the selected pin onto the markers themselves — runs after the
-  // two effects above (declaration order), so it always sees freshly-built
-  // markers rather than ones about to be torn down. Also where itinerary
-  // mode dims every *other* pin: with a route on screen, every other spot
-  // is a distraction, not a destination, so they fade out and stop
-  // responding to clicks (`--dimmed`, see globals.css) until directions
-  // mode ends — only the one actually being routed to stays fully
-  // interactive.
-  useEffect(() => {
-    spotMarkersRef.current.forEach((marker, id) => {
-      const active = selectedSpot?.id === id;
-      const dimmed = directionsTarget != null && id !== directionsTarget.id;
-      const el = marker.getElement();
-      el?.classList.toggle("spot-pin-marker--active", active);
-      el?.classList.toggle("spot-pin-marker--dimmed", dimmed);
-      el?.querySelector(".spot-pin")?.classList.toggle(
-        "spot-pin--active",
-        active,
-      );
-    });
-    eventMarkersRef.current.forEach((marker, id) => {
-      const el = marker.getElement();
-      el?.classList.toggle(
-        "event-pin-marker--active",
-        selectedEvent?.id === id,
-      );
-      // Events have no directions of their own (yet) — any event pin on
-      // screen during itinerary mode is equally beside the point.
-      el?.classList.toggle(
-        "event-pin-marker--dimmed",
-        directionsTarget != null,
-      );
-    });
-  }, [
-    selectedSpot,
-    selectedEvent,
-    filteredSpots,
-    filteredEvents,
-    directionsTarget,
-  ]);
+  const layerPins = mode === "spots" ? spotPins : eventPins;
+  const htmlPins = mePin ? [...layerPins, mePin] : layerPins;
 
   // The fixed site header's real rendered height (it grows with safe-area
   // insets on notched devices) — a hardcoded `top-14` left a gap the map's
@@ -1470,11 +1129,12 @@ export function SpotMap({
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      (pos) => {
         const { latitude, longitude } = pos.coords;
-        if (!mapRef.current) return;
-        await upsertMeMarker(latitude, longitude, false);
-        mapRef.current.flyTo([latitude, longitude], 16, { duration: 0.8 });
+        upsertMeMarker(latitude, longitude, false);
+        mapRef.current?.flyTo(project(latitude, longitude), {
+          scale: zoomToScale(16),
+        });
         setLocating(false);
       },
       () => {
@@ -1675,7 +1335,37 @@ export function SpotMap({
             : cn("rounded-[var(--radius-card)] border", heightClassName),
         )}
       >
-        <div ref={containerRef} className="h-full w-full" />
+        <div ref={containerRef} className="h-full w-full">
+          <SvgMap
+            ref={mapRef}
+            dark={isNight || prefersDark}
+            interactive={interactive}
+            htmlPins={htmlPins}
+            onReady={() => setReady(true)}
+            onBackgroundClick={handleMapClick}
+            className="h-full w-full"
+          >
+            {routeD && route && (
+              <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path
+                  className="svgmap-line"
+                  d={routeD}
+                  stroke="#ffffff"
+                  strokeOpacity={0.9}
+                  strokeWidth={7}
+                />
+                <path
+                  className="svgmap-line"
+                  d={routeD}
+                  stroke={NEUTRAL_PIN_COLOR}
+                  strokeOpacity={0.95}
+                  strokeWidth={4.5}
+                  strokeDasharray={route.approximate ? "2 10" : undefined}
+                />
+              </g>
+            )}
+          </SvgMap>
+        </div>
 
         <AnimatePresence>
           {!ready && (

@@ -20,7 +20,6 @@ const HOME_ARTICLES_COUNT = 3;
 // How many spots each homepage teaser leads with — the full set lives one
 // click away on /spots (grid) and /map.
 const FEATURED_SPOTS_COUNT = 6;
-const MAP_TEASER_SPOTS_COUNT = 12;
 
 export async function generateMetadata({
   params,
@@ -83,7 +82,7 @@ export default async function HomePage({
         </div>
 
         <div className="border-t border-border">
-          <MapTeaserSection spots={featuredFirst.slice(0, MAP_TEASER_SPOTS_COUNT)} />
+          <MapTeaserSection />
         </div>
 
         <AboutIntro />

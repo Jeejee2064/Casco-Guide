@@ -182,22 +182,11 @@ html[data-night] .glass {
   background: color-mix(in srgb, var(--surface) 82%, transparent);
 }
 
-/* Map tiles — dim and cool the CARTO tiles down rather than swap tilesets,
-   so the panel glow below (map detail panel) has something moody to sit on
-   top of. */
-html[data-night] .leaflet-container {
-  background: var(--background);
-}
-
-html[data-night] .leaflet-tile-pane {
-  filter: brightness(1.15) saturate(1.35) hue-rotate(-8deg);
-}
-
-/* Pins — pinHtml() (SpotMap.tsx) stamps both `background` and `color`
+/* Pins — SpotPinView (SpotMap.tsx) stamps both `background` and `color`
    inline to the category color, so `currentColor` here always matches
    whichever category a pin belongs to without a rule per category. No neon
    glow here anymore (dropped per request) — just a crisp ring so pins still
-   read clearly against the dimmed, cooled Night Mode tiles above. */
+   read clearly against the Night Mode basemap. */
 html[data-night] .spot-pin {
   box-shadow:
     0 0 0 2px color-mix(in srgb, currentColor 40%, white 60%),
@@ -217,12 +206,6 @@ html[data-night] .spot-pin--active {
 html[data-night] .spot-pin-marker:hover .spot-pin {
   box-shadow:
     0 0 0 2px color-mix(in srgb, currentColor 40%, white 60%),
-    0 0 4px 1px white inset;
-}
-
-html[data-night] .itinerary-pin {
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--color-aqua) 40%, white 60%),
     0 0 4px 1px white inset;
 }
 
@@ -615,48 +598,24 @@ html[data-night] .header-logotype {
 }
 
 /* ---------------------------------------------------------------------- */
-/* SpotMap (Leaflet) theming                                              */
+/* Map pin popups                                                         */
 /* ---------------------------------------------------------------------- */
 
-.leaflet-container {
-  font-family: var(--font-sans), Inter, Arial, sans-serif;
-  background: var(--background);
-}
-
-.leaflet-control-zoom a {
-  background: var(--surface) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-}
-
-.leaflet-control-attribution {
-  background: color-mix(in srgb, var(--surface) 85%, transparent) !important;
-  color: var(--foreground) !important;
-}
-
-.leaflet-control-attribution a {
-  color: var(--color-aqua-dark) !important;
-}
-
-/* MiniMap's pin popup (name + "Get directions") — chrome-less wrapper so it
-   reads as one of this app's own cards, not the default Leaflet box. */
-.leaflet-popup-content-wrapper {
-  background: var(--surface) !important;
-  color: var(--foreground) !important;
+.spot-mini-popup-card {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  cursor: default;
+  width: max-content;
+  max-width: 220px;
+  white-space: normal;
+  background: var(--surface);
+  color: var(--foreground);
   border: 1px solid var(--border);
-  border-radius: var(--radius-button) !important;
-  box-shadow: 0 8px 20px rgb(0 0 0 / 0.18) !important;
-}
-
-.leaflet-popup-content {
-  margin: 0 !important;
-}
-
-.leaflet-popup-tip {
-  background: var(--surface) !important;
-  border: 1px solid var(--border);
-  border-top: none;
-  border-left: none;
+  border-radius: var(--radius-button);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.18);
 }
 
 .spot-mini-popup {
@@ -772,16 +731,48 @@ html[data-night] .header-logotype {
     0 0 14px 2px color-mix(in srgb, currentColor 55%, transparent);
 }
 
+/* The pin whose place is open in the detail panel/sheet — meant to be spotted
+   at a glance next to the info it belongs to: bigger, ringed in white and its
+   own color, with a halo that keeps pulsing outward. */
 .spot-pin--active {
-  transform: rotate(-45deg) scale(1.18);
+  transform: rotate(-45deg) scale(1.4);
   box-shadow:
-    0 6px 16px rgb(0 0 0 / 0.45),
-    0 0 0 3px color-mix(in srgb, currentColor 45%, transparent),
-    0 0 20px 4px color-mix(in srgb, currentColor 65%, transparent);
+    0 8px 18px rgb(0 0 0 / 0.5),
+    0 0 0 3px white,
+    0 0 0 6px color-mix(in srgb, currentColor 70%, transparent),
+    0 0 24px 6px color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.spot-pin--active::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50% 50% 50% 0;
+  border: 3px solid currentColor;
+  pointer-events: none;
+  animation: spot-pin-selected-ring 1.5s ease-out infinite;
+}
+
+@keyframes spot-pin-selected-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Everything else steps back while a place is open. */
+.spot-pin-marker--faded,
+.event-pin-marker--faded {
+  opacity: 0.45;
 }
 
 .spot-pin-marker {
   z-index: 500 !important;
+  transition: opacity 200ms ease;
 }
 
 .spot-pin-marker--active {
@@ -789,21 +780,14 @@ html[data-night] .header-logotype {
 }
 
 /* Itinerary mode (SpotMap.tsx's directionsTarget) — every pin other than
-   the one actually being routed to fades out, so the route reads as the
-   main thing on the map worth tapping. Transition-only (no animation)
-   since this is a state toggle, not a one-off entrance. Spot pins stay
-   clickable despite the dimming — tapping one re-arms directions to it
-   (see the marker click handler in SpotMap.tsx) instead of being a dead
-   end; event pins have no directions of their own yet, so those stay
-   inert. */
+   the one actually being routed to is hidden, so only the destination and
+   the route are on the map. Transition-only (no animation) since this is
+   a state toggle; hidden pins also stop responding to clicks. */
 .spot-pin-marker--dimmed,
 .event-pin-marker--dimmed {
-  opacity: 0.3;
+  opacity: 0 !important;
+  pointer-events: none !important;
   transition: opacity 200ms ease;
-}
-
-.event-pin-marker--dimmed {
-  pointer-events: none;
 }
 
 /* Event pins — full-color /public/icons badges. These are already
@@ -835,11 +819,20 @@ html[data-night] .header-logotype {
 
 .event-pin-marker {
   z-index: 400 !important;
+  transition: opacity 200ms ease;
 }
 
-.event-pin-marker:hover .event-pin,
-.event-pin-marker--active .event-pin {
+.event-pin-marker:hover .event-pin {
   transform: scale(1.12);
+}
+
+.event-pin-marker--active {
+  z-index: 1000 !important;
+}
+
+.event-pin-marker--active .event-pin {
+  transform: scale(1.4);
+  filter: drop-shadow(0 0 6px var(--color-aqua)) drop-shadow(0 4px 8px rgb(0 0 0 / 0.4));
 }
 
 .spot-pin-marker--me {
@@ -972,27 +965,42 @@ html[data-night] .header-logotype {
   opacity: 0;
 }
 
-/* Numbered route pins — ItineraryMap.tsx, one per "itinerary"-layout
-   article stop, in day-plan order. A plain circle (not the teardrop
-   .spot-pin shape) so the number stays upright and legible. */
-.itinerary-pin {
-  display: flex;
-  height: 28px;
-  width: 28px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--color-aqua);
-  border: 2px solid white;
-  box-shadow: 0 4px 10px rgb(0 0 0 / 0.35);
+/* SVG map engine (SvgMap.tsx). Lines keep their pixel width at any zoom;
+   pins are positioned in world space but counter-scaled by --ik (1/k). */
+.svgmap-line {
+  vector-effect: non-scaling-stroke;
+}
+
+.svgmap-pin {
+  cursor: pointer;
+  outline: none;
+}
+
+.svgmap-pin:focus-visible .itinerary-pin-dot {
+  stroke-width: 4;
+}
+
+.itinerary-pin-dot {
+  fill: var(--color-aqua);
+  stroke: white;
+  stroke-width: 2;
+}
+
+.itinerary-pin-shadow {
+  fill: rgb(0 0 0 / 0.25);
+}
+
+.itinerary-pin-num {
+  fill: white;
   font-family: var(--font-heading);
   font-size: 12px;
   font-weight: 800;
-  color: white;
+  pointer-events: none;
+  user-select: none;
 }
 
-.itinerary-pin-marker {
-  z-index: 500 !important;
+html[data-night] .itinerary-pin-dot {
+  stroke: color-mix(in srgb, var(--color-aqua) 40%, white 60%);
 }
 
 /* "You are here" dot — SpotMap.tsx's upsertMeMarker, shared by the one-shot

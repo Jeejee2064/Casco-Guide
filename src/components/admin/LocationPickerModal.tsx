@@ -1,18 +1,15 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
-import type { LeafletMouseEvent, Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
+import { SvgMap, type HtmlPin, type SvgMapHandle } from "@/components/site/SvgMap";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Field";
-import { addCascoBasemap, CASCO_VIEJO_ATTRIBUTION } from "@/lib/cascoMap";
+import { project, unproject, zoomToScale } from "@/lib/svgMap/projection";
 
 // Casco Viejo, Panama City — same default as the public SpotMap.
 const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
-
-const pinHtml = `<span class="spot-pin" style="background:#ff6b35"><span class="spot-pin__emoji">📍</span></span>`;
 
 export interface LocationPickerLabels {
   title: string;
@@ -51,91 +48,57 @@ export function LocationPickerModal({
   const [latInput, setLatInput] = useState(start[0].toFixed(6));
   const [lngInput, setLngInput] = useState(start[1].toFixed(6));
   const [ready, setReady] = useState(false);
+  const mapRef = useRef<SvgMapHandle | null>(null);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const markerRef = useRef<LeafletMarker | null>(null);
+  // The admin has no Night Mode toggle — just follow the OS scheme.
+  const [prefersDark, setPrefersDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => setPrefersDark(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  // Opens centered on the pin, closer in when there's a real position.
+  useEffect(() => {
+    mapRef.current?.flyTo(project(start[0], start[1]), {
+      scale: zoomToScale(hasInitial ? 17 : 15),
+      animate: false,
+    });
+    // Once, with the modal's opening position — later changes go through
+    // applyPosition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** Single source of truth for a new pin position — updates state and the
-   * text inputs; `moveMap` also re-centers the marker/map (skipped when the
-   * change already came from a map click/drag, which placed it itself). */
+   * text inputs; `moveMap` also re-centers the map (skipped when the change
+   * already came from a map click/drag, which placed the pin itself). */
   const applyPosition = (newLat: number, newLng: number, moveMap: boolean) => {
     setPosition([newLat, newLng]);
     setLatInput(newLat.toFixed(6));
     setLngInput(newLng.toFixed(6));
-    if (moveMap && mapRef.current && markerRef.current) {
-      markerRef.current.setLatLng([newLat, newLng]);
-      mapRef.current.flyTo([newLat, newLng], Math.max(mapRef.current.getZoom(), 16), {
-        duration: 0.6,
-      });
+    if (moveMap) {
+      mapRef.current?.flyTo(project(newLat, newLng), { minScale: zoomToScale(16) });
     }
   };
 
-  // Init the map once, client-side only.
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !containerRef.current) return;
-
-      const map = L.map(containerRef.current, {
-        // Leaflet's SVG renderer only draws the viewport + 10% padding and
-        // redraws on moveend, so panning exposed blank edges. Extra
-        // padding (40%) keeps the basemap drawn ahead of the pan without making
-        // every zoom redraw a huge SVG (1.0 caused visible jank on zoom).
-        renderer: L.svg({ padding: 0.4 }),
-        // Mouse wheel: more pixels of scroll per zoom level = gentler zoom
-        // (Leaflet default is 60, which feels too fast).
-        wheelPxPerZoomLevel: 200,
-        center: start,
-        zoom: hasInitial ? 17 : 15,
-        attributionControl: false,
-      });
-      L.control.attribution({ prefix: false }).addAttribution(CASCO_VIEJO_ATTRIBUTION).addTo(map);
-
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-      const basemap = await addCascoBasemap(L, map, prefersDark);
-      // A second await (the basemap's own GeoJSON fetch) — re-check in case
-      // this modal closed while it was in flight.
-      if (cancelled) {
-        basemap.destroy();
-        map.remove();
-        return;
-      }
-
-      const icon = L.divIcon({
-        className: "spot-pin-marker",
-        html: pinHtml,
-        iconSize: [34, 34],
-        iconAnchor: [17, 34],
-      });
-      const marker = L.marker(start, { icon, draggable: true }).addTo(map);
-
-      marker.on("dragend", () => {
-        const { lat: newLat, lng: newLng } = marker.getLatLng();
-        applyPosition(newLat, newLng, false);
-      });
-      map.on("click", (e: LeafletMouseEvent) => {
-        marker.setLatLng(e.latlng);
-        applyPosition(e.latlng.lat, e.latlng.lng, false);
-      });
-
-      markerRef.current = marker;
-      mapRef.current = map;
-      setReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-      mapRef.current?.remove();
-      mapRef.current = null;
-      markerRef.current = null;
-    };
-    // Map is created once with the modal's opening position — later position
-    // changes flow through the refs, not a re-init.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [pinX, pinY] = project(position[0], position[1]);
+  const pin: HtmlPin = {
+    id: "picked",
+    x: pinX,
+    y: pinY,
+    width: 34,
+    height: 34,
+    anchor: [17, 34],
+    className: "spot-pin-marker",
+    draggable: true,
+    node: (
+      <span className="spot-pin" style={{ background: "#ff6b35" }}>
+        <span className="spot-pin__emoji">📍</span>
+      </span>
+    ),
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -188,7 +151,21 @@ export function LocationPickerModal({
 
         <div className="space-y-4 overflow-y-auto p-4">
           <div className="relative h-64 w-full overflow-hidden rounded-[var(--radius-button)] border border-border sm:h-80">
-            <div ref={containerRef} className="h-full w-full" />
+            <SvgMap
+              ref={mapRef}
+              dark={prefersDark}
+              htmlPins={[pin]}
+              onReady={() => setReady(true)}
+              onBackgroundClick={(pt) => {
+                const [lat, lng] = unproject(pt[0], pt[1]);
+                applyPosition(lat, lng, false);
+              }}
+              onPinDragEnd={(_id, pt) => {
+                const [lat, lng] = unproject(pt[0], pt[1]);
+                applyPosition(lat, lng, false);
+              }}
+              className="h-full w-full"
+            />
             {!ready && (
               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-aqua/10 to-coral/10">
                 <Loader2 className="animate-spin text-aqua" size={22} />

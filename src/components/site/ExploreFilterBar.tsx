@@ -117,6 +117,9 @@ export function ExploreFilterBar({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
+  // Horizontally-scrollable chip row (only one of the /spots or /map
+  // containers is ever rendered) — see the centering effect below.
+  const chipRowRef = useRef<HTMLDivElement>(null);
 
   // Distinct tags across the full spot list — case-insensitively deduped
   // (tags are free text entered per-spot in the admin form, so casing isn't
@@ -236,6 +239,21 @@ export function ExploreFilterBar({
     if (autoOpenVibesModal) setIsVibesModalOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keeps the selected chip centered in the scrollable row — on mobile the
+  // row overflows, so arriving with a vibe preselected (e.g. from a home
+  // page vibe card) would otherwise leave it off-screen. Scrolls the row
+  // itself (not scrollIntoView, which would also scroll the page).
+  useEffect(() => {
+    const row = chipRowRef.current;
+    const active = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!row || !active || active === row.firstElementChild) return;
+    const rowRect = row.getBoundingClientRect();
+    const chipRect = active.getBoundingClientRect();
+    const delta =
+      chipRect.left + chipRect.width / 2 - (rowRect.left + rowRect.width / 2);
+    row.scrollTo({ left: row.scrollLeft + delta, behavior: "smooth" });
+  }, [mode, vibes, categories]);
 
   // Whether the visitor has ever discovered vibes mode — persisted
   // (VIBES_USED_KEY), so both the passive hint bubble below and the
@@ -745,7 +763,7 @@ export function ExploreFilterBar({
           competes with the pins for thumb reach on mobile, so only one row
           lives up here. */}
         {!fixed && (
-          <div className="scrollbar-none mx-auto flex max-w-6xl gap-2 overflow-x-auto border-t border-border/60 pb-0.5 pt-3">
+          <div ref={chipRowRef} className="scrollbar-none mx-auto flex max-w-6xl gap-2 overflow-x-auto border-t border-border/60 pb-0.5 pt-3">
             {chips}
           </div>
         )}
@@ -779,7 +797,7 @@ export function ExploreFilterBar({
           }
           transition={{ duration: 0.28, ease: EASE_OUT }}
           className={cn(
-            "safe-bottom fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 px-4 pb-3 sm:px-6",
+            "safe-bottom fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 max-sm:!px-0 max-sm:!pb-0 px-4 pb-3 sm:px-6",
             // Matches the mobile sheet's own open/close transition (see
             // MapDetailPanel) — the two swap places in one motion: this
             // shelf fades/slides down out of the way as the sheet slides up
@@ -788,7 +806,7 @@ export function ExploreFilterBar({
           )}
         >
           {renderModeToggle(true)}
-          <div className="scrollbar-none flex max-w-full gap-2 overflow-x-auto rounded-full border border-border/60 bg-surface/70 px-3 py-2 shadow-lg backdrop-blur-xl">
+          <div ref={chipRowRef} className="scrollbar-none flex max-w-full gap-2 overflow-x-auto rounded-full border border-border/60 bg-surface/70 px-3 py-2 shadow-lg backdrop-blur-xl max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {chips}
           </div>
         </motion.div>

@@ -1,37 +1,23 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type {
-  Map as LeafletMap,
-  Marker as LeafletMarker,
-  Polyline,
-} from "leaflet";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { CalendarDays } from "lucide-react";
 import { MapDetailPanel, type DetailPanelContent } from "./MapDetailPanel";
 import { useNightMode } from "./NightModeContext";
+import { SvgMap, type SvgMapHandle, type SvgPin } from "./SvgMap";
 import { useRouter } from "@/i18n/navigation";
 import { CATEGORY_META } from "@/lib/categories";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
-import {
-  addCascoBasemap,
-  CASCO_VIEJO_ATTRIBUTION,
-  CASCO_VIEJO_BOUNDS,
-  type CascoBasemap,
-} from "@/lib/cascoMap";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { formatTime } from "@/lib/hours";
 import { routeBetween } from "@/lib/routing";
+import { latLngsToPath, project, zoomToScale } from "@/lib/svgMap/projection";
 import type { EventRow, Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
 const ROUTE_COLOR = "#146b8c"; // --color-aqua — matches the itinerary timeline's dots (ArticleDetailView)
-// Casco Viejo, Panama City — initial view before the first fitBounds() call
-// below (see SpotMap.tsx for the same fallback).
-const DEFAULT_CENTER: [number, number] = [8.9528, -79.5347];
-const DEFAULT_ZOOM = 15;
 
 // Casco Viejo is small enough that a chronological itinerary can genuinely
 // send you back past a spot you already walked by — a real crossing route,
@@ -137,24 +123,19 @@ export function ItineraryMap({
   const tEventCategory = useTranslations("eventCategory");
   const tEvents = useTranslations("events");
   const { isNight } = useNightMode();
-  const [ready, setReady] = useState(false);
   const [selected, setSelected] = useState<ItineraryStop | null>(null);
+  // One entry per leg (consecutive stop pair), not a single path — a leg the
+  // street graph couldn't connect (`approximate`) reads as dashed on its own
+  // instead of flattening every other leg's solid, real path to match it.
+  // Tagged with the stop list they were routed for, so a stale route never
+  // draws over a new set of pins.
+  const [routed, setRouted] = useState<{
+    forStops: ItineraryStop[];
+    legs: { d: string; approximate: boolean }[];
+  } | null>(null);
+  const legs = routed?.forStops === stops ? routed.legs : [];
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const basemapRef = useRef<CascoBasemap | null>(null);
-  const markersRef = useRef<LeafletMarker[]>([]);
-  // One casing+line pair per leg (consecutive stop pair), not a single
-  // polyline — see the drawing effect below for why.
-  const routeLayersRef = useRef<Polyline[]>([]);
-
-  // Mirrors SpotMap/MiniMap's isNightRef — the init effect below only runs
-  // once (mount), so it needs a live read of the latest `isNight` at that
-  // instant rather than whatever it closed over at first render.
-  const isNightRef = useRef(isNight);
-  useEffect(() => {
-    isNightRef.current = isNight;
-  }, [isNight]);
+  const mapRef = useRef<SvgMapHandle | null>(null);
 
   // Tracked in a ref, not state — only read at click-time, mirrors SpotMap.
   const isDesktopRef = useRef(false);
@@ -168,153 +149,57 @@ export function ItineraryMap({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
+  // Same as Leaflet's old dark check: Night Mode or the OS scheme.
+  const [prefersDark, setPrefersDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => setPrefersDark(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   // Nudges the map so the selected pin doesn't end up hidden behind the
   // panel/sheet about to cover it — same idea as SpotMap's revealSelection.
-  const revealSelection = useCallback((lat: number, lng: number) => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (isDesktopRef.current) {
-      map.panInside([lat, lng], {
-        paddingTopLeft: [412, 24],
-        paddingBottomRight: [24, 24],
-        animate: true,
-      });
-    } else {
-      map.panInside([lat, lng], {
-        paddingTopLeft: [24, 24],
-        paddingBottomRight: [24, 320],
-        animate: true,
-      });
-    }
+  const revealSelection = useCallback((x: number, y: number) => {
+    mapRef.current?.panInside(
+      [x, y],
+      isDesktopRef.current
+        ? { top: 24, left: 412, right: 24, bottom: 24 }
+        : { top: 24, left: 24, right: 24, bottom: 320 },
+    );
   }, []);
 
-  // Init the map once, client-side only.
+  // Declutter for display only — links/panel content still use each stop's
+  // real latitude/longitude (including for the routed path below).
+  const displayWorld = useMemo(
+    () =>
+      declutter(stops.map((s) => ({ lat: s.latitude, lng: s.longitude }))).map(
+        (p) => project(p.lat, p.lng),
+      ),
+    [stops],
+  );
+
+  // Route legs + fit. Fit once the legs are known so bounds account for a
+  // routed leg that bows out wider than a straight line between its pins.
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !containerRef.current) return;
-
-      const map = L.map(containerRef.current, {
-        // Leaflet's SVG renderer only draws the viewport + 10% padding and
-        // redraws on moveend, so panning exposed blank edges. Extra
-        // padding (40%) keeps the basemap drawn ahead of the pan without making
-        // every zoom redraw a huge SVG (1.0 caused visible jank on zoom).
-        renderer: L.svg({ padding: 0.4 }),
-        // Mouse wheel: more pixels of scroll per zoom level = gentler zoom
-        // (Leaflet default is 60, which feels too fast).
-        wheelPxPerZoomLevel: 200,
-        center: DEFAULT_CENTER,
-        zoom: DEFAULT_ZOOM,
-        minZoom: 14,
-        maxZoom: 19,
-        maxBounds: CASCO_VIEJO_BOUNDS,
-        maxBoundsViscosity: 0.6,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: interactive,
-        touchZoom: interactive,
-        scrollWheelZoom: interactive,
-        doubleClickZoom: interactive,
-        boxZoom: interactive,
-        keyboard: interactive,
-      });
-      L.control.zoom({ position: "topright" }).addTo(map);
-      L.control
-        .attribution({ prefix: false })
-        .addAttribution(CASCO_VIEJO_ATTRIBUTION)
-        .addTo(map);
-      map.on("click", () => setSelected(null));
-
-      const prefersDark = window.matchMedia?.(
-        "(prefers-color-scheme: dark)",
-      ).matches;
-      const basemap = await addCascoBasemap(
-        L,
-        map,
-        isNightRef.current || prefersDark,
+    const fit = (extra: [number, number][]) => {
+      const pts = [...displayWorld, ...extra];
+      if (pts.length === 0) return;
+      const xs = pts.map((p) => p[0]);
+      const ys = pts.map((p) => p[1]);
+      mapRef.current?.fitBounds(
+        [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+        { padding: 36, maxScale: zoomToScale(17) },
       );
-      // A second await (the basemap's own GeoJSON fetch) — re-check in case
-      // this ItineraryMap unmounted while it was in flight.
-      if (cancelled) {
-        basemap.destroy();
-        map.remove();
-        return;
-      }
-      basemapRef.current = basemap;
-
-      mapRef.current = map;
-      setReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-      mapRef.current?.remove();
-      mapRef.current = null;
-      basemapRef.current = null;
-      markersRef.current = [];
-      routeLayersRef.current = [];
     };
-    // One map per mounted instance — a different article gets a fresh
-    // ItineraryMap (keyed by the caller), not a re-init here. `interactive`
-    // is likewise read once by design, not meant to toggle live.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fit([]);
 
-  // Swaps the basemap's colors live if Night Mode is toggled after mount —
-  // the init effect above only reads isNight once, at creation.
-  useEffect(() => {
-    if (!ready) return;
-    const prefersDark = window.matchMedia?.(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    basemapRef.current?.setDark(isNight || prefersDark);
-  }, [ready, isNight]);
-
-  // Draw the numbered pins + connecting route whenever the stop list changes.
-  useEffect(() => {
-    if (!ready || !mapRef.current) return;
-    let cancelled = false;
-
-    (async () => {
-      const { default: L } = await import("leaflet");
-      if (cancelled || !mapRef.current) return;
-      const map = mapRef.current;
-
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-      routeLayersRef.current.forEach((layer) => layer.remove());
-      routeLayersRef.current = [];
-
-      // Declutter for display only — links/panel content, and pin
-      // placement, below still use each stop's real latitude/longitude
-      // (including for the routed path — see the loop below).
-      const displayPoints = declutter(
-        stops.map((s) => ({ lat: s.latitude, lng: s.longitude })),
-      );
-      const points: [number, number][] = displayPoints.map((p) => [
-        p.lat,
-        p.lng,
-      ]);
-      if (points.length === 0) return;
-
-      // One real, street-traced walking leg per consecutive stop pair —
-      // not a single straight as-the-crow-flies line across the whole
-      // route (see lib/routing.ts, the same router SpotMap's "get
-      // directions" uses). Each leg gets its own casing+line pair, drawn
-      // in parallel, so a leg the street graph couldn't connect (falls
-      // back to `approximate: true` — see routeBetween) reads as dashed on
-      // its own instead of flattening every other leg's solid, real path
-      // to match it.
-      // Collected below so fitBounds afterward can account for a routed
-      // leg that bows out wider than a straight line between its two pins
-      // would have — bounds based on pins alone could otherwise clip part
-      // of the drawn path.
-      const routePoints: [number, number][] = [];
-
-      if (stops.length > 1) {
-        const legs = await Promise.all(
+    if (stops.length > 1) {
+      (async () => {
+        const results = await Promise.all(
           stops
             .slice(0, -1)
             .map((from, i) =>
@@ -324,57 +209,45 @@ export function ItineraryMap({
               ),
             ),
         );
-        if (cancelled || !mapRef.current) return;
-
-        for (const leg of legs) {
-          const casing = L.polyline(leg.points, {
-            color: "#ffffff",
-            weight: 6,
-            opacity: 0.85,
-            lineCap: "round",
-            lineJoin: "round",
-          }).addTo(map);
-          const line = L.polyline(leg.points, {
-            color: ROUTE_COLOR,
-            weight: 3.5,
-            opacity: 0.95,
-            lineCap: "round",
-            lineJoin: "round",
-            dashArray: leg.approximate ? "2, 10" : undefined,
-          }).addTo(map);
-          routeLayersRef.current.push(casing, line);
-          routePoints.push(...leg.points);
-        }
-      }
-
-      stops.forEach((stop, i) => {
-        const icon = L.divIcon({
-          className: "itinerary-pin-marker",
-          html: `<span class="itinerary-pin">${stop.index}</span>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
+        if (cancelled) return;
+        setRouted({
+          forStops: stops,
+          legs: results.map((leg) => ({
+            d: latLngsToPath(leg.points),
+            approximate: leg.approximate,
+          })),
         });
-        const marker = L.marker(points[i], { icon })
-          .bindTooltip(`${stop.index}. ${stop.name}`)
-          .addTo(map);
-        marker.on("click", (e) => {
-          L.DomEvent.stopPropagation(e); // don't let the map's own click handler close the panel right back
-          setSelected(stop);
-          revealSelection(points[i][0], points[i][1]);
-        });
-        markersRef.current.push(marker);
-      });
-
-      map.fitBounds(L.latLngBounds([...points, ...routePoints]), {
-        padding: [36, 36],
-        maxZoom: 17,
-      });
-    })();
-
+        fit(results.flatMap((leg) => leg.points.map((p) => project(p[0], p[1]))));
+      })();
+    }
     return () => {
       cancelled = true;
     };
-  }, [ready, stops, revealSelection]);
+  }, [stops, displayWorld]);
+
+  const pins: SvgPin[] = useMemo(
+    () =>
+      stops.map((stop, i) => ({
+        id: stop.id,
+        x: displayWorld[i][0],
+        y: displayWorld[i][1],
+        label: `${stop.index}. ${stop.name}`,
+        node: (
+          <>
+            <circle className="itinerary-pin-shadow" cy={3} r={14} />
+            <circle className="itinerary-pin-dot" r={14} />
+            <text className="itinerary-pin-num" textAnchor="middle" dy="0.35em">
+              {stop.index}
+            </text>
+          </>
+        ),
+        onSelect: () => {
+          setSelected(stop);
+          revealSelection(displayWorld[i][0], displayWorld[i][1]);
+        },
+      })),
+    [stops, displayWorld, revealSelection],
+  );
 
   // Deselect if the stop list itself changes out from under the current
   // selection (e.g. article content reloads) and it's no longer in it.
@@ -480,13 +353,37 @@ export function ItineraryMap({
 
   return (
     <div className={cn("relative", className)}>
-      <div
-        ref={containerRef}
+      <SvgMap
+        ref={mapRef}
+        dark={isNight || prefersDark}
+        interactive={interactive}
+        pins={pins}
+        onBackgroundClick={() => setSelected(null)}
         className={cn(
-          "w-full overflow-hidden rounded-[var(--radius-card)] border border-border",
+          "w-full rounded-[var(--radius-card)] border border-border",
           heightClassName,
         )}
-      />
+      >
+        {legs.map((leg, i) => (
+          <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path
+              className="svgmap-line"
+              d={leg.d}
+              stroke="#ffffff"
+              strokeOpacity={0.85}
+              strokeWidth={6}
+            />
+            <path
+              className="svgmap-line"
+              d={leg.d}
+              stroke={ROUTE_COLOR}
+              strokeOpacity={0.95}
+              strokeWidth={3.5}
+              strokeDasharray={leg.approximate ? "2 10" : undefined}
+            />
+          </g>
+        ))}
+      </SvgMap>
       <MapDetailPanel
         content={panelContent}
         closeLabel={tSpot("close")}
