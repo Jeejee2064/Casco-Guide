@@ -11,7 +11,7 @@ import type { EventRow, Spot } from "@/lib/types/database";
 /**
  * Bottom-of-page "keep browsing" block for a spot or event detail page:
  * "related events" / spots rails. The CTA back to the full map lives right
- * under the MiniMap in the aside instead — see ExploreMapCard. Either rail
+ * under the MiniMap in the aside instead — see GetMeThereCard. Either rail
  * can be empty and just doesn't render; if both are empty there's nothing to
  * show at all.
  *

@@ -196,7 +196,8 @@
     "nearbySpots": "Lugares cercanos",
     "relatedSpots": "También te puede gustar",
     "relatedEvents": "Eventos relacionados",
-    "exploreMap": "Explora el mapa"
+    "exploreMap": "Explora el mapa",
+    "getMeThere": "¡Llévame!"
   },
   "gallery": {
     "viewAll": "Ver las {count} fotos",

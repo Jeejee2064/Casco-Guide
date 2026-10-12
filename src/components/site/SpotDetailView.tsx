@@ -23,7 +23,7 @@ import { PhotoGallery } from "./PhotoGallery";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
-import { ExploreMapCard } from "./ExploreMapCard";
+import { GetMeThereCard } from "./GetMeThereCard";
 import { NearbySection } from "./NearbySection";
 import { SpotCard } from "./SpotCard";
 import { ArticleCard } from "./ArticleCard";
@@ -438,7 +438,7 @@ export function SpotDetailView({
             </StaggerItem>
 
             <StaggerItem>
-              <ExploreMapCard />
+              <GetMeThereCard onClick={directions} />
             </StaggerItem>
 
             {spot.email && (

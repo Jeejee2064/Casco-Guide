@@ -20,7 +20,7 @@ import { LoadingImage } from "./LoadingImage";
 import { PhotoGallery } from "./PhotoGallery";
 import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
-import { ExploreMapCard } from "./ExploreMapCard";
+import { GetMeThereCard } from "./GetMeThereCard";
 import { NearbySection } from "./NearbySection";
 import { Stagger, StaggerItem, EASE_OUT } from "./motion";
 import { Button } from "@/components/ui/Button";
@@ -248,7 +248,7 @@ export function EventDetailView({
             </StaggerItem>
 
             <StaggerItem>
-              <ExploreMapCard />
+              <GetMeThereCard onClick={directions} />
             </StaggerItem>
 
             <StaggerItem>
