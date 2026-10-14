@@ -457,6 +457,8 @@
       "heroPhotoHint": "The main photo for this spot — it's the one shown in the hero on its page, on cards throughout the site, and as the pin thumbnail on the map.",
       "gallery": "Gallery (up to 5)",
       "uploadHint": "Drag & drop or click to upload",
+      "setAsMain": "Set as main photo",
+      "mainPhoto": "Main photo",
       "tags": "Tags",
       "tagsHint": "Press Enter to add",
       "isFeatured": "Featured spot",

@@ -457,6 +457,8 @@
       "heroPhotoHint": "La foto principal de este lugar: aparece en el hero de su página, en las tarjetas del sitio y como miniatura del pin en el mapa.",
       "gallery": "Galería (hasta 5)",
       "uploadHint": "Arrastra o haz clic para subir",
+      "setAsMain": "Usar como foto principal",
+      "mainPhoto": "Foto principal",
       "tags": "Etiquetas",
       "tagsHint": "Presiona Enter para agregar",
       "isFeatured": "Lugar destacado",

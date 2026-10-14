@@ -847,7 +847,12 @@ export function SpotForm({
       <Section title={t("sections.media")}>
         <div>
           <Label>{t("gallery")}</Label>
-          <GalleryUploader value={values.photos} onChange={(p) => set("photos", p)} />
+          <GalleryUploader
+            value={values.photos}
+            onChange={(p) => set("photos", p)}
+            featured={values.featured_photo}
+            onSetFeatured={(url) => set("featured_photo", url)}
+          />
         </div>
       </Section>
 

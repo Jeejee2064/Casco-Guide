@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -167,10 +167,16 @@ export function GalleryUploader({
   value,
   onChange,
   max = 5,
+  featured,
+  onSetFeatured,
 }: {
   value: Photo[];
   onChange: (photos: Photo[]) => void;
   max?: number;
+  /** URL currently used as the main photo — highlights the matching thumbnail. */
+  featured?: string;
+  /** When provided, each thumbnail gets a star button to make it the main photo. */
+  onSetFeatured?: (url: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -195,8 +201,16 @@ export function GalleryUploader({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-        {value.map((photo, i) => (
-          <div key={i} className="relative aspect-square overflow-hidden rounded-xl">
+        {value.map((photo, i) => {
+          const isFeatured = !!featured && photo.url === featured;
+          return (
+          <div
+            key={i}
+            className={cn(
+              "relative aspect-square overflow-hidden rounded-xl",
+              isFeatured && "ring-2 ring-aqua",
+            )}
+          >
             <Image src={photo.url} alt={photo.caption ?? ""} fill sizes="150px" className="object-cover" />
             <button
               type="button"
@@ -205,8 +219,24 @@ export function GalleryUploader({
             >
               <X size={12} />
             </button>
+            {onSetFeatured && (
+              <button
+                type="button"
+                disabled={isFeatured}
+                onClick={() => onSetFeatured(photo.url)}
+                title={isFeatured ? t("mainPhoto") : t("setAsMain")}
+                aria-label={isFeatured ? t("mainPhoto") : t("setAsMain")}
+                className={cn(
+                  "absolute bottom-1 left-1 flex h-6 w-6 items-center justify-center rounded-full text-white",
+                  isFeatured ? "bg-aqua" : "bg-black/50 hover:bg-aqua",
+                )}
+              >
+                <Star size={12} className={cn(isFeatured && "fill-current")} />
+              </button>
+            )}
           </div>
-        ))}
+          );
+        })}
         {value.length < max && (
           <button
             type="button"
