@@ -33,7 +33,7 @@ import { VIBE_META } from "@/lib/vibes";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
-import { getSpotImage } from "@/lib/data/categoryImages";
+import { getSpotPhotos } from "@/lib/data/categoryImages";
 import { panamaWhatsAppUrl } from "@/lib/phone";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
@@ -90,8 +90,7 @@ export function SpotDetailView({
   // not a boxy card.
   const headerHeight = useHeaderHeight(true);
 
-  const photos =
-    spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
+  const photos = getSpotPhotos(spot);
   const [hero, ...rest] = photos;
   const [heroLightboxOpen, setHeroLightboxOpen] = useState(false);
   const [hoursOpen, setHoursOpen] = useState(false);

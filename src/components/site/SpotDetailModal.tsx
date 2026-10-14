@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/Button";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
-import { getSpotImage } from "@/lib/data/categoryImages";
+import { getSpotPhotos } from "@/lib/data/categoryImages";
 import { panamaWhatsAppUrl } from "@/lib/phone";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
@@ -48,7 +48,7 @@ export function SpotDetailModal({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [hoursOpen, setHoursOpen] = useState(false);
 
-  const photos = spot.photos.length > 0 ? spot.photos : [{ url: getSpotImage(spot), caption: spot.name }];
+  const photos = getSpotPhotos(spot);
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);

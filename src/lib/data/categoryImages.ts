@@ -1,4 +1,4 @@
-import type { Spot, SpotCategory } from "@/lib/types/database";
+import type { Photo, Spot, SpotCategory } from "@/lib/types/database";
 
 /**
  * Curated fallback photography, keyed by spot category, used only when a
@@ -33,11 +33,30 @@ export const CATEGORY_IMAGES: Record<SpotCategory, string> = {
 export const HERO_IMAGE = "/hero.webp";
 
 /** Best available image for a spot card: its own photo, else a category placeholder. */
-export function getSpotImage(spot: Pick<Spot, "featured_photo" | "category">): string {
-  return spot.featured_photo ?? CATEGORY_IMAGES[spot.category];
+export function getSpotImage(
+  spot: Pick<Spot, "featured_photo" | "category"> & Partial<Pick<Spot, "photos">>,
+): string {
+  return spot.featured_photo || spot.photos?.[0]?.url || CATEGORY_IMAGES[spot.category];
 }
 
 /** True only when the image is a real, uploaded photo of the venue. */
-export function hasRealPhoto(spot: Pick<Spot, "featured_photo">): boolean {
-  return Boolean(spot.featured_photo);
+export function hasRealPhoto(spot: Pick<Spot, "featured_photo"> & Partial<Pick<Spot, "photos">>): boolean {
+  return Boolean(spot.featured_photo || spot.photos?.length);
+}
+
+/** Every photo of a spot with the main (featured) one always first, so the
+ * detail views open on the same picture the cards and map show. Falls back
+ * to the single getSpotImage() placeholder when there are none. */
+export function getSpotPhotos(
+  spot: Pick<Spot, "featured_photo" | "category" | "name" | "photos">,
+): Photo[] {
+  const gallery = spot.photos ?? [];
+  if (!spot.featured_photo) {
+    return gallery.length > 0 ? gallery : [{ url: getSpotImage(spot), caption: spot.name }];
+  }
+  const match = gallery.find((p) => p.url === spot.featured_photo);
+  return [
+    match ?? { url: spot.featured_photo, caption: spot.name },
+    ...gallery.filter((p) => p.url !== spot.featured_photo),
+  ];
 }
