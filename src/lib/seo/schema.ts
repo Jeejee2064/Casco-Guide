@@ -43,6 +43,42 @@ export function organizationSchema() {
     "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: SITE_URL,
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/cascoviejo.png`,
+    },
+    description:
+      "Independent, locally curated travel guide to Casco Viejo (Casco Antiguo, San Felipe), the UNESCO-listed old town of Panama City.",
+    areaServed: { "@id": `${SITE_URL}/#destination` },
+  };
+}
+
+/** The place the whole site is about — a stable `@id` entity that spot pages
+ * point back to via `containedInPlace`, with `sameAs` links to the
+ * authoritative records (Wikipedia, UNESCO) so search and AI systems can
+ * resolve "Casco Viejo" to the right real-world thing. */
+export function destinationSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "TouristDestination",
+    "@id": `${SITE_URL}/#destination`,
+    name: "Casco Viejo",
+    alternateName: ["Casco Antiguo", "San Felipe", "Old Town Panama City"],
+    description:
+      "Casco Viejo is the restored colonial old town of Panama City, a UNESCO World Heritage Site since 1997, known for its cobblestone streets, rooftop bars, restaurants, boutique hotels and museums.",
+    url: SITE_URL,
+    touristType: ["Cultural tourism", "Food tourism", "Nightlife"],
+    geo: { "@type": "GeoCoordinates", latitude: 8.9524, longitude: -79.5357 },
+    containedInPlace: {
+      "@type": "City",
+      name: "Panama City",
+      containedInPlace: { "@type": "Country", name: "Panama" },
+    },
+    sameAs: [
+      "https://en.wikipedia.org/wiki/Casco_Viejo,_Panam%C3%A1",
+      "https://es.wikipedia.org/wiki/Casco_Antiguo_de_Panam%C3%A1",
+      "https://whc.unesco.org/en/list/790",
+    ],
   };
 }
 
@@ -58,6 +94,7 @@ export function websiteSchema() {
       "@type": "Place",
       name: "Casco Viejo, Panama City",
     },
+    inLanguage: ["es", "en"],
     publisher: { "@id": `${SITE_URL}/#organization` },
   };
 }
@@ -92,6 +129,7 @@ export function spotSchema(spot: Spot, url: string) {
     "@id": `${url}#place`,
     name: spot.name,
     url,
+    containedInPlace: { "@id": `${SITE_URL}/#destination` },
     ...(image && { image: [image, ...images.filter((i) => i !== image)] }),
     ...(spot.description && { description: spot.description }),
     address: {
@@ -121,7 +159,7 @@ export function spotSchema(spot: Spot, url: string) {
 }
 
 /** One guide/story page's structured data. */
-export function articleSchema(article: Article, url: string) {
+export function articleSchema(article: Article, url: string, locale: string) {
   const image = article.cover_photo ? absoluteUrl(article.cover_photo) : undefined;
 
   return {
@@ -133,6 +171,9 @@ export function articleSchema(article: Article, url: string) {
     ...(image && { image: [image] }),
     ...(article.published_at && { datePublished: article.published_at }),
     dateModified: article.updated_at,
+    inLanguage: locale,
+    about: { "@id": `${SITE_URL}/#destination` },
+    isPartOf: { "@id": `${SITE_URL}/#website` },
     ...(article.author && { author: { "@type": "Person", name: article.author } }),
     publisher: { "@id": `${SITE_URL}/#organization` },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
@@ -161,5 +202,35 @@ export function faqSchema(items: Array<{ q: string; a: string }>) {
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
     })),
+  };
+}
+
+/** A list page (spots, guides) as a `CollectionPage` wrapping an `ItemList`
+ * of its entries, so crawlers get the full set of detail URLs in one
+ * machine-readable place. */
+export function collectionSchema(opts: {
+  name: string;
+  description: string;
+  url: string;
+  items: Array<{ name: string; url: string }>;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${opts.url}#collection`,
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    isPartOf: { "@id": `${SITE_URL}/#website` },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: opts.items.length,
+      itemListElement: opts.items.map((item, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: item.name,
+        url: item.url,
+      })),
+    },
   };
 }

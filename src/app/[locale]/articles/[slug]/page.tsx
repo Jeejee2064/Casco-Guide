@@ -84,7 +84,7 @@ export default async function ArticleDetailPage({
 
   return (
     <>
-      <JsonLd data={articleSchema(article, url)} />
+      <JsonLd data={articleSchema(article, url, locale)} />
       <JsonLd data={breadcrumbs} />
       <Header />
       <main className="flex-1">

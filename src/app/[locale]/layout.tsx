@@ -13,7 +13,7 @@ import { InstallPwaPrompt } from "@/components/site/InstallPwaPrompt";
 import { ScrollToTopOnNavigate } from "@/components/site/ScrollToTopOnNavigate";
 import { JsonLd } from "@/components/site/JsonLd";
 import { buildAlternates } from "@/lib/seo/alternates";
-import { organizationSchema, websiteSchema } from "@/lib/seo/schema";
+import { destinationSchema, organizationSchema, websiteSchema } from "@/lib/seo/schema";
 import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL, ogLocaleOf } from "@/lib/seo/site";
 import "../globals.css";
 
@@ -142,6 +142,7 @@ export default async function LocaleLayout({
             every route shares the same Organization/WebSite nodes. */}
         <JsonLd data={organizationSchema()} />
         <JsonLd data={websiteSchema()} />
+        <JsonLd data={destinationSchema()} />
         {/* Runs before hydration so a returning visitor who left Night Mode
             on doesn't see a flash of the day theme first. Kept tiny and
             defensive (storage can be unavailable in private browsing). */}

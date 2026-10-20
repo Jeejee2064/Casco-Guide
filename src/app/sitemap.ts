@@ -22,6 +22,7 @@ function localizedEntries(
   for (const locale of routing.locales) {
     languages[locale] = absoluteUrl(getPathname({ href, locale }));
   }
+  languages["x-default"] = absoluteUrl(getPathname({ href, locale: routing.defaultLocale }));
 
   return routing.locales.map((locale) => ({
     url: absoluteUrl(getPathname({ href, locale })),

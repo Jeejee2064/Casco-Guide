@@ -88,10 +88,11 @@ export default async function SpotDetailPage({
   });
 
   const url = buildAlternates({ pathname: "/spots/[slug]", params: { slug } }, locale)!.canonical as string;
-  const homeUrl = buildAlternates("/", locale)!.canonical as string;
+  const spotsUrl = buildAlternates("/spots", locale)!.canonical as string;
+  // Breadcrumb items must be real, crawlable pages — the category level has
+  // no page of its own, so it is left out rather than pointing at an anchor.
   const breadcrumbs = breadcrumbSchema([
-    { name: t("spots"), url: `${homeUrl}#explore` },
-    { name: tCategory(spot.category), url: `${homeUrl}#explore` },
+    { name: t("spots"), url: spotsUrl },
     { name: spot.name, url },
   ]);
 

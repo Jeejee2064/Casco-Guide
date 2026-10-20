@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
+import { JsonLd } from "@/components/site/JsonLd";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { ArticlesGrid } from "@/components/site/ArticlesGrid";
 import { getArticles } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
-import { SITE_NAME, ogLocaleOf } from "@/lib/seo/site";
+import { collectionSchema } from "@/lib/seo/schema";
+import { getPathname } from "@/i18n/navigation";
+import { SITE_NAME, absoluteUrl, ogLocaleOf } from "@/lib/seo/site";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -37,10 +40,29 @@ export default async function ArticlesPage({ params }: { params: Promise<{ local
   setRequestLocale(locale);
   const t = await getTranslations("articles");
 
-  const articles = await getArticles(locale);
+  const [articles, tSeo] = await Promise.all([
+    getArticles(locale),
+    getTranslations({ locale, namespace: "seo.articles" }),
+  ]);
 
   return (
     <>
+      <JsonLd
+        data={collectionSchema({
+          name: tSeo("title"),
+          description: tSeo("description"),
+          url: buildAlternates("/articles", locale)!.canonical as string,
+          items: articles.map((article) => ({
+            name: article.title,
+            url: absoluteUrl(
+              getPathname({
+                href: { pathname: "/articles/[slug]", params: { slug: article.slug } },
+                locale,
+              }),
+            ),
+          })),
+        })}
+      />
       <Header />
       <main className="flex-1">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">

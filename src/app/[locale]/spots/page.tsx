@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import { JsonLd } from "@/components/site/JsonLd";
 import { SpotsExplorerSection } from "@/components/site/SpotsExplorerSection";
 import { getSpots } from "@/lib/data/spots";
+import { getPathname } from "@/i18n/navigation";
 import { buildAlternates } from "@/lib/seo/alternates";
-import { SITE_NAME, ogLocaleOf } from "@/lib/seo/site";
+import { collectionSchema } from "@/lib/seo/schema";
+import { SITE_NAME, absoluteUrl, ogLocaleOf } from "@/lib/seo/site";
 import { SPOT_VIBES } from "@/lib/vibes";
 import type { Locale } from "@/i18n/routing";
 import type { SpotVibe } from "@/lib/types/database";
@@ -52,7 +55,10 @@ export default async function SpotsPage({
   setRequestLocale(locale);
   const sp = await searchParams;
 
-  const spots = await getSpots(locale);
+  const [spots, tSeo] = await Promise.all([
+    getSpots(locale),
+    getTranslations({ locale, namespace: "seo.spots" }),
+  ]);
 
   // Powers the homepage vibe teaser's deep links (?vibe=romantic_sunset) and
   // the general "Discover your vibe" CTA (?mode=vibes&vibesModal=1, no vibe
@@ -68,6 +74,19 @@ export default async function SpotsPage({
 
   return (
     <>
+      <JsonLd
+        data={collectionSchema({
+          name: tSeo("title"),
+          description: tSeo("description"),
+          url: buildAlternates("/spots", locale)!.canonical as string,
+          items: spots.map((spot) => ({
+            name: spot.name,
+            url: absoluteUrl(
+              getPathname({ href: { pathname: "/spots/[slug]", params: { slug: spot.slug } }, locale }),
+            ),
+          })),
+        })}
+      />
       <Header />
       <main className="flex-1">
         <SpotsExplorerSection
