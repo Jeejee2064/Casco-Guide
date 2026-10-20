@@ -20,10 +20,10 @@ export function FeaturedSpotsSection({ spots, totalCount }: { spots: Spot[]; tot
   if (spots.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-heading text-2xl font-extrabold sm:text-3xl">{t("title")}</h2>
+          <h2 className="font-heading text-3xl font-extrabold leading-tight sm:text-4xl">{t("title")}</h2>
           <p className="mt-1 text-foreground/60">{t("subtitle")}</p>
         </div>
         <Link

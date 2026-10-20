@@ -4,12 +4,13 @@ import { Link } from "@/i18n/navigation";
 import { VIBE_META, SPOT_VIBES } from "@/lib/vibes";
 
 /**
- * Homepage teaser into vibes mode — all 6 vibes, every card (and the CTA
- * below) going to /spots, not /map: each mood card deep-links with that one
- * vibe pre-selected (`?vibe=<id>`), the general "Discover your vibe" CTA
- * opens the picker with nothing chosen yet and VibesModal popped open right
- * away (`?mode=vibes&vibesModal=1`) — both read server-side by spots/page.tsx,
- * same params /map's page.tsx also understands.
+ * Homepage teaser into vibes mode. Two columns: the pitch and CTA on the
+ * left (sticky on desktop), the six vibes as a plain ruled list on the right
+ * — name, descriptor and a colored icon per row, no cards, so it reads as a
+ * different beat from the card grids around it. Each row deep-links to
+ * /spots with that vibe pre-selected (`?vibe=<id>`); the CTA opens the
+ * picker with nothing chosen (`?mode=vibes&vibesModal=1`), both read
+ * server-side by spots/page.tsx.
  */
 export async function VibeTeaserSection() {
   const [t, tVibe, tDescriptor] = await Promise.all([
@@ -19,47 +20,50 @@ export async function VibeTeaserSection() {
   ]);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-      <div className="mb-8 max-w-2xl">
-        <h2 className="font-heading text-2xl font-extrabold sm:text-3xl">{t("title")}</h2>
-        <p className="mt-2 text-foreground/60">{t("subtitle")}</p>
+    <section className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[5fr_7fr] lg:gap-16">
+      <div className="lg:sticky lg:top-28 lg:self-start">
+        <h2 className="font-heading text-3xl font-extrabold leading-tight sm:text-4xl">
+          {t("title")}
+        </h2>
+        <p className="mt-3 max-w-md text-foreground/65">{t("subtitle")}</p>
+        <Link
+          href={{ pathname: "/spots", query: { mode: "vibes", vibesModal: "1" } }}
+          className="group mt-6 inline-flex items-center gap-2 rounded-full bg-aqua px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-aqua-dark"
+        >
+          {t("cta")}
+          <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
+        </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <ul className="divide-y divide-border border-y border-border">
         {SPOT_VIBES.map((v) => {
           const meta = VIBE_META[v];
           const Icon = meta.icon;
           return (
-            <Link
-              key={v}
-              href={{ pathname: "/spots", query: { vibe: v } }}
-              className="card-lift group flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-5"
-            >
-              <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110"
-                style={{ background: `${meta.color}26`, color: meta.color }}
+            <li key={v}>
+              <Link
+                href={{ pathname: "/spots", query: { vibe: v } }}
+                className="group flex items-center gap-4 py-4 sm:gap-5 sm:py-5"
               >
-                <Icon size={20} strokeWidth={2.25} />
-              </span>
-              <div>
-                <p className="font-heading font-bold">{tVibe(v)}</p>
-                <p className="mt-1 text-sm text-foreground/60">{tDescriptor(v)}</p>
-              </div>
-            </Link>
+                <span
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110"
+                  style={{ background: `${meta.color}26`, color: meta.color }}
+                >
+                  <Icon size={22} strokeWidth={2.25} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-heading text-lg font-bold">{tVibe(v)}</span>
+                  <span className="mt-0.5 block text-sm text-foreground/60">{tDescriptor(v)}</span>
+                </span>
+                <ArrowRight
+                  size={18}
+                  className="shrink-0 text-foreground/30 transition-all group-hover:translate-x-1 group-hover:text-aqua"
+                />
+              </Link>
+            </li>
           );
         })}
-      </div>
-
-      {/* Pops VibesModal open right away — "Discover your vibe" is asking to
-          see the picker, not just landing quietly in vibes mode (see
-          spots/page.tsx's ?vibesModal=1). */}
-      <Link
-        href={{ pathname: "/spots", query: { mode: "vibes", vibesModal: "1" } }}
-        className="group mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-aqua hover:underline"
-      >
-        {t("cta")}
-        <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
-      </Link>
+      </ul>
     </section>
   );
 }

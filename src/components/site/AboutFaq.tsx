@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { ChevronDown } from "lucide-react";
 import { JsonLd } from "./JsonLd";
 import { faqSchema } from "@/lib/seo/schema";
 
@@ -8,11 +9,11 @@ import { faqSchema } from "@/lib/seo/schema";
 const FAQ_IDS = ["q1", "q2", "q3", "q4", "q5"] as const;
 
 /**
- * Casco Viejo FAQ, near the bottom of the homepage — real answers to the
+ * Casco Viejo FAQ, at the bottom of the homepage — real answers to the
  * questions visitors actually have, plus a FAQPage JSON-LD block that's
- * eligible for FAQ rich results. Split out of the old AboutCascoViejo — see
- * AboutIntro for its other half (history/eat/see/stay, right under the
- * Hero).
+ * eligible for FAQ rich results. Native <details> accordions: no JS, and the
+ * answers stay in the HTML (crawlable, and readable by AI agents) even while
+ * collapsed. The first one starts open.
  */
 export async function AboutFaq() {
   const t = await getTranslations("about");
@@ -22,19 +23,26 @@ export async function AboutFaq() {
   }));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[5fr_7fr] lg:gap-16">
       <JsonLd data={faqSchema(faqItems)} />
 
-      <div className="max-w-3xl">
-        <h2 className="font-heading text-xl font-extrabold sm:text-2xl">{t("faqTitle")}</h2>
-        <dl className="mt-6 divide-y divide-border">
-          {faqItems.map((item) => (
-            <div key={item.q} className="py-4">
-              <dt className="font-heading font-bold">{item.q}</dt>
-              <dd className="mt-1.5 text-sm text-foreground/65 leading-relaxed">{item.a}</dd>
-            </div>
-          ))}
-        </dl>
+      <h2 className="font-heading text-3xl font-extrabold leading-tight sm:text-4xl">
+        {t("faqTitle")}
+      </h2>
+
+      <div className="divide-y divide-border border-y border-border">
+        {faqItems.map((item, i) => (
+          <details key={item.q} open={i === 0} className="group py-1">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-heading font-bold [&::-webkit-details-marker]:hidden">
+              {item.q}
+              <ChevronDown
+                size={18}
+                className="shrink-0 text-foreground/40 transition-transform group-open:rotate-180"
+              />
+            </summary>
+            <p className="pb-4 pr-8 text-sm leading-relaxed text-foreground/65">{item.a}</p>
+          </details>
+        ))}
       </div>
     </div>
   );

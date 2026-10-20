@@ -55,41 +55,29 @@ export default async function HomePage({
     <>
       <Header />
       <main className="flex-1">
-        <Hero eventsCount={0} />
+        <Hero spotsCount={spots.length} />
 
-        {/* Latest guides come right after the fold — the hero itself stays
-            a clean, single-viewport "pick what you're here for" moment (see
-            Hero's own comment), and this is the first thing that scrolls
-            into view under it. */}
-        <div className="border-t border-border">
+        {/* Order follows intent: the places themselves first (the thing
+            people came for), then the editorial guides on a tinted band,
+            then the vibe picker, the map as the page's one dark band, and
+            finally the long-form context + FAQ that also give Google
+            substantial crawlable text. */}
+        <FeaturedSpotsSection
+          spots={featuredFirst.slice(0, FEATURED_SPOTS_COUNT)}
+          totalCount={spots.length}
+        />
+
+        <div className="border-y border-border bg-surface">
           <LatestGuidesSection articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
         </div>
 
-        {/* The map right under the guides — the other big "start exploring"
-            door, with every spot already pinned on it. */}
-        <div className="border-t border-border">
-          <MapTeaserSection spots={spots} />
-        </div>
+        <VibeTeaserSection />
 
-        {/* Content-forward homepage: history/context, then a teaser into
-            each of the three real ways to browse (grid, map, vibes) — the
-            grid and map themselves moved out to their own /spots and /map
-            pages (see AGENTS-adjacent commit) so this page reads as
-            substantial, crawlable text rather than mostly an app shell. */}
-
-        <div className="border-t border-border">
-          <VibeTeaserSection />
-        </div>
-        <div className="border-t border-border">
-          <FeaturedSpotsSection
-            spots={featuredFirst.slice(0, FEATURED_SPOTS_COUNT)}
-            totalCount={spots.length}
-          />
-        </div>
+        <MapTeaserSection spots={spots} />
 
         <AboutIntro />
 
-        <div className="border-t border-border">
+        <div className="border-t border-border bg-surface">
           <AboutFaq />
         </div>
       </main>
