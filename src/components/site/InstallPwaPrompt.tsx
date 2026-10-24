@@ -195,7 +195,7 @@ export function InstallPwaPrompt() {
               type="button"
               onClick={dismiss}
               aria-label={t("notNow")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/5"
+              className="flex h-11 w-11 md:h-8 md:w-8 shrink-0 items-center justify-center rounded-full text-foreground/50 hover:bg-foreground/5"
             >
               <X size={16} />
             </button>

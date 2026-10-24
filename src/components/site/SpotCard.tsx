@@ -7,6 +7,7 @@ import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { LoadingImage } from "./LoadingImage";
 import { TAP_SPRING } from "./motion";
+import { showsPriceRange } from "@/lib/categories";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { VIBE_META } from "@/lib/vibes";
 import type { Spot, SpotVibe } from "@/lib/types/database";
@@ -17,6 +18,7 @@ export function SpotCard({
   onClick,
   activeVibes = [],
   walkMinutes,
+  priority = false,
 }: {
   spot: Spot;
   onClick: () => void;
@@ -30,9 +32,11 @@ export function SpotCard({
    * against (see NearbySection) — omitted outside that "nearby" context, so
    * the badge only ever shows where "nearby" actually means something. */
   walkMinutes?: number;
+  /** Above-the-fold cards: loaded eagerly instead of lazily. */
+  priority?: boolean;
 }) {
   const tMap = useTranslations("map");
-  const priceLabel = spot.price_range ?? "";
+  const priceLabel = showsPriceRange(spot.category) ? (spot.price_range ?? "") : "";
   const matchedVibe = spot.vibes.find((v) => activeVibes.includes(v));
   const accentColor = matchedVibe ? VIBE_META[matchedVibe].color : undefined;
 
@@ -59,6 +63,7 @@ export function SpotCard({
         <LoadingImage
           src={getSpotImage(spot)}
           alt={spot.name}
+          priority={priority}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -92,15 +97,12 @@ export function SpotCard({
           {spot.name}
         </h3>
 
-        {/* Description, tags and the address/phone row are desktop-only —
-            on a single-column mobile grid, a full-width card doesn't need
-            this much detail to be scannable, so mobile keeps just name
-            and hours/price. From sm+ (multi-column grid) they're back, and
-            there they get a fixed-height slot regardless of whether they
-            have content, so every card in the grid comes out exactly the
-            same height (bento-style), not just the ones that happen to
-            have full copy. */}
-        <p className="hidden min-h-[2.5rem] text-sm text-foreground/70 sm:line-clamp-2">
+        {/* Three-line description teaser (same as the map pin panel) on every
+            screen size. Tags and the address/phone row are desktop-only.
+            All get a fixed-height slot regardless of whether they have
+            content, so every card in the grid comes out exactly the same
+            height (bento-style). */}
+        <p className="min-h-[3.75rem] text-sm leading-5 text-foreground/70 line-clamp-3">
           {spot.description}
         </p>
 
@@ -115,7 +117,7 @@ export function SpotCard({
           {spot.tags?.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="shrink-0 rounded-full bg-foreground/5 text-foreground/60 px-2 py-0.5 text-[11px] font-medium"
+              className="shrink-0 rounded-full bg-foreground/5 text-foreground/60 px-2 py-0.5 text-xs font-medium"
             >
               #{tag}
             </span>

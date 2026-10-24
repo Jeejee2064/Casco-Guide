@@ -143,7 +143,7 @@ export function Header() {
               onClick={() => setMobileMenuOpen((v) => !v)}
               aria-label={t("menu")}
               aria-expanded={mobileMenuOpen}
-              className="pill-lift flex h-9 w-9 items-center justify-center rounded-full text-foreground/70 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+              className="pill-lift flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full text-foreground/70 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>

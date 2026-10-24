@@ -6,6 +6,8 @@ import { useNightMode } from "./NightModeContext";
 import { SvgMap, type HtmlPin, type SvgMapHandle } from "./SvgMap";
 import { Link } from "@/i18n/navigation";
 import { project } from "@/lib/svgMap/projection";
+import type { SpotCategory } from "@/lib/types/database";
+import { CATEGORY_BLUES, CATEGORY_ICON_SHAPES, ShapeIcon } from "./SpotPinIcons";
 
 // Same brand blue every pin on the real map uses (see SpotMap's
 // NEUTRAL_PIN_COLOR).
@@ -21,13 +23,15 @@ export function MapTeaserCanvas({
   points,
   label,
 }: {
-  points: { id: string; lat: number; lng: number }[];
+  points: { id: string; lat: number; lng: number; category: SpotCategory }[];
   label: string;
 }) {
   const { isNight } = useNightMode();
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<SvgMapHandle | null>(null);
   const [active, setActive] = useState(false);
+  // SvgMap only has a camera once its basemap has loaded.
+  const [ready, setReady] = useState(false);
 
   const [prefersDark, setPrefersDark] = useState(false);
   useEffect(() => {
@@ -56,13 +60,18 @@ export function MapTeaserCanvas({
   }, []);
 
   const world = useMemo(
-    () => points.map((p) => ({ id: p.id, at: project(p.lat, p.lng) })),
+    () =>
+      points.map((p) => ({
+        id: p.id,
+        category: p.category,
+        at: project(p.lat, p.lng),
+      })),
     [points],
   );
 
   const pins: HtmlPin[] = useMemo(
     () =>
-      world.map(({ id, at }) => ({
+      world.map(({ id, at, category }) => ({
         id,
         x: at[0],
         y: at[1],
@@ -76,26 +85,38 @@ export function MapTeaserCanvas({
         node: (
           <span
             className="block h-full w-full"
-            style={{ transform: "scale(0.6)", transformOrigin: "17px 34px" }}
+            style={{ transform: "scale(0.8)", transformOrigin: "17px 34px" }}
           >
-            <span className="spot-pin" style={{ background: PIN_COLOR }} />
+            <span
+              className="spot-pin"
+              style={{ background: CATEGORY_BLUES[category] ?? PIN_COLOR, color: "white" }}
+            >
+              <span className="spot-pin__icon">
+                <ShapeIcon shapes={CATEGORY_ICON_SHAPES[category]} />
+              </span>
+            </span>
           </span>
         ),
       })),
     [world],
   );
 
-  // Every pin in frame, whatever the screen's aspect ratio. The top padding
-  // leaves room for a pin's body above its tip.
+  // Frame the dense core of the pins rather than every one: a few far-off
+  // outliers would otherwise force a zoom-out that shrinks the whole city to
+  // a blob. The top padding leaves room for a pin's body above its tip.
   useEffect(() => {
-    if (!active || world.length === 0) return;
-    const xs = world.map((w) => w.at[0]);
-    const ys = world.map((w) => w.at[1]);
-    mapRef.current?.fitBounds(
-      [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
-      { padding: { top: 48, right: 36, bottom: 24, left: 36 } },
-    );
-  }, [active, world]);
+    if (!ready || world.length === 0) return;
+    const trimmed = (vals: number[]) => {
+      const sorted = [...vals].sort((a, b) => a - b);
+      const cut = Math.floor(sorted.length * 0.1);
+      return [sorted[cut], sorted[sorted.length - 1 - cut]];
+    };
+    const [minX, maxX] = trimmed(world.map((w) => w.at[0]));
+    const [minY, maxY] = trimmed(world.map((w) => w.at[1]));
+    mapRef.current?.fitBounds([minX, minY, maxX, maxY], {
+      padding: { top: 64, right: 48, bottom: 40, left: 48 },
+    });
+  }, [ready, world]);
 
   return (
     <div
@@ -105,6 +126,7 @@ export function MapTeaserCanvas({
       {active && (
         <SvgMap
           ref={mapRef}
+          onReady={() => setReady(true)}
           dark={isNight || prefersDark}
           interactive={false}
           controls={false}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Header } from "@/components/site/Header";
+import { FoliageTrail } from "@/components/site/Foliage";
 import { Footer } from "@/components/site/Footer";
 import { JsonLd } from "@/components/site/JsonLd";
 import { SpotsExplorerSection } from "@/components/site/SpotsExplorerSection";
@@ -71,6 +72,8 @@ export default async function SpotsPage({
   // Classic toggle's own link, if it ever needs one) opts back out.
   const initialMode = sp.mode === "classic" ? "classic" : "vibes";
   const autoOpenVibesModal = sp.vibesModal === "1";
+  const q = Array.isArray(sp.q) ? sp.q[0] : sp.q;
+  const initialQuery = (q ?? "").slice(0, 80);
 
   return (
     <>
@@ -88,12 +91,14 @@ export default async function SpotsPage({
         })}
       />
       <Header />
-      <main className="flex-1">
+      <main className="relative isolate flex-1 overflow-clip">
+        <FoliageTrail seed="spots" />
         <SpotsExplorerSection
           spots={spots}
           initialMode={initialMode}
           initialVibes={vibe ? [vibe] : []}
           autoOpenVibesModal={autoOpenVibesModal}
+          initialQuery={initialQuery}
         />
       </main>
       <Footer />

@@ -60,6 +60,9 @@ export interface HtmlPin {
   label?: string;
   node: ReactNode;
   onSelect?: () => void;
+  /** Fired on hover / press, just ahead of `onSelect` — a cheap hook to warm
+   * whatever the selection is about to show (see preloadPhoto). */
+  onPreview?: () => void;
   /** Can be dragged with the mouse/finger; see `onPinDragEnd`. */
   draggable?: boolean;
 }
@@ -91,6 +94,7 @@ export interface SvgMapHandle {
 // every frame, so it lives outside React.
 const pinPos = new WeakMap<HTMLElement, WorldPoint>();
 
+const ZOOM0_SCALE = zoomToScale(0);
 const MIN_SCALE = zoomToScale(14);
 const MAX_SCALE = zoomToScale(19);
 const DRAG_THRESHOLD = 6; // px before a press becomes a pan
@@ -144,6 +148,9 @@ export const SvgMap = forwardRef<
     onPinDragEnd?: (id: string, point: WorldPoint) => void;
     /** Fires once the basemap has loaded. */
     onReady?: () => void;
+    /** Web-map zoom level, reported only when it moves to a new quarter-step
+     * (never per frame), so React can swap pins for clusters/dots. */
+    onZoomChange?: (zoom: number) => void;
     className?: string;
   }
 >(function SvgMap(
@@ -157,6 +164,7 @@ export const SvgMap = forwardRef<
     onBackgroundClick,
     onPinDragEnd,
     onReady,
+    onZoomChange,
     className,
   },
   ref,
@@ -172,11 +180,13 @@ export const SvgMap = forwardRef<
   const onBgRef = useRef(onBackgroundClick);
   const onDragEndRef = useRef(onPinDragEnd);
   const onReadyRef = useRef(onReady);
+  const onZoomRef = useRef(onZoomChange);
   useEffect(() => {
+    onZoomRef.current = onZoomChange;
     onBgRef.current = onBackgroundClick;
     onDragEndRef.current = onPinDragEnd;
     onReadyRef.current = onReady;
-  }, [onBackgroundClick, onPinDragEnd, onReady]);
+  }, [onBackgroundClick, onPinDragEnd, onReady, onZoomChange]);
   const apiRef = useRef<SvgMapHandle | null>(null);
   const layerRef = useRef<HTMLDivElement | null>(null);
   // Positions one HTML pin from the live camera — set by the effect below,
@@ -273,7 +283,13 @@ export const SvgMap = forwardRef<
 
     // The one write that moves the whole map: SVG group, SVG pin scale, and
     // every HTML pin, all from the same camera in the same frame.
+    let lastZoomStep = NaN;
     const paint = () => {
+      const zoomStep = Math.round(Math.log2(cam.k / ZOOM0_SCALE) * 4) / 4;
+      if (zoomStep !== lastZoomStep) {
+        lastZoomStep = zoomStep;
+        onZoomRef.current?.(zoomStep);
+      }
       g.setAttribute("transform", `matrix(${cam.k} 0 0 ${cam.k} ${cam.x} ${cam.y})`);
       svg.style.setProperty("--ik", String(1 / cam.k));
       for (const el of layer.children) place(el as HTMLElement);
@@ -772,7 +788,7 @@ export const SvgMap = forwardRef<
         rel="noreferrer"
         aria-label="© OpenStreetMap contributors"
         title="© OpenStreetMap contributors"
-        className="absolute bottom-0 right-0 z-20 rounded-tl-md bg-surface/60 px-1.5 py-px text-[9px] leading-tight text-foreground/60 hover:text-foreground"
+        className="absolute bottom-0 right-0 z-20 rounded-tl-md bg-surface/60 px-1.5 py-px text-[10px] leading-tight text-foreground/60 hover:text-foreground"
       >
         © OSM
       </a>
@@ -801,6 +817,8 @@ function HtmlPinItem({
       className={cn("pointer-events-auto absolute left-0 top-0", pin.className)}
       style={{ willChange: "transform", cursor: pin.draggable ? "grab" : pin.onSelect ? "pointer" : undefined }}
       onClick={pin.onSelect}
+      onPointerEnter={pin.onPreview}
+      onPointerDown={pin.onPreview}
     >
       {/* Inner box carries the enter/exit animation, so the outer element's
           transform stays 100% owned by the camera loop. */}

@@ -24,3 +24,9 @@ export const CATEGORY_META: Record<SpotCategory, { color: string; icon: LucideIc
 };
 
 export const SPOT_CATEGORIES = Object.keys(CATEGORY_META) as SpotCategory[];
+
+/** Public places (parks, monuments, viewpoints) have no meaningful price
+ * range, so the "$" indicator is hidden for them everywhere it's displayed. */
+export function showsPriceRange(category: SpotCategory): boolean {
+  return category !== "attraction";
+}

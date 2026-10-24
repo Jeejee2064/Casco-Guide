@@ -42,6 +42,16 @@ export function Hero({ spotsCount }: { spotsCount: number }) {
       <div className="absolute inset-0 bg-gradient-to-r from-[#0d0a17]/90 via-[#0d0a17]/55 to-[#0d0a17]/10" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0d0a17] via-transparent to-[#0d0a17]/40" />
 
+      {/* Giant tower mark (white, no tile) as a ghosted backdrop, dead center
+          of the hero. Plain <img>: decorative SVG, no optimization needed. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/hero-tower.svg"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[55%] max-h-[28rem] w-auto -translate-x-1/2 -translate-y-1/2 select-none opacity-15"
+      />
+
       <motion.div
         variants={staggerContainer}
         initial="hidden"

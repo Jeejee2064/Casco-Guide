@@ -21,10 +21,12 @@ import { useHeaderHeight } from "./useHeaderHeight";
 import { useNightMode } from "./NightModeContext";
 import { SvgMap, type HtmlPin, type SvgMapHandle } from "./SvgMap";
 import { useRouter } from "@/i18n/navigation";
-import { CATEGORY_META } from "@/lib/categories";
+import { CATEGORY_META, showsPriceRange } from "@/lib/categories";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { VIBE_META } from "@/lib/vibes";
 import { getSpotImage } from "@/lib/data/categoryImages";
+import { preloadPhoto } from "@/lib/preloadPhoto";
+import { MAP_PANEL_PHOTO_SIZES } from "./MapDetailPanel";
 import { formatTime, getHoursStatus } from "@/lib/hours";
 import { haversineKm } from "@/lib/geo";
 import { routeBetween, type Route } from "@/lib/routing";
@@ -38,10 +40,15 @@ import { setLastKnownUserLocation } from "@/lib/userLocation";
 import type {
   EventRow,
   Spot,
-  SpotCategory,
   SpotVibe,
 } from "@/lib/types/database";
 import { track } from "@/lib/analytics/track";
+import {
+  CATEGORY_BLUES,
+  CATEGORY_ICON_SHAPES,
+  ShapeIcon,
+  type IconShape,
+} from "./SpotPinIcons";
 import { cn } from "@/lib/utils";
 
 type MapMode = "spots" | "events";
@@ -79,6 +86,27 @@ const ROUTE_REFRESH_KM = 0.007;
 // pins their own color back.
 const NEUTRAL_PIN_COLOR = "#146b8c";
 
+// Zoom-dependent pin size (web-map zoom levels, see SvgMap's onZoomChange):
+// pins shrink to plain dots when zoomed far out, to mini pins in between,
+// so a dense area reads as texture instead of a pile of overlapping glyphs.
+const DOT_MAX_ZOOM = 16;
+const MINI_MAX_ZOOM = 17.25;
+const LARGE_MIN_ZOOM = 18;
+
+// EXPERIMENT — with no vibe chip picked ("All"), pins get a blue tint per
+// category (Classic) or per vibe (Vibes mode, first vibe, romantic first)
+// instead of one flat NEUTRAL_PIN_COLOR, to break up the wall of identical
+// pins while staying on-brand. Delete both maps (and the two uses in
+// spotPins) to go back to the single blue.
+const VIBE_BLUES: Record<SpotVibe, string> = {
+  rooftop_party: "#0f5a76",
+  nomad_work: "#146b8c",
+  romantic_sunset: "#1a7899",
+  shopping_boutiques: "#2088ae",
+  gastro_trendy: "#1a7899",
+  arts_culture: "#146b8c",
+};
+
 // ⚠️ TEMPORARY TESTING AID — REMOVE ONCE DONE ⚠️
 // Itinerary mode always tries the visitor's *real* geolocation first — this
 // is only the fallback for when that fails or is unavailable (denied,
@@ -103,122 +131,33 @@ const MAP_REVEAL_VARIANTS = {
   visible: { opacity: 1, scale: 1 },
 };
 
-/** Shape data for a Lucide glyph, drawn by ShapeIcon below. */
-type IconShape =
-  | { d: string }
-  | { cx: string; cy: string; r: string }
-  | { x: string; y: string; width: string; height: string; rx: string };
-
-/** Path data mirroring CATEGORY_META's Lucide icons, so map pins and popups
- * use the same glyphs as the rest of the UI instead of an emoji. */
-const CATEGORY_ICON_SHAPES: Record<SpotCategory, IconShape[]> = {
-  restaurant: [
-    { d: "M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" },
-    { d: "M7 2v20" },
-    { d: "M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" },
-  ],
-  bar: [
-    {
-      d: "M12 12 4.207 4.207A.707.707 0 0 1 4.707 3h14.586a.707.707 0 0 1 .5 1.207z",
-    },
-    { d: "M12 12v10" },
-    { d: "M7 22h10" },
-  ],
-  cafe: [
-    { d: "M10 2v2" },
-    { d: "M14 2v2" },
-    {
-      d: "M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1",
-    },
-    { d: "M6 2v2" },
-  ],
-  attraction: [
-    { d: "M10 18v-7" },
-    {
-      d: "M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z",
-    },
-    { d: "M14 18v-7" },
-    { d: "M18 18v-7" },
-    { d: "M3 22h18" },
-    { d: "M6 18v-7" },
-  ],
-  museum: [
-    { d: "M10 12h4" },
-    { d: "M10 8h4" },
-    { d: "M14 21v-3a2 2 0 0 0-4 0v3" },
-    {
-      d: "M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2",
-    },
-    { d: "M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" },
-  ],
-  shop: [
-    { d: "M16 10a4 4 0 0 1-8 0" },
-    { d: "M3.103 6.034h17.794" },
-    {
-      d: "M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z",
-    },
-  ],
-  gallery: [
-    {
-      d: "M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z",
-    },
-    { cx: "13.5", cy: "6.5", r: ".5" },
-    { cx: "17.5", cy: "10.5", r: ".5" },
-    { cx: "6.5", cy: "12.5", r: ".5" },
-    { cx: "8.5", cy: "7.5", r: ".5" },
-  ],
-  hotel: [
-    { d: "M2 4v16" },
-    { d: "M2 8h18a2 2 0 0 1 2 2v10" },
-    { d: "M2 17h20" },
-    { d: "M6 8v9" },
-  ],
-};
-
-/** Renders 24x24 stroke-based Lucide shape data as an inline SVG, so map
- * pins use the same glyphs as the rest of the UI instead of an emoji. */
-function ShapeIcon({ shapes, size = 15 }: { shapes: IconShape[]; size?: number }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {shapes.map((sh, i) => {
-        if ("d" in sh) return <path key={i} d={sh.d} />;
-        if ("cx" in sh)
-          return <circle key={i} cx={sh.cx} cy={sh.cy} r={sh.r} fill="currentColor" />;
-        return (
-          <rect key={i} x={sh.x} y={sh.y} width={sh.width} height={sh.height} rx={sh.rx} />
-        );
-      })}
-    </svg>
-  );
-}
-
 /** One spot's pin. Mounted once per spot and updated in place (never
  * rebuilt), so a recolor has a "from" state for the CSS transition to
  * animate away from. Entrance pop and the vibe-match pulse are CSS
  * animations driven from here. */
 function SpotPinView({
+  mini,
+  large,
   color,
   shapes,
   childCount,
   active,
+  routing,
   entering,
   delayMs,
   pulseKey,
 }: {
+  /** Scaled down (from the bottom tip) while zoomed out. */
+  mini: boolean;
+  /** Scaled up (from the bottom tip) when zoomed in close. */
+  large: boolean;
   color: string;
   shapes: IconShape[];
   childCount: number;
   active: boolean;
+  /** This pin is the itinerary's destination — the only pin that gets the
+   * pulsing ring (a merely selected pin doesn't). */
+  routing: boolean;
   /** Plays the pop-in on mount. */
   entering: boolean;
   /** Stagger for the initial load's cascade. */
@@ -262,11 +201,20 @@ function SpotPinView({
 
   return (
     <span
-      className={cn("block h-full w-full", isEntering && "spot-pin-marker--entering")}
+      className={cn(
+        "spot-pin-size block h-full w-full",
+        mini && "spot-pin-size--mini",
+        large && "spot-pin-size--large",
+        isEntering && "spot-pin-marker--entering",
+      )}
     >
       <span ref={pulseRef} className="block h-full w-full">
         <span
-          className={cn("spot-pin", active && "spot-pin--active")}
+          className={cn(
+            "spot-pin",
+            active && "spot-pin--active",
+            routing && "spot-pin--routing",
+          )}
           style={{
             background: color,
             color,
@@ -281,6 +229,12 @@ function SpotPinView({
       </span>
     </span>
   );
+}
+
+/** Small plain dot standing in for a pin when zoomed out too far for its
+ * glyph to be legible. */
+function SpotDotView({ color }: { color: string }) {
+  return <span className="spot-dot" style={{ background: color }} />;
 }
 
 /** The /public/icons badges are already fully-drawn pins (balloon shape,
@@ -438,6 +392,7 @@ export function SpotMap({
     return () => window.clearTimeout(t);
   }, [ready]);
   const eventsFittedRef = useRef(false);
+  const poppedPinIdsRef = useRef<Set<string>>(new Set());
 
   // The "you are here" dot, shared by the one-shot locate-me button and
   // itinerary mode's live position tracking.
@@ -938,6 +893,14 @@ export function SpotMap({
   // Pins are plain React now — built from state, so selection, dimming and
   // vibe color are just props rather than classes toggled onto markers.
   const vibesKey = activeVibes.slice().sort().join("|");
+  const [zoom, setZoom] = useState(16);
+  // Marked after commit (not inside the memo) so StrictMode's double render
+  // can't mark a pin as popped before it has actually mounted.
+  useEffect(() => {
+    if (!ready) return;
+    for (const sp of filteredSpots) poppedPinIdsRef.current.add(sp.id);
+  }, [filteredSpots, ready]);
+
   const spotPins: HtmlPin[] = useMemo(() => {
     if (!ready) return [];
     // Arriving straight from a spot's "Get directions" button (see
@@ -945,7 +908,16 @@ export function SpotMap({
     // instant the map's ready — the cascade-in flourish would just be motion
     // nobody has time to see before it's overridden.
     const skipFlourish = initialDirectionsSpot != null;
-    return filteredSpots.map((spot, index) => {
+    const singles = filteredSpots.map((spot, index) => ({ spot, index }));
+    // A pin pops in once per stay on the map. Zooming across the dot/pin
+    // threshold remounts the pin view, which used to replay the pop (the
+    // "double bounce" right after load, once the fit-to-bounds zoom settled).
+    const visibleIds = new Set(filteredSpots.map((sp) => sp.id));
+    for (const id of poppedPinIdsRef.current) {
+      if (!visibleIds.has(id)) poppedPinIdsRef.current.delete(id);
+    }
+    const dots = zoom < DOT_MAX_ZOOM;
+    const singlePins: HtmlPin[] = singles.map(({ spot, index }) => {
       // Neutral by default — "All", a classic category filter, or vibes mode
       // with nothing picked yet all render every pin in the same
       // NEUTRAL_PIN_COLOR, so the white glyph (always the spot's category
@@ -954,7 +926,14 @@ export function SpotMap({
       // in that vibe's hue, or gold for a spot matching more than one.
       const matchingVibes = activeVibes.filter((v) => spot.vibes.includes(v));
       let color: string;
-      if (!useVibeIcons || matchingVibes.length === 0) {
+      if (!useVibeIcons) {
+        color = CATEGORY_BLUES[spot.category] ?? NEUTRAL_PIN_COLOR;
+      } else if (activeVibes.length === 0) {
+        const vibe = spot.vibes.includes("romantic_sunset")
+          ? "romantic_sunset"
+          : spot.vibes[0];
+        color = (vibe && VIBE_BLUES[vibe]) || NEUTRAL_PIN_COLOR;
+      } else if (matchingVibes.length === 0) {
         color = NEUTRAL_PIN_COLOR;
       } else if (matchingVibes.length > 1) {
         color = isNight ? MULTI_VIBE_COLOR_NIGHT : MULTI_VIBE_COLOR;
@@ -982,19 +961,25 @@ export function SpotMap({
           dimmed && "spot-pin-marker--dimmed",
           faded && "spot-pin-marker--faded",
         ),
-        node: (
+        node: dots && !active ? (
+          <SpotDotView color={color} />
+        ) : (
           <SpotPinView
+            mini={zoom < MINI_MAX_ZOOM && !active}
+            large={zoom >= LARGE_MIN_ZOOM}
             color={color}
             shapes={CATEGORY_ICON_SHAPES[spot.category]}
             childCount={childrenBySpotId?.get(spot.id)?.length ?? 0}
             active={active}
-            entering={!skipFlourish}
+            routing={directionsTarget?.id === spot.id}
+            entering={!skipFlourish && !poppedPinIdsRef.current.has(spot.id)}
             // Capped — with a lot of pins, a linear per-pin delay would leave
             // the last ones popping in absurdly late.
             delayMs={revealed || skipFlourish ? 0 : Math.min(index * 28, 650)}
             pulseKey={isMatch ? vibesKey : ""}
           />
         ),
+        onPreview: () => preloadPhoto(getSpotImage(spot), MAP_PANEL_PHOTO_SIZES),
         onSelect: () => {
           track("map_spot_click", { spot_id: spot.id, spot_slug: spot.slug });
           // Itinerary mode active and this is a *different* spot than the
@@ -1011,7 +996,9 @@ export function SpotMap({
         },
       };
     });
+    return singlePins;
   }, [
+    zoom,
     ready,
     revealed,
     filteredSpots,
@@ -1194,7 +1181,7 @@ export function SpotMap({
                 })
               : tHours("closed");
       const metaItems: string[] = [hoursLabel];
-      if (selectedSpot.price_range) metaItems.push(selectedSpot.price_range);
+      if (selectedSpot.price_range && showsPriceRange(selectedSpot.category)) metaItems.push(selectedSpot.price_range);
 
       // This spot's own businesses, if it's a hub — see childrenBySpotId's
       // doc comment above. Rendered as a list right under the title.
@@ -1365,6 +1352,7 @@ export function SpotMap({
             interactive={interactive}
             htmlPins={htmlPins}
             onReady={() => setReady(true)}
+            onZoomChange={setZoom}
             onBackgroundClick={handleMapClick}
             className="h-full w-full"
           >

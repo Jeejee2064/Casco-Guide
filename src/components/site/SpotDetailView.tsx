@@ -6,16 +6,16 @@ import {
   ChevronDown,
   Mail,
   MapPin,
-  Navigation,
   CreditCard,
   CalendarCheck,
   Car,
   MessageCircle,
   Building2,
+  Map as MapIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { CategoryBadge } from "./CategoryBadge";
 import { HoursBadge } from "./HoursBadge";
 import { LoadingImage } from "./LoadingImage";
@@ -28,7 +28,8 @@ import { NearbySection } from "./NearbySection";
 import { SpotCard } from "./SpotCard";
 import { ArticleCard } from "./ArticleCard";
 import { Stagger, StaggerItem, fadeUp, EASE_OUT } from "./motion";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
+import { showsPriceRange } from "@/lib/categories";
 import { VIBE_META } from "@/lib/vibes";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
@@ -233,7 +234,7 @@ export function SpotDetailView({
                 <CategoryBadge category={spot.category} />
                 <h1 className="font-heading text-3xl font-extrabold sm:text-4xl">{spot.name}</h1>
                 <div className="flex flex-wrap items-center gap-3 text-sm">
-                  {spot.price_range && (
+                  {spot.price_range && showsPriceRange(spot.category) && (
                     <span className="font-semibold text-foreground/60">{spot.price_range}</span>
                   )}
                   {spot.is_verified && (
@@ -256,35 +257,57 @@ export function SpotDetailView({
             </div>
 
             {spot.vibes.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {spot.vibes.map((v) => {
                   const meta = VIBE_META[v];
                   const Icon = meta.icon;
                   const gradient = `linear-gradient(135deg, ${meta.color}, color-mix(in srgb, ${meta.color} 68%, black))`;
-                  return (
-                    <span
-                      key={v}
-                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold leading-none text-white shadow-sm"
-                      style={{ background: gradient }}
-                    >
+                  const cls =
+                    "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold leading-none text-white shadow-sm sm:min-h-8 sm:px-3 sm:text-xs";
+                  const content = (
+                    <>
                       <Icon size={12} className="shrink-0" />
                       <span>{tVibe(v)}</span>
+                    </>
+                  );
+                  // Admin preview (onBack) must not navigate away from the editor.
+                  return onBack ? (
+                    <span key={v} className={cls} style={{ background: gradient }}>
+                      {content}
                     </span>
+                  ) : (
+                    <Link
+                      key={v}
+                      href={{ pathname: "/map", query: { vibe: v } }}
+                      className={`${cls} transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground`}
+                      style={{ background: gradient }}
+                    >
+                      {content}
+                    </Link>
                   );
                 })}
               </div>
             )}
 
             {spot.tags.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {spot.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-foreground/5 px-2.5 py-1 text-xs font-medium text-foreground/60"
-                  >
-                    #{tag}
-                  </span>
-                ))}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {spot.tags.map((tag) => {
+                  const cls =
+                    "inline-flex min-h-9 items-center rounded-full bg-foreground/5 px-3.5 py-1.5 text-sm font-medium text-foreground/70 sm:min-h-8 sm:px-3 sm:text-xs";
+                  return onBack ? (
+                    <span key={tag} className={cls}>
+                      #{tag}
+                    </span>
+                  ) : (
+                    <Link
+                      key={tag}
+                      href={{ pathname: "/spots", query: { mode: "classic", q: tag } }}
+                      className={`${cls} transition hover:bg-foreground/10 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground`}
+                    >
+                      #{tag}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </StaggerItem>
@@ -425,7 +448,11 @@ export function SpotDetailView({
           </Stagger>
         )}
 
-        <aside className="h-fit lg:col-start-2 lg:row-start-1 lg:sticky lg:top-24">
+        {/* Sticky's containing block is the grid container, not the grid
+            area, so a bare sticky aside would slide down over the gallery
+            row. This wrapper stretches over row 1 only and bounds it. */}
+        <div className="lg:col-start-2 lg:row-start-1">
+        <aside className="h-fit lg:sticky lg:top-24">
           <Stagger className="space-y-4" show={heroLoaded} delay={0.15}>
             <StaggerItem>
               <MiniMap
@@ -462,19 +489,19 @@ export function SpotDetailView({
                     <MessageCircle size={16} /> {t("whatsapp")}
                   </Button>
                 )}
-                <Button type="button" variant="outline" className="flex-1" onClick={directions}>
-                  <Navigation size={16} /> {t("getDirections")}
-                </Button>
                 <ShareMenu
                   title={spot.name}
                   variant="primary"
-                  size="icon"
+                  size="lg"
+                  showLabel
+                  className="flex-1"
                   entity={{ type: "spot", id: spot.id, slug: spot.slug }}
                 />
               </div>
             </StaggerItem>
           </Stagger>
         </aside>
+        </div>
       </div>
 
       {articles.length > 0 && (
@@ -502,6 +529,17 @@ export function SpotDetailView({
         spotsAreNearby={false}
       />
 
+      {!onBack && (
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center lg:mt-14">
+          <Link href="/map" className={buttonVariants({ variant: "primary", size: "lg" })}>
+            <MapIcon size={18} /> {td("exploreMap")}
+          </Link>
+          <Link href="/spots" className={buttonVariants({ variant: "outline", size: "lg" })}>
+            <ChevronLeft size={18} /> {td("backToSpots")}
+          </Link>
+        </div>
+      )}
+
       {/* Mobile sticky action bar — same Directions/WhatsApp-first layout
           as the desktop CTA row above. */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-border bg-surface p-3 sm:hidden">
@@ -510,14 +548,13 @@ export function SpotDetailView({
             <MessageCircle size={16} /> {t("whatsapp")}
           </Button>
         )}
-        <Button type="button" variant="outline" className="flex-1" onClick={directions}>
-          <Navigation size={16} /> {t("getDirections")}
-        </Button>
         <ShareMenu
           title={spot.name}
           direction="up"
           variant="primary"
-          size="icon"
+          size="lg"
+          showLabel
+          className="flex-1"
           entity={{ type: "spot", id: spot.id, slug: spot.slug }}
         />
       </div>

@@ -73,7 +73,7 @@ export function VibesModal({
                 type="button"
                 onClick={onClose}
                 aria-label={t("close")}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/60 transition-colors hover:bg-foreground/10 hover:text-foreground"
+                className="flex h-11 w-11 md:h-9 md:w-9 shrink-0 items-center justify-center rounded-full text-foreground/60 transition-colors hover:bg-foreground/10 hover:text-foreground"
               >
                 <X size={18} />
               </button>
@@ -112,7 +112,7 @@ export function VibesModal({
                       {/* Clamped, not just wrapped — descriptor length varies
                           per vibe/locale, and a fixed card height (all 6
                           need to match) can't flex to fit the longest one. */}
-                      <span className="line-clamp-2 text-[11px] leading-snug text-foreground/50">
+                      <span className="line-clamp-2 text-xs leading-snug text-foreground/50">
                         {tDescriptor(v)}
                       </span>
                     </motion.button>

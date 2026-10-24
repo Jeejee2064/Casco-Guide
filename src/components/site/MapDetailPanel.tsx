@@ -3,8 +3,11 @@
 import { AnimatePresence, motion, useDragControls, type PanInfo } from "framer-motion";
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
-import { EASE_OUT, TAP_SPRING } from "./motion";
+import { TAP_SPRING } from "./motion";
 import { LoadingImage } from "./LoadingImage";
+
+/** Shared with SpotMap's pin-hover preload so both resolve the same srcset URL. */
+export const MAP_PANEL_PHOTO_SIZES = "(max-width: 768px) 100vw, 380px";
 import { cn } from "@/lib/utils";
 
 export interface DetailPanelAction {
@@ -46,6 +49,9 @@ export interface DetailPanelContent {
 
 // How far (px) or how fast (px/s) a downward drag on the mobile sheet has to
 // go before it counts as "let go of this", not just a rubber-band bounce.
+// Gentler than EASE_OUT: long, smooth deceleration for the pin-to-pin swap.
+const SOFT_EASE = [0.22, 1, 0.36, 1] as const;
+
 const SHEET_DISMISS_DISTANCE = 120;
 const SHEET_DISMISS_VELOCITY = 500;
 
@@ -89,7 +95,6 @@ export function MapDetailPanel({
   // paired with this handle's own `onPointerDown` — sidesteps the
   // scrollable area entirely instead of fighting it.
   const sheetDragControls = useDragControls();
-
   useEffect(() => {
     if (!content) return;
     const onKey = (e: KeyboardEvent) => {
@@ -109,19 +114,22 @@ export function MapDetailPanel({
   return (
     <>
       {/* Desktop — side panel, floats over the map's left edge. */}
-      <AnimatePresence>
+      {/* mode="wait": the old card finishes sliding off to the left before
+          the new one slides in from the same side, so a pin-to-pin switch
+          reads as two distinct moves instead of a crossfade in place. */}
+      <AnimatePresence mode="wait">
         {content && (
           <motion.div
-            key="map-panel-desktop"
+            key={`map-panel-desktop-${content.title}`}
             ref={desktopRef}
             role="dialog"
             aria-modal="true"
             aria-label={content.title}
             tabIndex={-1}
-            initial={{ x: -24, opacity: 0 }}
+            initial={{ x: -440, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -24, opacity: 0 }}
-            transition={{ duration: 0.22, ease: EASE_OUT }}
+            exit={{ x: -440, opacity: 0 }}
+            transition={{ duration: 0.38, ease: SOFT_EASE }}
             style={desktopTopOffsetPx != null ? { top: desktopTopOffsetPx } : undefined}
             className={cn(
               // Sized to content (capped, not stretched) — a short
@@ -151,7 +159,7 @@ export function MapDetailPanel({
       <AnimatePresence>
         {content && (
           <motion.div
-            key="map-sheet"
+            key={`map-sheet-${content.title}`}
             ref={sheetRef}
             role="dialog"
             aria-modal="true"
@@ -160,7 +168,7 @@ export function MapDetailPanel({
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ duration: 0.28, ease: EASE_OUT }}
+            transition={{ duration: 0.5, ease: SOFT_EASE }}
             drag="y"
             dragListener={false}
             dragControls={sheetDragControls}
@@ -223,7 +231,7 @@ function PanelBody({
           <LoadingImage
             src={content.photoUrl}
             alt=""
-            sizes="(max-width: 768px) 100vw, 380px"
+            sizes={MAP_PANEL_PHOTO_SIZES}
             className="object-cover"
             iconClassName="h-7 w-7"
           />
@@ -239,7 +247,7 @@ function PanelBody({
           aria-label={closeLabel}
           whileTap={{ scale: 0.9 }}
           transition={TAP_SPRING}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/55"
+          className="absolute right-3 top-3 flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/55"
         >
           <X size={16} />
         </motion.button>
@@ -247,7 +255,7 @@ function PanelBody({
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         {content.featuredLabel && (
-          <span className="map-detail-panel__featured-badge inline-flex w-fit items-center gap-1 rounded-full bg-magenta/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-magenta">
+          <span className="map-detail-panel__featured-badge inline-flex w-fit items-center gap-1 rounded-full bg-magenta/15 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-magenta">
             ★ {content.featuredLabel}
           </span>
         )}
@@ -304,8 +312,8 @@ function PanelBody({
           </div>
         )}
         {!compact && content.description && (
-          // Mobile: clamped to three lines with an ellipsis; desktop shows it all.
-          <p className="line-clamp-3 text-sm leading-relaxed text-foreground/70 md:line-clamp-none">
+          // Clamped to a three-line teaser with an ellipsis on every screen size.
+          <p className="line-clamp-3 text-sm leading-relaxed text-foreground/70">
             {content.description}
           </p>
         )}

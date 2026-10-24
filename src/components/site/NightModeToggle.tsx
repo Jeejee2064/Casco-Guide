@@ -23,7 +23,7 @@ export function NightModeToggle() {
       aria-label={t("toggle")}
       title={t("toggle")}
       className={cn(
-        "glass pill-lift inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold",
+        "glass pill-lift inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2.5 md:py-1.5 text-xs font-semibold",
         isNight
           ? "border-[#3a2d66] text-[#ffcf6b]"
           : "border-border text-foreground/70 hover:text-foreground",

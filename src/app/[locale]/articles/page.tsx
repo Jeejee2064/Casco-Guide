@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { JsonLd } from "@/components/site/JsonLd";
 import { Header } from "@/components/site/Header";
+import { FoliageTrail } from "@/components/site/Foliage";
 import { Footer } from "@/components/site/Footer";
 import { ArticlesGrid } from "@/components/site/ArticlesGrid";
 import { getArticles } from "@/lib/data/articles";
@@ -64,7 +65,8 @@ export default async function ArticlesPage({ params }: { params: Promise<{ local
         })}
       />
       <Header />
-      <main className="flex-1">
+      <main className="relative isolate flex-1 overflow-clip">
+        <FoliageTrail seed="articles" />
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
           <div className="mb-8">
             <h1 className="font-heading text-3xl font-extrabold sm:text-4xl">{t("title")}</h1>

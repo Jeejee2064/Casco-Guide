@@ -8,7 +8,8 @@ import { SpotCard } from "./SpotCard";
 import { Stagger, StaggerItem, TAP_SPRING, EASE_OUT } from "./motion";
 import { useRouter } from "@/i18n/navigation";
 import { isOpenNow } from "@/lib/hours";
-import type { ExploreFilterMode } from "./ExploreFilterContext";
+import { useExploreFilter, type ExploreFilterMode } from "./ExploreFilterContext";
+import { Button } from "@/components/ui/Button";
 import type { PriceRange, Spot, SpotVibe } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,7 @@ export function SpotExplorer({
 }) {
   const t = useTranslations("filters");
   const router = useRouter();
+  const explore = useExploreFilter();
   const [prices, setPrices] = useState<PriceRange[]>([]);
   const [openNow, setOpenNow] = useState(false);
   const [sort, setSort] = useState<SortKey>("newest");
@@ -129,24 +131,40 @@ export function SpotExplorer({
 
   const hasActiveFilters = prices.length > 0 || openNow;
 
-  // Identity of the current result set/order. When it changes (any filter,
-  // vibe, search, mode flip...) the grid is remounted under this key so the
-  // old cards vanish at once and the new ones stagger in one after another,
-  // and the page is scrolled back to the top so we never land mid-list.
+  // Identity of the current result set/order. The grid doesn't render
+  // `filtered` directly: when this key changes (any filter, vibe, search, mode
+  // flip...) the page jumps back to the top first, and the grid swaps to the
+  // new list two frames later. Framer's `layout` animations measure positions
+  // when the list changes, so the scroll jump has to land *before* that
+  // measurement — otherwise cards glide in from their old scroll position.
   const gridKey = useMemo(() => filtered.map((s) => s.id).join("|"), [filtered]);
-  const firstGridKey = useRef(true);
+  const [view, setView] = useState({ key: gridKey, list: filtered });
+  // After the first swap, cards that mount fade/slide in on their own (before
+  // that, the initial scroll-reveal stagger from <Stagger> handles it).
+  const [swapped, setSwapped] = useState(false);
+  // Same ids, fresh objects (e.g. refetched data) -> show them right away.
+  const displayed = view.key === gridKey ? filtered : view.list;
+
   useEffect(() => {
-    if (firstGridKey.current) {
-      firstGridKey.current = false;
-      return;
-    }
+    if (view.key === gridKey) return;
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [gridKey]);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setView({ key: gridKey, list: filtered });
+        setSwapped(true);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [gridKey, filtered, view.key]);
 
   // Truncate only the unfiltered, default list — once someone searches or
   // filters, show every match, since that's the result set they asked for.
-  const canCollapse = !hasActiveFilters && filtered.length > INITIAL_VISIBLE;
-  const visibleSpots = !hasActiveFilters && !expanded ? filtered.slice(0, INITIAL_VISIBLE) : filtered;
+  const canCollapse = !hasActiveFilters && displayed.length > INITIAL_VISIBLE;
+  const visibleSpots = !hasActiveFilters && !expanded ? displayed.slice(0, INITIAL_VISIBLE) : displayed;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -235,24 +253,35 @@ export function SpotExplorer({
         )}
       </AnimatePresence>
 
-      {filtered.length > 0 ? (
+      {displayed.length > 0 ? (
         <>
           <Stagger
-            key={gridKey}
             className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             amount={0.05}
           >
-            {visibleSpots.map((spot) => (
-              <StaggerItem key={spot.id}>
-                <SpotCard
-                  spot={spot}
-                  activeVibes={activeVibes}
-                  onClick={() =>
-                    router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
-                  }
-                />
-              </StaggerItem>
-            ))}
+            {/* Standard Motion recipe for a filtered grid: stable keys, `layout`
+                so surviving cards glide to their new slot, `popLayout` so
+                leaving cards drop out of the flow while they fade. */}
+            <AnimatePresence mode="popLayout" initial={false}>
+              {visibleSpots.map((spot, i) => (
+                <StaggerItem
+                  key={spot.id}
+                  layout="position"
+                  enter={swapped}
+                  delay={Math.min(i, 12) * 0.045}
+                  exitFast
+                >
+                  <SpotCard
+                    spot={spot}
+                    activeVibes={activeVibes}
+                    priority={i < 3}
+                    onClick={() =>
+                      router.push({ pathname: "/spots/[slug]", params: { slug: spot.slug } })
+                    }
+                  />
+                </StaggerItem>
+              ))}
+            </AnimatePresence>
           </Stagger>
 
           {canCollapse && (
@@ -271,7 +300,7 @@ export function SpotExplorer({
                   </>
                 ) : (
                   <>
-                    {t("showMore", { count: filtered.length - INITIAL_VISIBLE })}{" "}
+                    {t("showMore", { count: displayed.length - INITIAL_VISIBLE })}{" "}
                     <ChevronDown size={15} className="transition-transform duration-200 group-hover:translate-y-0.5" />
                   </>
                 )}
@@ -280,19 +309,39 @@ export function SpotExplorer({
           )}
         </>
       ) : (
-        <EmptyState />
+        <EmptyState
+          onReset={
+            hasActiveFilters ||
+            explore.query.trim() !== "" ||
+            explore.categories.length > 0 ||
+            explore.vibes.length > 0
+              ? () => {
+                  explore.setQuery("");
+                  explore.setCategories([]);
+                  explore.setVibes([]);
+                  setPrices([]);
+                  setOpenNow(false);
+                }
+              : undefined
+          }
+        />
       )}
     </div>
   );
 }
 
-function EmptyState() {
+function EmptyState({ onReset }: { onReset?: () => void }) {
   const t = useTranslations("empty");
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-2 rounded-[var(--radius-card)] border border-dashed border-border py-16 text-center">
       <SearchX size={36} className="text-foreground/25" />
       <p className="font-heading text-lg font-bold">{t("title")}</p>
       <p className="text-sm text-foreground/60">{t("subtitle")}</p>
+      {onReset && (
+        <Button type="button" variant="outline" className="mt-3" onClick={onReset}>
+          <X size={16} /> {t("reset")}
+        </Button>
+      )}
     </div>
   );
 }

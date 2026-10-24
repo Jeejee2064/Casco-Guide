@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/Badge";
 import { getHoursStatus, formatTime } from "@/lib/hours";
+import { DAY_KEYS } from "@/lib/types/database";
 import type { Spot } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,11 @@ export function HoursBadge({ spot, className }: { spot: Spot; className?: string
   const t = useTranslations("hours");
   const locale = useLocale();
   const status = getHoursStatus(spot);
+
+  // Open-air places (plazas, monuments) have no meaningful "closed", and a
+  // spot with no hours entered at all would read "Closed" for lack of data.
+  const hasHours = DAY_KEYS.some((d) => (spot[`hours_${d}`]?.length ?? 0) > 0);
+  if (spot.category === "attraction" || !hasHours) return null;
 
   // `-readable` variants (globals.css) blend each brand color toward
   // `--foreground` instead of swapping on Tailwind's `dark:` variant —

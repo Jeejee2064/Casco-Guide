@@ -84,6 +84,7 @@ export function SpotsExplorerSection({
   initialMode = "classic",
   initialVibes = [],
   autoOpenVibesModal = false,
+  initialQuery = "",
 }: {
   spots: Spot[];
   /** Seeded server-side from the homepage vibe teaser's `?vibe=`/`?mode=vibes`
@@ -94,9 +95,13 @@ export function SpotsExplorerSection({
   /** Same deep link's `?vibesModal=1` — pops VibesModal open immediately,
    * since "Discover your vibe" is explicitly asking to see it, same as /map. */
   autoOpenVibesModal?: boolean;
+  /** `?q=` deep link — a tag clicked on a spot detail page. */
+  initialQuery?: string;
 }) {
   return (
-    <ExploreFilterProvider initialMode={initialMode} initialVibes={initialVibes}>
+    <ExploreFilterProvider initialMode={initialMode} initialVibes={initialVibes}
+      initialQuery={initialQuery}
+    >
       <SpotsExplorerContent spots={spots} autoOpenVibesModal={autoOpenVibesModal} />
     </ExploreFilterProvider>
   );

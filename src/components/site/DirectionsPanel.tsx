@@ -16,7 +16,7 @@ import {
   Navigation,
   X,
 } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { EASE_OUT, TAP_SPRING } from "./motion";
 import { formatDistance, walkingMinutes } from "@/lib/geo";
@@ -147,6 +147,64 @@ function StepsList({
   );
 }
 
+/** Animated tap-to-expand wrapper around StepsList — same height/opacity
+ * motion as the weekly schedule on the spot detail page. */
+function CollapsibleSteps({
+  steps,
+  destinationName,
+  tMap,
+}: {
+  steps: RouteStep[];
+  destinationName: string;
+  tMap: (key: string, values?: Record<string, string>) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="-mx-1 rounded-[var(--radius-button)] border border-border">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls="route-steps-panel"
+        className="flex w-full items-center justify-between px-3 py-2 text-sm font-bold"
+      >
+        {tMap("steps.title")}
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.4, ease: EASE_OUT }}
+          className="text-foreground/40"
+        >
+          <ChevronDown size={15} />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            id="route-steps-panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              height: { duration: 0.4, ease: EASE_OUT },
+              opacity: { duration: 0.25, ease: EASE_OUT, delay: open ? 0.05 : 0 },
+            }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-border px-3 py-2.5">
+              <StepsList
+                steps={steps}
+                destinationName={destinationName}
+                tMap={tMap}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 interface DirectionsPanelProps {
   destinationName: string;
   categoryIcon: ReactNode;
@@ -260,7 +318,7 @@ function PanelBody({
           aria-label={tMap("exitDirections")}
           whileTap={{ scale: 0.9 }}
           transition={TAP_SPRING}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/5 hover:text-foreground md:hidden"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/5 hover:text-foreground md:hidden"
         >
           <ArrowLeft size={17} />
         </motion.button>
@@ -276,7 +334,7 @@ function PanelBody({
           aria-label={tMap("exitDirections")}
           whileTap={{ scale: 0.9 }}
           transition={TAP_SPRING}
-          className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/5 hover:text-foreground md:flex"
+          className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground/60 hover:bg-foreground/5 hover:text-foreground md:flex"
         >
           <X size={17} />
         </motion.button>
@@ -386,22 +444,11 @@ function PanelBody({
           // Mobile: same disclosure pattern as the weekly hours table on the
           // spot detail page — worth a tap to expand, not something that has
           // to dominate this otherwise compact bottom bar.
-          <details className="group -mx-1 rounded-[var(--radius-button)] border border-border">
-            <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-bold [&::-webkit-details-marker]:hidden">
-              {tMap("steps.title")}
-              <ChevronDown
-                size={15}
-                className="text-foreground/40 transition-transform group-open:rotate-180"
-              />
-            </summary>
-            <div className="border-t border-border px-3 py-2.5">
-              <StepsList
-                steps={steps}
-                destinationName={destinationName}
-                tMap={tMap}
-              />
-            </div>
-          </details>
+          <CollapsibleSteps
+            steps={steps}
+            destinationName={destinationName}
+            tMap={tMap}
+          />
         ))}
 
       {status === "error" && (

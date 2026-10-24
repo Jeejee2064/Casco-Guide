@@ -26,11 +26,13 @@ import { ShareMenu } from "./ShareMenu";
 import { MiniMap } from "./MiniMap";
 import { EASE_OUT } from "./motion";
 import { Button } from "@/components/ui/Button";
+import { showsPriceRange } from "@/lib/categories";
 import { DAY_KEYS } from "@/lib/types/database";
 import type { Spot } from "@/lib/types/database";
 import { formatDaySlots } from "@/lib/hours";
 import { getSpotPhotos } from "@/lib/data/categoryImages";
 import { panamaWhatsAppUrl } from "@/lib/phone";
+import { Foliage, pickFoliageName } from "./Foliage";
 import { track } from "@/lib/analytics/track";
 import { markContentEngaged } from "@/lib/pwaEngagement";
 
@@ -112,9 +114,10 @@ export function SpotDetailModal({
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: "100%", opacity: 0, scale: 0.98 }}
         transition={{ type: "spring", stiffness: 380, damping: 38 }}
-        className="relative flex h-full sm:h-auto sm:max-h-[90vh] w-full sm:max-w-2xl flex-col overflow-hidden bg-surface sm:rounded-[var(--radius-card)] shadow-2xl"
+        className="relative isolate flex h-full sm:h-auto sm:max-h-[90vh] w-full sm:max-w-2xl flex-col overflow-hidden bg-surface sm:rounded-[var(--radius-card)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        <Foliage name={pickFoliageName(`modal-${spot.slug}`)} className="-bottom-16 -left-20 h-80 w-80 -rotate-6 text-[var(--foliage-green)]" />
         <button
           onClick={onClose}
           aria-label={t("close")}
@@ -145,13 +148,13 @@ export function SpotDetailModal({
                   <>
                     <button
                       onClick={scrollPrev}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
                     >
                       <ChevronLeft size={18} />
                     </button>
                     <button
                       onClick={scrollNext}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
                     >
                       <ChevronRight size={18} />
                     </button>
@@ -181,7 +184,7 @@ export function SpotDetailModal({
                 <CategoryBadge category={spot.category} />
                 <h2 className="font-heading text-2xl font-extrabold">{spot.name}</h2>
                 <div className="flex items-center gap-3 text-sm">
-                  {spot.price_range && (
+                  {spot.price_range && showsPriceRange(spot.category) && (
                     <span className="text-foreground/60 font-semibold">
                       {spot.price_range}
                     </span>

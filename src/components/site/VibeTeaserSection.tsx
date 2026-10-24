@@ -4,13 +4,12 @@ import { Link } from "@/i18n/navigation";
 import { VIBE_META, SPOT_VIBES } from "@/lib/vibes";
 
 /**
- * Homepage teaser into vibes mode. Two columns: the pitch and CTA on the
+ * Homepage teaser into vibes mode. Two columns: the pitch on the
  * left (sticky on desktop), the six vibes as a plain ruled list on the right
  * — name, descriptor and a colored icon per row, no cards, so it reads as a
  * different beat from the card grids around it. Each row deep-links to
- * /spots with that vibe pre-selected (`?vibe=<id>`); the CTA opens the
- * picker with nothing chosen (`?mode=vibes&vibesModal=1`), both read
- * server-side by spots/page.tsx.
+ * /spots with that vibe pre-selected (`?vibe=<id>`); read server-side
+ * by spots/page.tsx.
  */
 export async function VibeTeaserSection() {
   const [t, tVibe, tDescriptor] = await Promise.all([
@@ -26,16 +25,9 @@ export async function VibeTeaserSection() {
           {t("title")}
         </h2>
         <p className="mt-3 max-w-md text-foreground/65">{t("subtitle")}</p>
-        <Link
-          href={{ pathname: "/spots", query: { mode: "vibes", vibesModal: "1" } }}
-          className="group mt-6 inline-flex items-center gap-2 rounded-full bg-aqua px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-aqua-dark"
-        >
-          {t("cta")}
-          <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
-        </Link>
       </div>
 
-      <ul className="divide-y divide-border border-y border-border">
+      <ul className="divide-y divide-border border-y-2 border-foreground/15">
         {SPOT_VIBES.map((v) => {
           const meta = VIBE_META[v];
           const Icon = meta.icon;
@@ -43,21 +35,21 @@ export async function VibeTeaserSection() {
             <li key={v}>
               <Link
                 href={{ pathname: "/spots", query: { vibe: v } }}
-                className="group flex items-center gap-4 py-4 sm:gap-5 sm:py-5"
+                className="group flex items-center gap-4 py-5 sm:gap-6 sm:py-7"
               >
                 <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110"
+                  className="flex h-14 w-14 shrink-0 sm:h-16 sm:w-16 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-110"
                   style={{ background: `${meta.color}26`, color: meta.color }}
                 >
-                  <Icon size={22} strokeWidth={2.25} />
+                  <Icon size={28} strokeWidth={2.25} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-heading text-lg font-bold">{tVibe(v)}</span>
-                  <span className="mt-0.5 block text-sm text-foreground/60">{tDescriptor(v)}</span>
+                  <span className="block font-heading text-xl font-extrabold sm:text-2xl">{tVibe(v)}</span>
+                  <span className="mt-0.5 block text-sm text-foreground/60 sm:text-base">{tDescriptor(v)}</span>
                 </span>
                 <ArrowRight
-                  size={18}
-                  className="shrink-0 text-foreground/30 transition-all group-hover:translate-x-1 group-hover:text-aqua"
+                  size={22}
+                  className="shrink-0 text-foreground/40 transition-all group-hover:translate-x-1 group-hover:text-aqua"
                 />
               </Link>
             </li>

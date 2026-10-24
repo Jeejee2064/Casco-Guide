@@ -16,10 +16,10 @@ export async function MapTeaserSection({ spots }: { spots: Spot[] }) {
 
   const points = spots
     .filter((s) => s.latitude != null && s.longitude != null)
-    .map((s) => ({ id: s.id, lat: s.latitude, lng: s.longitude }));
+    .map((s) => ({ id: s.id, lat: s.latitude, lng: s.longitude, category: s.category }));
 
   return (
-    <section className="bg-[#0d0a17] text-white">
+    <section className="text-white">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <h2 className="font-heading mb-8 max-w-xl text-3xl font-extrabold leading-tight sm:text-4xl">
           {t("title")}

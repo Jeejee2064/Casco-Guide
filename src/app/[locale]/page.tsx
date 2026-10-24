@@ -9,6 +9,8 @@ import { MapTeaserSection } from "@/components/site/MapTeaserSection";
 import { VibeTeaserSection } from "@/components/site/VibeTeaserSection";
 import { LatestGuidesSection } from "@/components/site/LatestGuidesSection";
 import { Hero } from "@/components/site/Hero";
+import { Foliage } from "@/components/site/Foliage";
+import { TowerMark } from "@/components/site/TowerMark";
 import { getSpots } from "@/lib/data/spots";
 import { getArticles } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
@@ -62,22 +64,39 @@ export default async function HomePage({
             then the vibe picker, the map as the page's one dark band, and
             finally the long-form context + FAQ that also give Google
             substantial crawlable text. */}
-        <FeaturedSpotsSection
-          spots={featuredFirst.slice(0, FEATURED_SPOTS_COUNT)}
-          totalCount={spots.length}
-        />
+        {/* Foliage silhouettes sit in the background of each band — whisper-soft
+            tints (see `--foliage*` in globals.css), cropped by the band's
+            edges, behind the content. */}
+        <div className="relative isolate overflow-hidden">
+          <Foliage name="monstera" className="-right-24 -top-16 h-[22rem] w-[22rem] rotate-12 text-[var(--foliage)] sm:-right-10 sm:h-[30rem] sm:w-[30rem]" />
+          <FeaturedSpotsSection
+            spots={featuredFirst.slice(0, FEATURED_SPOTS_COUNT)}
+            totalCount={spots.length}
+          />
+        </div>
 
-        <div className="border-y border-border bg-surface">
+        <div className="relative isolate overflow-hidden border-y border-border bg-surface">
+          <Foliage name="heliconia" className="-left-16 -top-10 h-[20rem] w-[20rem] text-[var(--foliage)] sm:-left-8 sm:h-[26rem] sm:w-[26rem]" />
           <LatestGuidesSection articles={articles.slice(0, HOME_ARTICLES_COUNT)} />
         </div>
 
-        <VibeTeaserSection />
+        <div className="relative isolate overflow-hidden">
+          <Foliage name="heliconia" className="-bottom-10 -left-20 hidden h-[28rem] w-[28rem] -scale-x-100 text-[var(--foliage-green)] lg:block" />
+          <VibeTeaserSection />
+        </div>
 
-        <MapTeaserSection spots={spots} />
+        <div className="relative isolate overflow-hidden bg-[#0d0a17]">
+          <Foliage name="monstera" className="-left-20 -top-16 h-[22rem] w-[22rem] -rotate-12 text-[var(--foliage-dark)] sm:h-[28rem] sm:w-[28rem]" />
+          <MapTeaserSection spots={spots} />
+        </div>
 
-        <AboutIntro />
+        <div className="relative isolate overflow-hidden">
+          <Foliage name="bamboo" className="-right-20 -top-10 hidden h-[26rem] w-[26rem] text-[var(--foliage-green)] md:block" />
+          <AboutIntro />
+        </div>
 
-        <div className="border-t border-border bg-surface">
+        <div className="relative isolate overflow-hidden border-t border-border bg-surface">
+          <TowerMark className="-bottom-10 left-[8%] hidden h-[22rem] w-[22rem] text-[var(--foliage)] opacity-50 lg:block" />
           <AboutFaq />
         </div>
       </main>

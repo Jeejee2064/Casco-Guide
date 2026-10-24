@@ -56,7 +56,7 @@ export function EventCard({ event }: { event: EventRow }) {
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2 text-xs font-bold text-foreground/60">
           <span
-            className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white"
+            className="rounded-full px-1.5 py-0.5 text-xs font-bold text-white"
             style={{ backgroundColor: categoryMeta.color }}
           >
             {tCat(event.category)}

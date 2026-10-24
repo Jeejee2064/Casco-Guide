@@ -159,7 +159,8 @@
   },
   "empty": {
     "title": "Todavía no hay nada aquí",
-    "subtitle": "Intenta ajustar tus filtros o búsqueda."
+    "subtitle": "Intenta ajustar tus filtros o búsqueda.",
+    "reset": "Quitar filtros"
   },
   "map": {
     "locateMe": "Mi ubicación",
@@ -210,7 +211,9 @@
     "amenities": "Comodidades",
     "gallery": "Galería",
     "featuredIn": "Aparece en",
-    "placesHere": "Lugares aquí"
+    "placesHere": "Lugares aquí",
+    "exploreMap": "Explorar el mapa",
+    "backToSpots": "Volver a los lugares"
   },
   "eventDetail": {
     "back": "Volver",

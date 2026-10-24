@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, type Variants } from "framer-motion";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 /** Expo-out — the "premium" reveal curve used across entrance animations. */
 export const EASE_OUT = [0.16, 1, 0.3, 1] as const;
@@ -67,14 +67,39 @@ export function StaggerItem({
   children,
   className,
   layout = false,
+  ref,
+  enter = false,
+  delay = 0,
+  exitFast = false,
 }: {
   children: ReactNode;
   className?: string;
   /** Smoothly animate to a new grid position when siblings are added/removed (e.g. filtering). */
-  layout?: boolean;
+  layout?: boolean | "position";
+  /** Forwarded to the root element — AnimatePresence `popLayout` needs it to take leaving items out of the flow. */
+  ref?: Ref<HTMLDivElement>;
+  /** Play an entrance on mount even though the parent <Stagger> has already revealed (for items added later, e.g. after filtering). */
+  enter?: boolean;
+  /** Delay (s) for that entrance — use a small per-index value for a light cascade. */
+  delay?: number;
+  /** Short fade on exit instead of the slow reveal-style one. */
+  exitFast?: boolean;
 }) {
   return (
-    <motion.div layout={layout} className={className} variants={fadeUp} exit="hidden">
+    <motion.div
+      ref={ref}
+      layout={layout}
+      className={className}
+      variants={fadeUp}
+      transition={{ layout: { duration: 0.8, ease: EASE_OUT } }}
+      {...(enter
+        ? {
+            initial: { opacity: 0, y: 22 },
+            animate: { opacity: 1, y: 0, transition: { duration: 0.75, ease: EASE_OUT, delay } },
+          }
+        : {})}
+      exit={exitFast ? { opacity: 0, transition: { duration: 0.3, ease: "easeOut" } } : "hidden"}
+    >
       {children}
     </motion.div>
   );

@@ -8,7 +8,7 @@ import { MapDetailPanel, type DetailPanelContent } from "./MapDetailPanel";
 import { useNightMode } from "./NightModeContext";
 import { SvgMap, type SvgMapHandle, type SvgPin } from "./SvgMap";
 import { useRouter } from "@/i18n/navigation";
-import { CATEGORY_META } from "@/lib/categories";
+import { CATEGORY_META, showsPriceRange } from "@/lib/categories";
 import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
 import { getSpotImage } from "@/lib/data/categoryImages";
 import { formatTime } from "@/lib/hours";
@@ -276,7 +276,7 @@ export function ItineraryMap({
       const meta = CATEGORY_META[spot.category];
       const Icon = meta.icon;
       const metaItems: string[] = [];
-      if (spot.price_range) metaItems.push(spot.price_range);
+      if (spot.price_range && showsPriceRange(spot.category)) metaItems.push(spot.price_range);
 
       return {
         photoUrl: getSpotImage(spot),

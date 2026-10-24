@@ -33,6 +33,7 @@ export function ExploreFilterProvider({
   children,
   initialMode = "classic",
   initialVibes = [],
+  initialQuery = "",
 }: {
   children: ReactNode;
   /** Seeds the page open directly into vibes mode — used by /spots's
@@ -40,9 +41,11 @@ export function ExploreFilterProvider({
   initialMode?: ExploreFilterMode;
   /** Seeds the initially-selected vibe(s) — same deep-link use as above. */
   initialVibes?: SpotVibe[];
+  /** Seeds the search box — used by /spots's `?q=` deep link (spot detail tags). */
+  initialQuery?: string;
 }) {
   const [mode, setMode] = useState<ExploreFilterMode>(initialMode);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [categories, setCategories] = useState<SpotCategory[]>([]);
   const [vibes, setVibes] = useState<SpotVibe[]>(initialVibes);
 

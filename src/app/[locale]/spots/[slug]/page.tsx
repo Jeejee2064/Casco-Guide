@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Header } from "@/components/site/Header";
+import { FoliageTrail } from "@/components/site/Foliage";
 import { Footer } from "@/components/site/Footer";
 import { JsonLd } from "@/components/site/JsonLd";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
@@ -101,7 +102,8 @@ export default async function SpotDetailPage({
       <JsonLd data={spotSchema(spot, url)} />
       <JsonLd data={breadcrumbs} />
       <Header />
-      <main className="flex-1">
+      <main className="relative isolate flex-1 overflow-clip">
+        <FoliageTrail seed={`spot-${slug}`} />
         <SpotDetailView
           spot={spot}
           nearbySpots={relatedSpots}

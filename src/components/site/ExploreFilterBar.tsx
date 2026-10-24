@@ -354,12 +354,22 @@ export function ExploreFilterBar({
     <div className="relative shrink-0 self-center">
       <div
         className={cn(
-          "relative inline-flex rounded-full border shadow-lg",
+          "relative grid grid-cols-2 rounded-full border shadow-lg",
           big
-            ? "gap-0.5 border-border/60 bg-surface/70 p-1 backdrop-blur-xl"
+            ? "border-border/60 bg-surface/70 p-1 backdrop-blur-xl"
             : "glass border-border p-1",
         )}
       >
+        {/* CSS-driven pill, not a shared-layout (layoutId) one: layout
+            projection measured the pill against a stale scroll offset when
+            the vibe was picked mid-scroll and made it fly in from below. */}
+        <span
+          aria-hidden
+          className={cn(
+            "brand-accent pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-0.25rem)] rounded-full transition-transform duration-300 ease-out",
+            mode === "vibes" && "translate-x-full",
+          )}
+        />
         {(
           [
             { key: "classic", label: t("classic"), icon: LayoutGrid },
@@ -387,24 +397,13 @@ export function ExploreFilterBar({
               whileTap={{ scale: 0.94 }}
               transition={TAP_SPRING}
               className={cn(
-                "relative z-10 flex items-center gap-1.5 rounded-full font-semibold transition-colors",
+                "relative z-10 flex items-center justify-center gap-1.5 rounded-full font-semibold transition-colors",
                 big ? "px-4 py-2 text-xs" : "px-4 py-1.5 text-xs",
                 active
                   ? "text-white"
-                  : "text-foreground/60 hover:text-foreground",
+                  : "text-foreground/60 [html[data-night]_&]:text-foreground/90 dark:text-foreground/90 hover:text-foreground",
               )}
             >
-              {active && (
-                <motion.span
-                  layoutId={
-                    big
-                      ? "explore-filter-mode-pill-big"
-                      : "explore-filter-mode-pill"
-                  }
-                  transition={{ type: "spring", stiffness: 500, damping: 34 }}
-                  className="brand-accent absolute inset-0 -z-10 rounded-full"
-                />
-              )}
               {key === "vibes" && showHint && (
                 <motion.span
                   aria-hidden
@@ -460,7 +459,7 @@ export function ExploreFilterBar({
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="brand-accent relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-[11px] font-bold text-white shadow-lg"
+              className="brand-accent relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-3 text-xs font-bold text-white shadow-lg"
             >
               <Sparkles size={12} className="shrink-0" />
               {t("vibesHint")}
@@ -483,10 +482,10 @@ export function ExploreFilterBar({
         type="button"
         onClick={() => (mode === "classic" ? setCategories([]) : setVibes([]))}
         className={cn(
-          "pill-lift shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
+          "pill-lift shrink-0 rounded-full border px-3.5 py-2.5 text-sm font-semibold shadow-sm",
           (mode === "classic" ? categories.length === 0 : vibes.length === 0)
             ? "brand-accent border-transparent text-white"
-            : "chip-surface border-border text-foreground/60 hover:text-foreground",
+            : "chip-surface border-border text-foreground/60 [html[data-night]_&]:text-foreground/90 dark:text-foreground/90 hover:text-foreground",
         )}
       >
         {t("all")}
@@ -513,7 +512,7 @@ export function ExploreFilterBar({
                   "pill-lift flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
                   isActive
                     ? "brand-accent border-transparent text-white"
-                    : "chip-surface border-border text-foreground/60 hover:text-foreground",
+                    : "chip-surface border-border text-foreground/60 [html[data-night]_&]:text-foreground/90 dark:text-foreground/90 hover:text-foreground",
                 )}
               >
                 <Icon size={13} strokeWidth={2.5} /> {tCategory(cat)}
@@ -542,7 +541,7 @@ export function ExploreFilterBar({
                   "pill-lift flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
                   isActive
                     ? "border-transparent text-white"
-                    : "chip-surface border-border text-foreground/60 hover:text-foreground",
+                    : "chip-surface border-border text-foreground/60 [html[data-night]_&]:text-foreground/90 dark:text-foreground/90 hover:text-foreground",
                 )}
                 style={
                   isActive
@@ -603,7 +602,7 @@ export function ExploreFilterBar({
           <div ref={searchWrapperRef} className="group relative flex-1">
             <Search
               size={17}
-              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40 transition-colors duration-200 group-focus-within:text-aqua"
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/40 [html[data-night]_&]:text-foreground/70 dark:text-foreground/70 transition-colors duration-200 group-focus-within:text-aqua"
             />
             <input
               value={query}
@@ -660,7 +659,7 @@ export function ExploreFilterBar({
                         {showHeader && (
                           <div
                             className={cn(
-                              "px-4 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-foreground/40",
+                              "px-4 pb-1 pt-2 text-xs font-bold uppercase tracking-wide text-foreground/40",
                               i === 0 && "pt-1",
                             )}
                           >

@@ -146,13 +146,13 @@ export function EventDetailModal({
                   <>
                     <button
                       onClick={scrollPrev}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
                     >
                       <ChevronLeft size={18} />
                     </button>
                     <button
                       onClick={scrollNext}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-white/80 hover:bg-white"
                     >
                       <ChevronRight size={18} />
                     </button>
@@ -179,7 +179,7 @@ export function EventDetailModal({
           <div className="p-5 sm:p-6 space-y-5">
             <div className="space-y-1.5">
               <span
-                className="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold text-white"
+                className="inline-block rounded-full px-2 py-0.5 text-xs font-bold text-white"
                 style={{ backgroundColor: categoryMeta.color }}
               >
                 {tCat(event.category)}

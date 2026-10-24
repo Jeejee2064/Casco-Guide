@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Check, Link2, Mail, MessageCircle, Send, Share2, X as XIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  Check,
+  Link2,
+  Mail,
+  MessageCircle,
+  Send,
+  Share2,
+  X as XIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/Button";
@@ -9,7 +18,14 @@ import { track } from "@/lib/analytics/track";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 
-type ShareChannel = "native" | "whatsapp" | "facebook" | "twitter" | "telegram" | "email" | "copy_link";
+type ShareChannel =
+  | "native"
+  | "whatsapp"
+  | "facebook"
+  | "twitter"
+  | "telegram"
+  | "email"
+  | "copy_link";
 
 /** Share sheet: native share on mobile when available, plus direct links for
  * WhatsApp, Facebook, X and Telegram, email, and copy-link — all of which
@@ -26,8 +42,6 @@ export function ShareMenu({
   title,
   text,
   url,
-  align = "right",
-  direction = "down",
   variant = "outline",
   size = "icon",
   showLabel = false,
@@ -51,27 +65,23 @@ export function ShareMenu({
   // Lazy init: only read on the client, and gated behind `open` (always false
   // on first paint) so a server/client mismatch here never reaches the DOM.
   const [canNativeShare] = useState(
-    () => typeof navigator !== "undefined" && typeof navigator.share === "function",
+    () =>
+      typeof navigator !== "undefined" && typeof navigator.share === "function",
   );
-  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
-    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
-    document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
-  const shareUrl = url ?? (typeof window !== "undefined" ? window.location.href : "");
+  const shareUrl =
+    url ?? (typeof window !== "undefined" ? window.location.href : "");
   const shareText = text ?? title;
 
   const links = [
@@ -150,7 +160,7 @@ export function ShareMenu({
   };
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div className={cn("relative", className)}>
       <Button
         type="button"
         variant={variant}
@@ -158,67 +168,84 @@ export function ShareMenu({
         className={showLabel ? "w-full" : undefined}
         onClick={() => setOpen((current) => !current)}
         aria-label={t("cta")}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
       >
         <Share2 size={16} />
         {showLabel && t("cta")}
       </Button>
 
-      {open && (
-        <div
-          role="menu"
-          className={cn(
-            "absolute z-[70] w-56 overflow-hidden rounded-2xl border border-border bg-surface p-1.5 shadow-xl",
-            direction === "up" ? "bottom-full mb-2" : "top-full mt-2",
-            align === "right" ? "right-0" : "left-0",
-          )}
-        >
-          {canNativeShare && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={nativeShare}
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-foreground">
-                <Share2 size={15} />
-              </span>
-              {t("more")}
-            </button>
-          )}
-          {links.map(({ key, label, icon: Icon, iconClass, href }) => (
-            <button
-              key={key}
-              type="button"
-              role="menuitem"
-              onClick={() => openLink(href, key)}
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              <span
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold leading-none",
-                  iconClass,
-                )}
-              >
-                {Icon ? <Icon size={15} /> : "f"}
-              </span>
-              {label}
-            </button>
-          ))}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={copyLink}
-            className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+      {open &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setOpen(false);
+            }}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-foreground">
-              {copied ? <Check size={15} /> : <Link2 size={15} />}
-            </span>
-            {t("copyLink")}
-          </button>
-        </div>
-      )}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("cta")}
+              className="w-full max-w-xs overflow-hidden rounded-3xl border border-border bg-surface p-2 shadow-2xl"
+            >
+              <div className="flex items-center justify-between px-3 pb-1 pt-2">
+                <h2 className="font-heading text-base font-extrabold">
+                  {t("cta")}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label={t("cta")}
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  <XIcon size={16} />
+                </button>
+              </div>
+              {canNativeShare && (
+                <button
+                  type="button"
+                  onClick={nativeShare}
+                  className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+                    <Share2 size={15} />
+                  </span>
+                  {t("more")}
+                </button>
+              )}
+              {links.map(({ key, label, icon: Icon, iconClass, href }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => openLink(href, key)}
+                  className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold leading-none",
+                      iconClass,
+                    )}
+                  >
+                    {Icon ? <Icon size={15} /> : "f"}
+                  </span>
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={copyLink}
+                className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm font-medium text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+                  {copied ? <Check size={15} /> : <Link2 size={15} />}
+                </span>
+                {t("copyLink")}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
