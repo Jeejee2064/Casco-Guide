@@ -4,6 +4,12 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // The share-card route reads its fonts and logo from disk with computed
+  // paths, which Next's file tracing can't see — without this they're missing
+  // from the deployed (Vercel) function and the image fails.
+  outputFileTracingIncludes: {
+    "/api/og/**": ["./public/logoletters.png", "./src/assets/fonts/*"],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co" },

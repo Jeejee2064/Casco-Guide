@@ -130,7 +130,11 @@
     "telegram": "Telegram",
     "email": "Correo",
     "copyLink": "Copiar enlace",
-    "linkCopied": "Enlace copiado ✨"
+    "linkCopied": "Enlace copiado ✨",
+    "guide": "Guía",
+    "readingTime": "{minutes} min de lectura",
+    "hookSpot": "{category} en el Casco Viejo, Panamá",
+    "hookArticle": "Una guía del Casco Viejo"
   },
   "eventCategory": {
     "cinema": "Cine",

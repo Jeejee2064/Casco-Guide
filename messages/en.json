@@ -130,7 +130,11 @@
     "telegram": "Telegram",
     "email": "Email",
     "copyLink": "Copy link",
-    "linkCopied": "Link copied ✨"
+    "linkCopied": "Link copied ✨",
+    "guide": "Guide",
+    "readingTime": "{minutes} min read",
+    "hookSpot": "{category} in Casco Viejo, Panama",
+    "hookArticle": "A guide to Casco Viejo"
   },
   "eventCategory": {
     "cinema": "Cinema",

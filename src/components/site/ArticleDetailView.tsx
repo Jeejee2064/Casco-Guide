@@ -9,6 +9,7 @@ import { SpotMap } from "./SpotMap";
 import { ItineraryMap, type ItineraryStop } from "./ItineraryMap";
 import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
+import { firstSentence } from "@/lib/shareText";
 import { Stagger, StaggerItem, staggerContainer, fadeUp } from "./motion";
 import type { Article, EventRow, Spot } from "@/lib/types/database";
 import { track } from "@/lib/analytics/track";
@@ -36,6 +37,7 @@ export function ArticleDetailView({
 }) {
   const t = useTranslations("articleDetail");
   const tMap = useTranslations("map");
+  const tShare = useTranslations("share");
   const locale = useLocale();
   // See SpotDetailView for why this starts in normal flow and only
   // `sticky`s below the header once scrolled to it.
@@ -197,6 +199,7 @@ export function ArticleDetailView({
             </div>
             <ShareMenu
               title={article.title}
+              text={`*${article.title}*\n${firstSentence(article.excerpt) ?? tShare("hookArticle")}`}
               variant="primary"
               entity={{ type: "article", id: article.id, slug: article.slug }}
             />

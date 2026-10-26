@@ -26,3 +26,32 @@ export function absoluteUrl(path: string): string {
 export function ogLocaleOf(locale: Locale): string {
   return locale === "es" ? "es_PA" : "en_US";
 }
+
+// Origin used ONLY for sharing (shared links, og:url, og:image). Temporarily
+// the Vercel deployment because cascoviejo.guide isn't live yet, so link
+// previews can actually be fetched by WhatsApp & co. Canonical, hreflang and
+// the sitemap keep using SITE_URL. TODO at domain launch: delete the Vercel
+// fallback so this equals SITE_URL.
+export const SHARE_URL = (
+  process.env.NEXT_PUBLIC_SHARE_URL ?? "https://casco-guide.vercel.app"
+).replace(/\/+$/, "");
+
+/** Same path as `absoluteUrl`, but on the share origin. */
+export function shareLink(path: string): string {
+  return `${SHARE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+/** Absolute URL of the generated 1200x630 share card for a spot/guide/event
+ * (see app/api/og). `v` is the record's updated_at: editing a record changes
+ * the URL, so WhatsApp/Facebook re-fetch instead of serving a stale preview. */
+export function shareImageUrl(
+  type: "spots" | "guides" | "events",
+  slug: string,
+  locale: Locale,
+  updatedAt: string,
+): string {
+  const v = Date.parse(updatedAt) || 0;
+  return `${SHARE_URL}/api/og/${type}/${encodeURIComponent(slug)}?locale=${locale}&v=${v}`;
+}
+
+export const SHARE_IMAGE_META = { width: 1200, height: 630, type: "image/jpeg" } as const;

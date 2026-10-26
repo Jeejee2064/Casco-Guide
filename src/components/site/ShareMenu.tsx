@@ -47,6 +47,7 @@ export function ShareMenu({
   showLabel = false,
   className,
   entity,
+  previewImage,
 }: {
   title: string;
   text?: string;
@@ -57,6 +58,8 @@ export function ShareMenu({
   size?: VariantProps<typeof buttonVariants>["size"];
   showLabel?: boolean;
   className?: string;
+  /** Absolute URL of the share-card image, prefetched when the sheet opens. */
+  previewImage?: string;
   entity?: { type: "spot" | "event" | "article"; id: string; slug: string };
 }) {
   const t = useTranslations("share");
@@ -68,6 +71,13 @@ export function ShareMenu({
     () =>
       typeof navigator !== "undefined" && typeof navigator.share === "function",
   );
+
+  // Opening the sheet is a strong signal a share is coming: fetch the
+  // preview image now so it is already cached (CDN) by the time a messenger's
+  // crawler asks for it, instead of being generated while it waits.
+  useEffect(() => {
+    if (open && previewImage) void fetch(previewImage, { mode: "no-cors" }).catch(() => {});
+  }, [open, previewImage]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +100,7 @@ export function ShareMenu({
       label: t("whatsapp"),
       icon: MessageCircle,
       iconClass: "bg-[#25D366] text-white",
-      href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
+      href: `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`,
     },
     {
       key: "facebook",
@@ -118,7 +128,7 @@ export function ShareMenu({
       label: t("email"),
       icon: Mail,
       iconClass: "bg-foreground/10 text-foreground",
-      href: `mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(shareUrl)}`,
+      href: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`,
     },
   ] as const;
 

@@ -22,6 +22,9 @@ import { LoadingImage } from "./LoadingImage";
 import { PhotoGallery } from "./PhotoGallery";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { ShareMenu } from "./ShareMenu";
+import { buildShareText } from "@/lib/shareText";
+import { shareLink, shareImageUrl } from "@/lib/seo/site";
+import type { Locale } from "@/i18n/routing";
 import { MiniMap } from "./MiniMap";
 import { GetMeThereCard } from "./GetMeThereCard";
 import { NearbySection } from "./NearbySection";
@@ -77,10 +80,19 @@ export function SpotDetailView({
   onBack?: () => void;
 }) {
   const t = useTranslations("spot");
+  const tShare = useTranslations("share");
+  const tShareCategory = useTranslations("category");
   const td = useTranslations("spotDetail");
   const th = useTranslations("hours");
   const tVibe = useTranslations("vibe");
   const locale = useLocale();
+  const shareText = buildShareText({
+    name: spot.name,
+    description: spot.description,
+    fallback: tShare("hookSpot", { category: tShareCategory(spot.category) }),
+  });
+  const shareUrl = shareLink(`/${locale}/spots/${spot.slug}`);
+  const previewImage = shareImageUrl("spots", spot.slug, locale as Locale, spot.updated_at);
   const router = useRouter();
   const goBack = useSmartBack();
   // Sits in normal flow (so it never covers the title on a page with no
@@ -491,6 +503,9 @@ export function SpotDetailView({
                 )}
                 <ShareMenu
                   title={spot.name}
+                  text={shareText}
+                  url={shareUrl}
+                  previewImage={previewImage}
                   variant="primary"
                   size="lg"
                   showLabel
@@ -550,6 +565,9 @@ export function SpotDetailView({
         )}
         <ShareMenu
           title={spot.name}
+          text={shareText}
+          url={shareUrl}
+          previewImage={previewImage}
           direction="up"
           variant="primary"
           size="lg"

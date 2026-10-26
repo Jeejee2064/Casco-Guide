@@ -12,7 +12,7 @@ import { getSpotBySlug, getRelatedSpots, getSpotById, getChildSpots } from "@/li
 import { getArticlesForSpot } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { breadcrumbSchema, spotSchema } from "@/lib/seo/schema";
-import { absoluteUrl, SITE_NAME, ogLocaleOf } from "@/lib/seo/site";
+import { SITE_NAME, ogLocaleOf, shareImageUrl, shareLink, SHARE_IMAGE_META } from "@/lib/seo/site";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -31,8 +31,10 @@ export async function generateMetadata({
   const category = tCategory(spot.category);
   const title = t("spotTitle", { name: spot.name, category });
   const description = spot.description ?? t("spotDescriptionFallback", { name: spot.name, category });
-  const image = spot.featured_photo ?? spot.photos[0]?.url;
   const alternates = buildAlternates({ pathname: "/spots/[slug]", params: { slug } }, locale);
+  const ogDescription =
+    description.length > 150 ? `${description.slice(0, 147).trimEnd()}…` : description;
+  const image = shareImageUrl("spots", slug, locale, spot.updated_at);
 
   return {
     title,
@@ -43,18 +45,21 @@ export async function generateMetadata({
     // included — has to be repeated here rather than assumed inherited.
     openGraph: {
       title,
-      description,
-      url: alternates?.canonical as string,
+      description: ogDescription,
+      // Share origin, not canonical: Facebook re-fetches og:url, which must
+      // be reachable (see SHARE_URL).
+      url: shareLink(new URL(alternates?.canonical as string).pathname),
       siteName: SITE_NAME,
       locale: ogLocaleOf(locale),
       type: "website",
-      ...(image && { images: [{ url: absoluteUrl(image), alt: spot.name }] }),
+      alternateLocale: locale === "es" ? ["en_US"] : ["es_PA"],
+      images: [{ url: image, alt: spot.name, ...SHARE_IMAGE_META }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      ...(image && { images: [absoluteUrl(image)] }),
+      images: [image],
     },
   };
 }

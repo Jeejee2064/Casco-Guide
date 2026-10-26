@@ -12,7 +12,7 @@ import { getSpotsByIds } from "@/lib/data/spots";
 // import { getEventsByIds } from "@/lib/data/events";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { articleSchema, breadcrumbSchema } from "@/lib/seo/schema";
-import { absoluteUrl, SITE_NAME, ogLocaleOf } from "@/lib/seo/site";
+import { SITE_NAME, ogLocaleOf, shareImageUrl, shareLink, SHARE_IMAGE_META } from "@/lib/seo/site";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -27,6 +27,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "seo" });
   const description = article.excerpt ?? t("articleDescriptionFallback", { title: article.title });
   const alternates = buildAlternates({ pathname: "/articles/[slug]", params: { slug } }, locale);
+  const image = shareImageUrl("guides", slug, locale, article.updated_at);
 
   return {
     title: article.title,
@@ -38,22 +39,23 @@ export async function generateMetadata({
     openGraph: {
       title: article.title,
       description,
-      url: alternates?.canonical as string,
+      // Share origin, not canonical: Facebook re-fetches og:url, which must
+      // be reachable (see SHARE_URL).
+      url: shareLink(new URL(alternates?.canonical as string).pathname),
       siteName: SITE_NAME,
       locale: ogLocaleOf(locale),
       type: "article",
       ...(article.published_at && { publishedTime: article.published_at }),
       modifiedTime: article.updated_at,
       ...(article.author && { authors: [article.author] }),
-      ...(article.cover_photo && {
-        images: [{ url: absoluteUrl(article.cover_photo), alt: article.title }],
-      }),
+      alternateLocale: locale === "es" ? ["en_US"] : ["es_PA"],
+      images: [{ url: image, alt: article.title, ...SHARE_IMAGE_META }],
     },
     twitter: {
       card: "summary_large_image",
       title: article.title,
       description,
-      ...(article.cover_photo && { images: [absoluteUrl(article.cover_photo)] }),
+      images: [image],
     },
   };
 }
