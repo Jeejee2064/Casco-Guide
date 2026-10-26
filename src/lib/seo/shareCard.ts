@@ -101,6 +101,9 @@ export async function ensureShareImage(
   const input = await resolveShareInput(type, slug, locale);
   if (!input) return null;
   const image = await renderShareImage(input);
+  // No version in the request (e.g. someone hitting the bare URL): serve the
+  // card but never store it, so it can't shadow or evict a real version.
+  if (!version) return image;
 
   try {
     const storage = createAdminClient().storage.from(BUCKET);
@@ -111,9 +114,12 @@ export async function ensureShareImage(
     });
     if (error) throw error;
     const { data: files } = await storage.list("share", { search: prefix.slice("share/".length) });
+    // Only versions older than this one are stale — a request carrying an
+    // outdated `v` must never delete a newer card.
     const stale = (files ?? [])
-      .map((f) => `share/${f.name}`)
-      .filter((name) => name.startsWith(prefix) && name !== key);
+      .filter((f) => `share/${f.name}`.startsWith(prefix))
+      .filter((f) => Number(f.name.slice(prefix.length - "share/".length).replace(".jpg", "")) < version)
+      .map((f) => `share/${f.name}`);
     if (stale.length) await storage.remove(stale);
   } catch (err) {
     console.warn("share image not saved to storage:", err instanceof Error ? err.message : err);
