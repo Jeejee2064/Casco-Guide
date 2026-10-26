@@ -199,7 +199,7 @@ export function ArticleDetailView({
             </div>
             <ShareMenu
               title={article.title}
-              text={`*${article.title}*\n${firstSentence(article.excerpt) ?? tShare("hookArticle")}`}
+              text={`*${article.title}*\n${firstSentence(article.excerpt) ?? tShare("hookArticle")}\ncascoviejo.guide`}
               variant="primary"
               entity={{ type: "article", id: article.id, slug: article.slug }}
             />

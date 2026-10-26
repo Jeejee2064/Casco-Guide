@@ -8,7 +8,7 @@ export function firstSentence(text: string | null | undefined, max = 110): strin
 
 /** Body of a share message: pin + name, then a one-line hook — the spot's
  * own first sentence when it's short enough, else a generic localized line
- * (`fallback`). The link is appended by ShareMenu on its own line. */
+ * (`fallback`). The brand domain closes the text; the link is appended by ShareMenu on its own line. */
 export function buildShareText({
   name,
   description,
@@ -18,5 +18,5 @@ export function buildShareText({
   description?: string | null;
   fallback: string;
 }): string {
-  return `*${name}*\n${firstSentence(description, 110) ?? fallback}`;
+  return `*${name}*\n${firstSentence(description, 110) ?? fallback}\ncascoviejo.guide`;
 }
