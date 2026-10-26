@@ -139,10 +139,7 @@ async function renderOverlay({ name, meta, chip }: ShareImageInput) {
 
 /** Branded share card as a JPEG under ~250 KB: the photo cropped to
  * 1200x630 under the overlay, or a brand-teal background without one. */
-export async function buildShareImage(
-  input: ShareImageInput,
-  cacheControl: string,
-): Promise<Response> {
+export async function renderShareImage(input: ShareImageInput): Promise<Buffer> {
   const { width, height } = SHARE_IMAGE_SIZE;
   const [overlay, photo] = await Promise.all([
     renderOverlay(input),
@@ -173,7 +170,5 @@ export async function buildShareImage(
     );
   }
 
-  return new Response(new Uint8Array(out), {
-    headers: { "Content-Type": "image/jpeg", "Cache-Control": cacheControl },
-  });
+  return out;
 }

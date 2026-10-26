@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "@/i18n/navigation";
-import type { Locale } from "@/i18n/routing";
+import { ensureShareImage } from "@/lib/seo/shareCard";
+import { routing, type Locale } from "@/i18n/routing";
 import type { DayHours, Photo, SpotRecord, SpotVibe } from "@/lib/types/database";
 
 export interface SpotFormValues {
@@ -75,12 +76,20 @@ export async function upsertSpot(locale: Locale, values: SpotFormValues) {
   };
 
   const { error, data } = id
-    ? await supabase.from("spots").update(payload).eq("id", id).select("slug").single()
-    : await supabase.from("spots").insert(payload).select("slug").single();
+    ? await supabase.from("spots").update(payload).eq("id", id).select("slug, updated_at").single()
+    : await supabase.from("spots").insert(payload).select("slug, updated_at").single();
 
   if (error) {
     return { error: error.message };
   }
+
+  // Pre-generate the share cards (both languages) so the first WhatsApp
+  // preview never waits on rendering. Best-effort: a failure here must not
+  // fail the save — the og:image route generates on demand as a fallback.
+  const version = Date.parse(data.updated_at) || 0;
+  await Promise.allSettled(
+    routing.locales.map((l) => ensureShareImage("spots", data.slug, l, version)),
+  );
 
   revalidatePath("/[locale]/admin/spots", "page");
   revalidatePath("/[locale]", "page");
