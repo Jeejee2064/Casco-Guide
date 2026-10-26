@@ -12,6 +12,7 @@ import { HoursEditor } from "./HoursEditor";
 import { FeaturedPhotoUploader, GalleryUploader } from "./PhotoUploader";
 import { ArticleBodyEditor } from "./ArticleBodyEditor";
 import { LangTabs } from "./LangTabs";
+import { SharePreview } from "./SharePreview";
 import { LocationPickerModal } from "./LocationPickerModal";
 import { PlaceLinkPicker, type LinkablePlace } from "./PlaceLinkPicker";
 import { TranslationSyncModal } from "./TranslationSyncModal";
@@ -460,6 +461,13 @@ export function SpotForm({
           <FieldHint>{t("heroPhotoHint")}</FieldHint>
         </div>
       </Section>
+
+      {spot && (
+        <Section title={t("sharePreview.title")}>
+          <SharePreview slug={spot.slug} updatedAt={spot.updated_at} />
+          <FieldHint>{t("sharePreview.hint")}</FieldHint>
+        </Section>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4">
         <div>

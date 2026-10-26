@@ -352,6 +352,11 @@
       "title2": "Title 2"
     },
     "spotForm": {
+      "sharePreview": {
+        "title": "Share preview",
+        "hint": "What WhatsApp, Facebook & co. show when this spot's link is shared. Built from the hero photo, name, category and main vibe, and regenerated every time you save — this shows the last saved version.",
+        "alt": "Share preview"
+      },
       "import": {
         "title": "Import from Google Maps screenshot",
         "description": "Upload up to 5 screenshots of the place's Google Maps card (when it doesn't fit in one) and Claude combines whatever each one shows — review everything before saving. Tip: right-click the exact point on the map (\"What's here?\") so the coordinates show up in a screenshot and get imported too.",

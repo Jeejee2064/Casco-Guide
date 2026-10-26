@@ -352,6 +352,11 @@
       "title2": "Título 2"
     },
     "spotForm": {
+      "sharePreview": {
+        "title": "Vista previa al compartir",
+        "hint": "Lo que muestran WhatsApp, Facebook y demás al compartir el enlace de este lugar. Se crea con la foto principal, el nombre, la categoría y el vibe principal, y se regenera cada vez que guardas — aquí ves la última versión guardada.",
+        "alt": "Vista previa al compartir"
+      },
       "import": {
         "title": "Importar desde captura de Google Maps",
         "description": "Sube hasta 5 capturas de la ficha del lugar en Google Maps (si no cabe todo en una) y Claude combina lo que pueda leer en cada una — revisa todo antes de guardar. Truco: haz clic derecho sobre el punto exacto en el mapa (\"¿Qué hay aquí?\") para que las coordenadas aparezcan en la captura y se importen también.",
