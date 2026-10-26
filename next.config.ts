@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   // paths, which Next's file tracing can't see — without this they're missing
   // from the deployed (Vercel) function and the image fails.
   outputFileTracingIncludes: {
-    "/api/og/**": ["./public/logoletters.png", "./src/assets/fonts/*"],
+    "/api/og/**": ["./public/logoletters.png", "./public/hero-tower.svg", "./src/assets/fonts/*"],
   },
   images: {
     remotePatterns: [

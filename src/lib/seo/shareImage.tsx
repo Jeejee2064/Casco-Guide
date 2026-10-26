@@ -12,7 +12,6 @@ export const SHARE_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 const TARGET_BYTES = 250 * 1024;
 const QUALITIES = [78, 72, 66, 60, 54, 48, 42];
 const BRAND_TEAL = "#1fa6da";
-const CHIP_FALLBACK = BRAND_TEAL;
 
 // Read once at module scope — none of these depend on request data.
 const publicFile = (...parts: string[]) => path.join(process.cwd(), "public", ...parts);
@@ -21,17 +20,13 @@ const fontsPromise = Promise.all([
   readFile(fontFile("Poppins-ExtraBold.woff")),
   readFile(fontFile("Poppins-SemiBold.woff")),
 ]);
-const logoPromise = readFile(publicFile("logoletters.png")).then(
-  (buf) => `data:image/png;base64,${buf.toString("base64")}`,
-);
+const dataUri = (mime: string) => (buf: Buffer) => `data:${mime};base64,${buf.toString("base64")}`;
+const logoPromise = readFile(publicFile("logoletters.png")).then(dataUri("image/png"));
+const towerPromise = readFile(publicFile("hero-tower.svg")).then(dataUri("image/svg+xml"));
 
 export interface ShareImageInput {
   photoUrl: string | null;
   name: string;
-  /** Plain text shown before the chip (category, date/time…). */
-  meta: string;
-  /** Optional colored chip after `meta` (a spot's main vibe). */
-  chip?: { label: string; color: string } | null;
 }
 
 /** Supabase public-bucket URLs can be served through its image transformer;
@@ -60,14 +55,18 @@ async function fetchPhoto(url: string): Promise<Buffer | null> {
   return (resized && (await fetchBuffer(resized))) || fetchBuffer(url);
 }
 
-/** Transparent overlay — gradient on the bottom 45%, logo, name, chip. Kept
+/** Transparent overlay — gradient on the bottom 45%, logo, name. Kept
  * separate from the photo so Satori never embeds a large image. Content sits
  * in the central ~70% horizontally (15% margins) because some apps crop the
  * preview toward a square. */
-async function renderOverlay({ name, meta, chip }: ShareImageInput) {
+async function renderOverlay({ name }: ShareImageInput) {
   const { width, height } = SHARE_IMAGE_SIZE;
-  const [[extraBold, semiBold], logo] = await Promise.all([fontsPromise, logoPromise]);
-  const fontSize = name.length > 40 ? 52 : name.length > 26 ? 62 : 74;
+  const [[extraBold, semiBold], logo, tower] = await Promise.all([
+    fontsPromise,
+    logoPromise,
+    towerPromise,
+  ]);
+  const fontSize = name.length > 40 ? 52 : name.length > 26 ? 62 : 76;
   const sideMargin = Math.round(width * 0.15);
 
   const res = new ImageResponse(
@@ -78,51 +77,34 @@ async function renderOverlay({ name, meta, chip }: ShareImageInput) {
           height,
           display: "flex",
           flexDirection: "column",
+          alignItems: "center",
           justifyContent: "space-between",
-          padding: `44px ${sideMargin}px 52px`,
+          padding: `26px ${sideMargin}px 48px`,
           color: "white",
           fontFamily: "Poppins",
+          // Evenly dims the photo (the centered tower needs contrast), then
+          // deepens the top (logotype) and the bottom 45% (name).
           backgroundImage:
-            "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.62) 24%, rgba(0,0,0,0) 45%), linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 30%)",
+            "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 24%, rgba(0,0,0,0) 45%), linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 28%), linear-gradient(rgba(0,0,0,0.22), rgba(0,0,0,0.22))",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} width={230} height={55} alt="" />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              fontSize,
-              fontWeight: 800,
-              lineHeight: 1.08,
-              letterSpacing: -1,
-              display: "flex",
-              textShadow: "0 2px 18px rgba(0,0,0,0.5)",
-            }}
-          >
-            {name}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", marginTop: 22 }}>
-            <div style={{ fontSize: 28, fontWeight: 600, opacity: 0.92, display: "flex" }}>
-              {meta}
-            </div>
-            {chip && (
-              <div
-                style={{
-                  marginLeft: 18,
-                  padding: "6px 20px",
-                  borderRadius: 999,
-                  background: chip.color || CHIP_FALLBACK,
-                  fontSize: 24,
-                  fontWeight: 600,
-                  display: "flex",
-                }}
-              >
-                {chip.label}
-              </div>
-            )}
-          </div>
+        {/* eslint-disable @next/next/no-img-element */}
+        <img src={logo} width={600} height={143} alt="" />
+        <img src={tower} width={310} height={310} alt="" />
+        {/* eslint-enable @next/next/no-img-element */}
+        <div
+          style={{
+            fontSize,
+            fontWeight: 800,
+            lineHeight: 1.08,
+            letterSpacing: -1,
+            textAlign: "center",
+            justifyContent: "center",
+            display: "flex",
+            textShadow: "0 2px 18px rgba(0,0,0,0.5)",
+          }}
+        >
+          {name}
         </div>
       </div>
     ),

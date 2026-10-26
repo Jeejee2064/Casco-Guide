@@ -4,6 +4,8 @@
 //   node --env-file=.env.local scripts/generate-share-images.mjs https://casco-guide.vercel.app
 // Idempotent: cards that already exist for the current updated_at are just
 // re-read from storage.
+// Keep in sync with SHARE_DESIGN_VERSION in src/lib/seo/site.ts (cache-busting only here).
+const DESIGN = 2;
 const base = (process.argv[2] ?? "").replace(/\/+$/, "");
 const { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: key } = process.env;
 if (!base || !url || !key) {
@@ -28,7 +30,7 @@ let ok = 0;
 for (const [type, { slug, updated_at }] of jobs) {
   for (const locale of ["es", "en"]) {
     const v = Date.parse(updated_at) || 0;
-    const res = await fetch(`${base}/api/og/${type}/${slug}?locale=${locale}&v=${v}`);
+    const res = await fetch(`${base}/api/og/${type}/${slug}?locale=${locale}&v=${v}&d=${DESIGN}`);
     const kb = Math.round((await res.arrayBuffer()).byteLength / 1024);
     console.log(`${res.ok ? "ok  " : "FAIL"} ${type}/${slug} ${locale} ${kb} KB`);
     if (res.ok) ok++;

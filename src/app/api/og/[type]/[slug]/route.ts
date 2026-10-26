@@ -37,6 +37,6 @@ export async function GET(
 
   // Unknown record: still return a branded image (never a broken preview),
   // but don't let it be cached for long in case the record appears later.
-  const fallback = await renderShareImage({ photoUrl: null, name: "Casco Viejo Guide", meta: "Panamá" });
+  const fallback = await renderShareImage({ photoUrl: null, name: "Casco Viejo Guide" });
   return jpeg(fallback, SHORT);
 }

@@ -41,6 +41,11 @@ export function shareLink(path: string): string {
   return `${SHARE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Bump whenever the share card's look changes: it is part of both the image
+ * URL (busting messenger/CDN caches) and the stored file name (so old-design
+ * cards are never served again). */
+export const SHARE_DESIGN_VERSION = 2;
+
 /** Absolute URL of the generated 1200x630 share card for a spot/guide/event
  * (see app/api/og). `v` is the record's updated_at: editing a record changes
  * the URL, so WhatsApp/Facebook re-fetch instead of serving a stale preview. */
@@ -51,7 +56,7 @@ export function shareImageUrl(
   updatedAt: string,
 ): string {
   const v = Date.parse(updatedAt) || 0;
-  return `${SHARE_URL}/api/og/${type}/${encodeURIComponent(slug)}?locale=${locale}&v=${v}`;
+  return `${SHARE_URL}/api/og/${type}/${encodeURIComponent(slug)}?locale=${locale}&v=${v}&d=${SHARE_DESIGN_VERSION}`;
 }
 
 export const SHARE_IMAGE_META = { width: 1200, height: 630, type: "image/jpeg" } as const;
