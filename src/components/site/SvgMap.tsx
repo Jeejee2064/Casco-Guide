@@ -96,6 +96,7 @@ const pinPos = new WeakMap<HTMLElement, WorldPoint>();
 
 const ZOOM0_SCALE = zoomToScale(0);
 const MIN_SCALE = zoomToScale(14);
+const FIT_MIN_SCALE = zoomToScale(12);
 const MAX_SCALE = zoomToScale(19);
 const DRAG_THRESHOLD = 6; // px before a press becomes a pan
 const DOUBLE_TAP_MS = 300;
@@ -403,7 +404,9 @@ export const SvgMap = forwardRef<
           const availH = Math.max(h - pad.top - pad.bottom, 50);
           const k = clampNum(
             Math.min(availW / bw, availH / bh),
-            MIN_SCALE,
+            // Below the manual-zoom floor on purpose: a fit must always show
+            // every point, even on a narrow phone-width map.
+            FIT_MIN_SCALE,
             Math.min(MAX_SCALE, o?.maxScale ?? MAX_SCALE),
           );
           // World point that must land at the middle of the padded area.

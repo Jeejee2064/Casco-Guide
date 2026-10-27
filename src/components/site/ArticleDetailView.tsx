@@ -374,14 +374,14 @@ export function ArticleDetailView({
             {itineraryStops.length > 0 ? (
               <ItineraryMap
                 stops={itineraryStops}
-                heightClassName="h-[55vh] min-h-[440px]"
+                heightClassName="h-[50vh] min-h-[300px]"
                 interactive={false}
               />
             ) : (
               <ItineraryMap
                 stops={citedStops}
                 route={false}
-                heightClassName="h-[55vh] min-h-[440px]"
+                heightClassName="h-[50vh] min-h-[300px]"
                 interactive={false}
               />
             )}

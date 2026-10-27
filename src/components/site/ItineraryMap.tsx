@@ -169,7 +169,7 @@ export function ItineraryMap({
       const ys = pts.map((p) => p[1]);
       mapRef.current?.fitBounds(
         [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
-        { padding: 36, maxScale: zoomToScale(17) },
+        { padding: 44, maxScale: zoomToScale(17) },
       );
     };
     fit([]);
