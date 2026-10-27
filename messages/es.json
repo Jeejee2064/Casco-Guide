@@ -263,13 +263,11 @@
       "empty": "Todavía no hay datos para este período.",
       "notConfigured": "Configura POSTHOG_PERSONAL_API_KEY en tu entorno para activar esta pestaña.",
       "error": "No se pudo cargar la analítica. Intenta de nuevo en un momento.",
-
       "trafficTrend": "Tráfico",
       "trafficTrendSubtitle": "Vistas de página por día",
       "rangeToday": "Hoy",
       "rangeLast7": "Últimos 7 días",
       "rangeLast30": "Últimos 30 días",
-
       "interactionsSection": "Interacciones por lugar",
       "interactionsSubtitle": "Cada lugar, ordenado por interacciones totales — úsalo para mostrarle a un negocio exactamente dónde está parado",
       "interactionsCount": "{count, plural, one {# lugar clasificado} other {# lugares clasificados}}",
@@ -285,18 +283,15 @@
       "interactionsColMap": "Mapa",
       "interactionsColShare": "Compartir",
       "interactionsColTotal": "Total",
-
       "contentSection": "Más visto",
       "topSpots": "Lugares más vistos",
       "topArticles": "Artículos más vistos",
-
       "engagementSection": "Interacción",
       "engagementSubtitle": "Qué hace la gente al llegar a un lugar o evento",
       "whatsappClicks": "Clics en WhatsApp",
       "directionsClicks": "Clics en cómo llegar",
       "mapPinClicks": "Toques en el mapa",
       "shareClicks": "Clics en compartir",
-
       "discoverySection": "Descubrimiento",
       "discoverySubtitle": "Qué busca y filtra la gente",
       "topCategories": "Categorías más filtradas",
@@ -304,17 +299,14 @@
       "searchesTotal": "Búsquedas",
       "searchesNoResults": "Sin resultados",
       "searchesNoResultsSub": "{pct}% de las búsquedas no encontraron nada",
-
       "audienceSection": "Audiencia",
       "deviceBreakdown": "Dispositivos",
       "languageSplit": "Idioma",
       "referrers": "De dónde viene el tráfico",
       "direct": "Directo",
-
       "nightModeSection": "Modo noche",
       "nightModeAdoption": "Visitantes que lo activaron",
       "nightModeSub": "{pct}% de los visitantes únicos",
-
       "pwaSection": "Embudo de instalación de la app",
       "pwaShown": "Aviso mostrado",
       "pwaAccepted": "Instalada",
@@ -677,8 +669,8 @@
   },
   "seo": {
     "home": {
-      "title": "Guía de Casco Viejo — Mejores Restaurantes, Bares, Hoteles y Qué Hacer",
-      "description": "La guía completa de Casco Viejo: restaurantes, bares con azotea, hoteles boutique, museos y rutas a pie por el casco antiguo de la Ciudad de Panamá, Patrimonio de la Humanidad por la UNESCO — seleccionado y actualizado por locales.",
+      "title": "Guía de Casco Viejo — Restaurantes, Bares, Hoteles y Qué Hacer",
+      "description": "Restaurantes, bares con azotea, hoteles boutique, museos y rutas a pie por Casco Viejo, el casco antiguo de Ciudad de Panamá — por locales.",
       "keywords": "Casco Viejo, Casco Viejo Panamá, Casco Antiguo, San Felipe Panamá, qué hacer en Casco Viejo, restaurantes en Casco Viejo, bares en Casco Viejo, hoteles en Casco Viejo, guía de Casco Viejo, centro histórico Ciudad de Panamá"
     },
     "articles": {
@@ -686,14 +678,16 @@
       "description": "Guías a fondo, selecciones y crónicas sobre los mejores restaurantes, bares, sitios y rincones escondidos de Casco Viejo, Ciudad de Panamá."
     },
     "spots": {
-      "title": "Lugares en Casco Viejo — Restaurantes, Bares, Cafés, Museos y Más",
-      "description": "Explora cada restaurante, bar, café, museo, tienda y hotel de Casco Viejo, Ciudad de Panamá. Filtra por categoría o por vibe — atardecer romántico, fiesta en azotea, patrimonio local y más — para encontrar justo lo que buscas."
+      "title": "Restaurantes, Bares y Cafés en Casco Viejo",
+      "description": "Explora cada restaurante, bar, café, museo, tienda y hotel de Casco Viejo, Ciudad de Panamá. Filtra por categoría o vibe y encuentra lo que buscas.",
+      "h1": "Todos los lugares de Casco Viejo"
     },
     "map": {
       "title": "Mapa de Casco Viejo — Todos los Lugares",
-      "description": "Un mapa interactivo con cada restaurante, bar, café, sitio y hotel de Casco Viejo, Ciudad de Panamá. Filtra por categoría o vibe y muévete a pie por el casco antiguo."
+      "description": "Mapa interactivo de cada restaurante, bar, café, sitio y hotel de Casco Viejo, Ciudad de Panamá. Filtra por categoría o vibe y obtén indicaciones.",
+      "h1": "Mapa interactivo de Casco Viejo"
     },
-    "spotTitle": "{name} — {category} en Casco Viejo",
+    "spotTitle": "{name} — {category}",
     "spotDescriptionFallback": "{name} — {category} en Casco Viejo, Ciudad de Panamá. Consulta horario, dirección, fotos y todo lo que necesitas para visitarlo.",
     "articleDescriptionFallback": "Una historia de Casco Viejo Guide: {title}."
   },

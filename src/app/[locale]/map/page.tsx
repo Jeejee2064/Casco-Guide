@@ -4,7 +4,7 @@ import { Header } from "@/components/site/Header";
 import { MapExplorerSection } from "@/components/site/MapExplorerSection";
 import { getSpots } from "@/lib/data/spots";
 import { buildAlternates } from "@/lib/seo/alternates";
-import { SITE_NAME, ogLocaleOf } from "@/lib/seo/site";
+import { socialMetadata } from "@/lib/seo/metadata";
 import { SPOT_VIBES } from "@/lib/vibes";
 import type { Locale } from "@/i18n/routing";
 import type { SpotVibe } from "@/lib/types/database";
@@ -29,15 +29,12 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates,
-    openGraph: {
+    ...socialMetadata({
+      locale,
       title: t("title"),
       description: t("description"),
       url: alternates?.canonical as string,
-      siteName: SITE_NAME,
-      locale: ogLocaleOf(locale),
-      type: "website",
-    },
-    twitter: { card: "summary_large_image", title: t("title"), description: t("description") },
+    }),
   };
 }
 
@@ -51,6 +48,7 @@ export default async function MapPage({
   const { locale } = (await params) as { locale: Locale };
   setRequestLocale(locale);
   const sp = await searchParams;
+  const tSeo = await getTranslations({ locale, namespace: "seo.map" });
 
   // Events omitted, same as the old home page's ExploreSection — hidden
   // site-wide for now (see AGENTS note), not specific to this page.
@@ -81,6 +79,7 @@ export default async function MapPage({
           ever turned off. `main` still wraps it for the usual landmark
           structure — the fixed positioning ignores it either way. */}
       <main className="flex-1">
+        <h1 className="sr-only">{tSeo("h1")}</h1>
         <MapExplorerSection
           spots={spots}
           initialMode={initialMode}

@@ -42,11 +42,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getArticles(routing.defaultLocale),
   ]);
 
+  const newest = (dates: string[]) =>
+    dates.length ? new Date(Math.max(...dates.map((d) => Date.parse(d)))).toISOString() : undefined;
+  const spotsUpdated = newest(spots.map((s) => s.updated_at));
+  const articlesUpdated = newest(articles.map((a) => a.updated_at));
+  const siteUpdated = newest([spotsUpdated, articlesUpdated].filter((d): d is string => !!d));
+
   return [
-    ...localizedEntries("/", { changeFrequency: "daily", priority: 1 }),
-    ...localizedEntries("/spots", { changeFrequency: "daily", priority: 0.9 }),
-    ...localizedEntries("/map", { changeFrequency: "weekly", priority: 0.6 }),
-    ...localizedEntries("/articles", { changeFrequency: "daily", priority: 0.8 }),
+    ...localizedEntries("/", { changeFrequency: "daily", priority: 1, lastModified: siteUpdated }),
+    ...localizedEntries("/spots", { changeFrequency: "daily", priority: 0.9, lastModified: spotsUpdated }),
+    ...localizedEntries("/map", { changeFrequency: "weekly", priority: 0.6, lastModified: spotsUpdated }),
+    ...localizedEntries("/articles", { changeFrequency: "daily", priority: 0.8, lastModified: articlesUpdated }),
     ...spots.flatMap((spot) =>
       localizedEntries(
         { pathname: "/spots/[slug]", params: { slug: spot.slug } },

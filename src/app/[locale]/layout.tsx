@@ -14,7 +14,8 @@ import { ScrollToTopOnNavigate } from "@/components/site/ScrollToTopOnNavigate";
 import { JsonLd } from "@/components/site/JsonLd";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { destinationSchema, organizationSchema, websiteSchema } from "@/lib/seo/schema";
-import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL, ogLocaleOf } from "@/lib/seo/site";
+import { socialMetadata } from "@/lib/seo/metadata";
+import { SITE_NAME, SITE_URL } from "@/lib/seo/site";
 import "../globals.css";
 
 export const viewport: Viewport = {
@@ -31,7 +32,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = (await params) as { locale: Locale };
   const t = await getTranslations({ locale, namespace: "seo.home" });
-  const ogLocale = ogLocaleOf(locale);
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -40,22 +40,12 @@ export async function generateMetadata({
     keywords: t("keywords"),
     applicationName: SITE_NAME,
     alternates: buildAlternates("/", locale),
-    openGraph: {
-      siteName: SITE_NAME,
+    ...socialMetadata({
+      locale,
       title: t("title"),
       description: t("description"),
       url: buildAlternates("/", locale)?.canonical as string,
-      images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 650, alt: SITE_NAME }],
-      locale: ogLocale,
-      alternateLocale: routing.locales.filter((l) => l !== locale).map(ogLocaleOf),
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: t("title"),
-      description: t("description"),
-      images: [DEFAULT_OG_IMAGE],
-    },
+    }),
     robots: {
       index: true,
       follow: true,

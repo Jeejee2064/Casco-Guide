@@ -9,7 +9,8 @@ import { getArticles } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { collectionSchema } from "@/lib/seo/schema";
 import { getPathname } from "@/i18n/navigation";
-import { SITE_NAME, absoluteUrl, ogLocaleOf } from "@/lib/seo/site";
+import { absoluteUrl } from "@/lib/seo/site";
+import { socialMetadata } from "@/lib/seo/metadata";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -24,15 +25,12 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates,
-    openGraph: {
+    ...socialMetadata({
+      locale,
       title: t("title"),
       description: t("description"),
       url: alternates?.canonical as string,
-      siteName: SITE_NAME,
-      locale: ogLocaleOf(locale),
-      type: "website",
-    },
-    twitter: { card: "summary_large_image", title: t("title"), description: t("description") },
+    }),
   };
 }
 

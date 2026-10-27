@@ -12,6 +12,7 @@ export const SITE_NAME = "Casco Viejo Guide";
 // Site-wide fallback Open Graph image (the logo mark on the brand teal) —
 // every spot/article page overrides it with its own photo when it has one.
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
+export const DEFAULT_OG_IMAGE_META = { width: 1200, height: 650, type: "image/png" } as const;
 
 /** Resolves a site-relative path (or passes through an already-absolute URL)
  * against SITE_URL — metadata fields that require a fully qualified URL
@@ -25,20 +26,6 @@ export function absoluteUrl(path: string): string {
  * Panama-specific since the site's Spanish is aimed at that audience. */
 export function ogLocaleOf(locale: Locale): string {
   return locale === "es" ? "es_PA" : "en_US";
-}
-
-// Origin used ONLY for sharing (shared links, og:url, og:image). Temporarily
-// the Vercel deployment because cascoviejo.guide isn't live yet, so link
-// previews can actually be fetched by WhatsApp & co. Canonical, hreflang and
-// the sitemap keep using SITE_URL. TODO at domain launch: delete the Vercel
-// fallback so this equals SITE_URL.
-export const SHARE_URL = (
-  process.env.NEXT_PUBLIC_SHARE_URL ?? "https://casco-guide.vercel.app"
-).replace(/\/+$/, "");
-
-/** Same path as `absoluteUrl`, but on the share origin. */
-export function shareLink(path: string): string {
-  return `${SHARE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 /** Bump whenever the share card's look changes: it is part of both the image
@@ -56,7 +43,7 @@ export function shareImageUrl(
   updatedAt: string,
 ): string {
   const v = Date.parse(updatedAt) || 0;
-  return `${SHARE_URL}/api/og/${type}/${encodeURIComponent(slug)}?locale=${locale}&v=${v}&d=${SHARE_DESIGN_VERSION}`;
+  return `${SITE_URL}/api/og/${type}/${encodeURIComponent(slug)}?locale=${locale}&v=${v}&d=${SHARE_DESIGN_VERSION}`;
 }
 
 export const SHARE_IMAGE_META = { width: 1200, height: 630, type: "image/jpeg" } as const;

@@ -10,7 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE_NAME,
     short_name: "Casco Viejo",
     description:
-      "Guide de Casco Viejo : restaurants, bars, hôtels et incontournables du quartier colonial de Panama City.",
+      "Guía de Casco Viejo: restaurantes, bares, hoteles y lugares imperdibles del casco antiguo de Ciudad de Panamá.",
+    lang: "es",
     start_url: "/",
     scope: "/",
     display: "standalone",

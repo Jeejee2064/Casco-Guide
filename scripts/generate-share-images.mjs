@@ -1,7 +1,7 @@
 // Pre-generates (and stores in Supabase Storage) the share card of every spot
 // and published guide, in both languages, by requesting the app's og route.
 // Run after a deploy, or whenever you want to warm everything:
-//   node --env-file=.env.local scripts/generate-share-images.mjs https://casco-guide.vercel.app
+//   node --env-file=.env.local scripts/generate-share-images.mjs https://cascoviejo.guide
 // Idempotent: cards that already exist for the current updated_at are just
 // re-read from storage.
 // Keep in sync with SHARE_DESIGN_VERSION in src/lib/seo/site.ts (cache-busting only here).

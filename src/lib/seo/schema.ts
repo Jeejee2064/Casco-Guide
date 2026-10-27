@@ -1,7 +1,8 @@
 // JSON-LD builders. Kept separate from the `<JsonLd>` component so page code
 // can stay focused on "what data" rather than "how to serialize it".
+import type { Locale } from "@/i18n/routing";
 import { DAY_KEYS, type DayKey, type Spot, type SpotCategory, type Article } from "@/lib/types/database";
-import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
+import { SITE_NAME, SITE_URL, absoluteUrl, shareImageUrl } from "./site";
 
 // schema.org has no single "restaurant/bar/museum/..." vocabulary entry —
 // each spot category maps to the closest concrete type so rich results
@@ -160,7 +161,11 @@ export function spotSchema(spot: Spot, url: string) {
 
 /** One guide/story page's structured data. */
 export function articleSchema(article: Article, url: string, locale: string) {
-  const image = article.cover_photo ? absoluteUrl(article.cover_photo) : undefined;
+  // Article rich results need an image: fall back to the generated share
+  // card when the guide has no cover photo.
+  const image = article.cover_photo
+    ? absoluteUrl(article.cover_photo)
+    : shareImageUrl("guides", article.slug, locale as Locale, article.updated_at);
 
   return {
     "@context": "https://schema.org",
@@ -168,7 +173,7 @@ export function articleSchema(article: Article, url: string, locale: string) {
     "@id": `${url}#article`,
     headline: article.title,
     ...(article.excerpt && { description: article.excerpt }),
-    ...(image && { image: [image] }),
+    image: [image],
     ...(article.published_at && { datePublished: article.published_at }),
     dateModified: article.updated_at,
     inLanguage: locale,

@@ -9,7 +9,8 @@ import { getSpots } from "@/lib/data/spots";
 import { getPathname } from "@/i18n/navigation";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { collectionSchema } from "@/lib/seo/schema";
-import { SITE_NAME, absoluteUrl, ogLocaleOf } from "@/lib/seo/site";
+import { absoluteUrl } from "@/lib/seo/site";
+import { socialMetadata } from "@/lib/seo/metadata";
 import { SPOT_VIBES } from "@/lib/vibes";
 import type { Locale } from "@/i18n/routing";
 import type { SpotVibe } from "@/lib/types/database";
@@ -26,15 +27,12 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates,
-    openGraph: {
+    ...socialMetadata({
+      locale,
       title: t("title"),
       description: t("description"),
       url: alternates?.canonical as string,
-      siteName: SITE_NAME,
-      locale: ogLocaleOf(locale),
-      type: "website",
-    },
-    twitter: { card: "summary_large_image", title: t("title"), description: t("description") },
+    }),
   };
 }
 
@@ -93,6 +91,7 @@ export default async function SpotsPage({
       <Header />
       <main className="relative isolate flex-1 overflow-clip">
         <FoliageTrail seed="spots" />
+        <h1 className="sr-only">{tSeo("h1")}</h1>
         <SpotsExplorerSection
           spots={spots}
           initialMode={initialMode}

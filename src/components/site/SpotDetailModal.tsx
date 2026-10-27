@@ -24,7 +24,7 @@ import { HoursBadge } from "./HoursBadge";
 import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
 import { buildShareText } from "@/lib/shareText";
-import { shareLink, shareImageUrl } from "@/lib/seo/site";
+import { absoluteUrl, shareImageUrl } from "@/lib/seo/site";
 import type { Locale } from "@/i18n/routing";
 import { MiniMap } from "./MiniMap";
 import { EASE_OUT } from "./motion";
@@ -56,7 +56,7 @@ export function SpotDetailModal({
     description: spot.description,
     fallback: tShare("hookSpot", { category: tShareCategory(spot.category) }),
   });
-  const shareUrl = shareLink(`/${locale}/spots/${spot.slug}`);
+  const shareUrl = absoluteUrl(`/${locale}/spots/${spot.slug}`);
   const previewImage = shareImageUrl("spots", spot.slug, locale as Locale, spot.updated_at);
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);

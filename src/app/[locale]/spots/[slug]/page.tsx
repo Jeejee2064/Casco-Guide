@@ -12,7 +12,8 @@ import { getSpotBySlug, getRelatedSpots, getSpotById, getChildSpots } from "@/li
 import { getArticlesForSpot } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { breadcrumbSchema, spotSchema } from "@/lib/seo/schema";
-import { SITE_NAME, ogLocaleOf, shareImageUrl, shareLink, SHARE_IMAGE_META } from "@/lib/seo/site";
+import { shareImageUrl, SHARE_IMAGE_META } from "@/lib/seo/site";
+import { socialMetadata, truncate } from "@/lib/seo/metadata";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({
@@ -30,37 +31,26 @@ export async function generateMetadata({
   ]);
   const category = tCategory(spot.category);
   const title = t("spotTitle", { name: spot.name, category });
-  const description = spot.description ?? t("spotDescriptionFallback", { name: spot.name, category });
+  const description = truncate(
+    spot.description ?? t("spotDescriptionFallback", { name: spot.name, category }),
+  );
   const alternates = buildAlternates({ pathname: "/spots/[slug]", params: { slug } }, locale);
-  const ogDescription =
-    description.length > 150 ? `${description.slice(0, 147).trimEnd()}…` : description;
-  const image = shareImageUrl("spots", slug, locale, spot.updated_at);
 
   return {
     title,
     description,
     alternates,
-    // `openGraph`/`twitter` fully replace (not merge with) the root
-    // layout's, so every field worth keeping — url, siteName, locale
-    // included — has to be repeated here rather than assumed inherited.
-    openGraph: {
-      title,
-      description: ogDescription,
-      // Share origin, not canonical: Facebook re-fetches og:url, which must
-      // be reachable (see SHARE_URL).
-      url: shareLink(new URL(alternates?.canonical as string).pathname),
-      siteName: SITE_NAME,
-      locale: ogLocaleOf(locale),
-      type: "website",
-      alternateLocale: locale === "es" ? ["en_US"] : ["es_PA"],
-      images: [{ url: image, alt: spot.name, ...SHARE_IMAGE_META }],
-    },
-    twitter: {
-      card: "summary_large_image",
+    ...socialMetadata({
+      locale,
       title,
       description,
-      images: [image],
-    },
+      url: alternates?.canonical as string,
+      image: {
+        url: shareImageUrl("spots", slug, locale, spot.updated_at),
+        alt: spot.name,
+        ...SHARE_IMAGE_META,
+      },
+    }),
   };
 }
 

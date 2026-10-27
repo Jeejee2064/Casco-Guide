@@ -263,13 +263,11 @@
       "empty": "No data yet for this period.",
       "notConfigured": "Set POSTHOG_PERSONAL_API_KEY in your environment to enable this tab.",
       "error": "Couldn't load analytics right now. Try again shortly.",
-
       "trafficTrend": "Traffic",
       "trafficTrendSubtitle": "Pageviews per day",
       "rangeToday": "Today",
       "rangeLast7": "Last 7 days",
       "rangeLast30": "Last 30 days",
-
       "interactionsSection": "Interactions by spot",
       "interactionsSubtitle": "Every spot, ranked by total interactions — use this to show a business exactly where they stand",
       "interactionsCount": "{count, plural, one {# spot ranked} other {# spots ranked}}",
@@ -285,18 +283,15 @@
       "interactionsColMap": "Map",
       "interactionsColShare": "Share",
       "interactionsColTotal": "Total",
-
       "contentSection": "Most viewed",
       "topSpots": "Top spots",
       "topArticles": "Top articles",
-
       "engagementSection": "Engagement",
       "engagementSubtitle": "What people do once they land on a spot or event",
       "whatsappClicks": "WhatsApp clicks",
       "directionsClicks": "Directions clicks",
       "mapPinClicks": "Map pin taps",
       "shareClicks": "Share clicks",
-
       "discoverySection": "Discovery",
       "discoverySubtitle": "What people search and filter for",
       "topCategories": "Top category filters",
@@ -304,17 +299,14 @@
       "searchesTotal": "Searches",
       "searchesNoResults": "No results",
       "searchesNoResultsSub": "{pct}% of searches found nothing",
-
       "audienceSection": "Audience",
       "deviceBreakdown": "Devices",
       "languageSplit": "Language",
       "referrers": "Where traffic comes from",
       "direct": "Direct",
-
       "nightModeSection": "Night mode",
       "nightModeAdoption": "Visitors who turned it on",
       "nightModeSub": "{pct}% of unique visitors",
-
       "pwaSection": "App install funnel",
       "pwaShown": "Prompt shown",
       "pwaAccepted": "Installed",
@@ -677,8 +669,8 @@
   },
   "seo": {
     "home": {
-      "title": "Casco Viejo Guide — Best Restaurants, Bars, Hotels & Things To Do",
-      "description": "The complete Casco Viejo travel guide: handpicked restaurants, rooftop bars, boutique hotels, museums and walking routes in Panama City's UNESCO-listed old town — curated and kept up to date by locals.",
+      "title": "Casco Viejo Guide — Restaurants, Bars, Hotels & Things To Do",
+      "description": "Handpicked restaurants, rooftop bars, boutique hotels, museums and walking routes in Casco Viejo, Panama City's UNESCO old town — curated by locals.",
       "keywords": "Casco Viejo, Casco Viejo Panama, Casco Antiguo, San Felipe Panama, things to do in Casco Viejo, restaurants in Casco Viejo, bars in Casco Viejo, hotels in Casco Viejo, Casco Viejo guide, Panama City old town"
     },
     "articles": {
@@ -686,14 +678,16 @@
       "description": "In-depth guides, top picks and stories about the best restaurants, bars, sights and hidden corners of Casco Viejo, Panama City."
     },
     "spots": {
-      "title": "Casco Viejo Spots — Restaurants, Bars, Cafés, Museums & More",
-      "description": "Browse every restaurant, bar, café, museum, shop and hotel in Casco Viejo, Panama City. Filter by category or by vibe — romantic sunset, rooftop party, local heritage and more — to find exactly what you're after."
+      "title": "Casco Viejo Restaurants, Bars & Cafés",
+      "description": "Browse every restaurant, bar, café, museum, shop and hotel in Casco Viejo, Panama City. Filter by category or vibe to find exactly what you want.",
+      "h1": "All places in Casco Viejo"
     },
     "map": {
-      "title": "Casco Viejo Map — Every Spot, Plotted",
-      "description": "An interactive map of every restaurant, bar, café, sight and hotel in Casco Viejo, Panama City. Filter by category or vibe and find your way around the old town on foot."
+      "title": "Casco Viejo Map — Every Spot",
+      "description": "Interactive map of every restaurant, bar, café, sight and hotel in Casco Viejo, Panama City. Filter by category or vibe and get directions.",
+      "h1": "Interactive map of Casco Viejo"
     },
-    "spotTitle": "{name} — {category} in Casco Viejo",
+    "spotTitle": "{name} — {category}",
     "spotDescriptionFallback": "{name} — {category} in Casco Viejo, Panama City. See hours, address, photos and everything you need to visit.",
     "articleDescriptionFallback": "A Casco Viejo Guide story: {title}."
   },

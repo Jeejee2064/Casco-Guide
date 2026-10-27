@@ -30,6 +30,21 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "30mb",
     },
   },
+  // One canonical host: the Vercel domain and the www variant permanently
+  // redirect to the apex so they never get indexed as duplicates (and links
+  // already shared from them keep working). Opt-in via REDIRECT_TO_CANONICAL
+  // so it can only be switched on once the apex domain really serves the
+  // site — otherwise the *.vercel.app URL would redirect into the void.
+  async redirects() {
+    if (process.env.REDIRECT_TO_CANONICAL !== "true") return [];
+    const canonical = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cascoviejo.guide";
+    return ["casco-guide.vercel.app", "www.cascoviejo.guide"].map((host) => ({
+      source: "/:path*",
+      has: [{ type: "host" as const, value: host }],
+      destination: `${canonical}/:path*`,
+      permanent: true,
+    }));
+  },
   async rewrites() {
     const posthogHost = process.env.POSTHOG_HOST;
     const posthogAssetsHost = process.env.POSTHOG_ASSETS_HOST;

@@ -23,7 +23,7 @@ import { PhotoGallery } from "./PhotoGallery";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { ShareMenu } from "./ShareMenu";
 import { buildShareText } from "@/lib/shareText";
-import { shareLink, shareImageUrl } from "@/lib/seo/site";
+import { absoluteUrl, shareImageUrl } from "@/lib/seo/site";
 import type { Locale } from "@/i18n/routing";
 import { MiniMap } from "./MiniMap";
 import { GetMeThereCard } from "./GetMeThereCard";
@@ -91,7 +91,7 @@ export function SpotDetailView({
     description: spot.description,
     fallback: tShare("hookSpot", { category: tShareCategory(spot.category) }),
   });
-  const shareUrl = shareLink(`/${locale}/spots/${spot.slug}`);
+  const shareUrl = absoluteUrl(`/${locale}/spots/${spot.slug}`);
   const previewImage = shareImageUrl("spots", spot.slug, locale as Locale, spot.updated_at);
   const router = useRouter();
   const goBack = useSmartBack();
