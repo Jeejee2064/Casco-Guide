@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   ChevronDown,
@@ -115,6 +116,11 @@ export function SpotDetailView({
   // `show`/`delay`), so the sequence always matches what's really on
   // screen instead of guessing how long the photo takes to arrive.
   const [heroLoaded, setHeroLoaded] = useState(false);
+  // The mobile action bar is portaled to <body>: rendered in place it sits
+  // inside the page's animated wrapper (a stacking context), so the footer
+  // that follows that wrapper painted over it and showed through.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Next.js only scrolls to top on navigation when the new page isn't
   // already visible in the viewport — from a scrolled-down card in the
@@ -129,12 +135,20 @@ export function SpotDetailView({
   // doc comment above) — an in-progress unsaved draft isn't a real visit.
   useEffect(() => {
     if (onBack) return;
-    track("spot_view", { spot_id: spot.id, spot_slug: spot.slug, category: spot.category });
+    track("spot_view", {
+      spot_id: spot.id,
+      spot_slug: spot.slug,
+      category: spot.category,
+    });
     markContentEngaged();
   }, [spot.id, spot.slug, spot.category, onBack]);
 
   const directions = () => {
-    track("directions_click", { entity: "spot", entity_id: spot.id, entity_slug: spot.slug });
+    track("directions_click", {
+      entity: "spot",
+      entity_id: spot.id,
+      entity_slug: spot.slug,
+    });
     // The admin preview (`onBack` set — see this component's doc comment)
     // has nothing real to route to on /map (an unsaved draft may not even
     // have a slug in the database yet), so it keeps the old Google Maps
@@ -315,7 +329,10 @@ export function SpotDetailView({
                   ) : (
                     <Link
                       key={tag}
-                      href={{ pathname: "/spots", query: { mode: "classic", q: tag } }}
+                      href={{
+                        pathname: "/spots",
+                        query: { mode: "classic", q: tag },
+                      }}
                       className={`${cls} transition hover:bg-foreground/10 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground`}
                     >
                       #{tag}
@@ -385,12 +402,23 @@ export function SpotDetailView({
                     exit={{ height: 0, opacity: 0 }}
                     transition={{
                       height: { duration: 0.4, ease: EASE_OUT },
-                      opacity: { duration: 0.25, ease: EASE_OUT, delay: hoursOpen ? 0.05 : 0 },
+                      opacity: {
+                        duration: 0.25,
+                        ease: EASE_OUT,
+                        delay: hoursOpen ? 0.05 : 0,
+                      },
                     }}
                     className="overflow-hidden"
                   >
                     <motion.ul
-                      variants={{ show: { transition: { staggerChildren: 0.03, delayChildren: 0.08 } } }}
+                      variants={{
+                        show: {
+                          transition: {
+                            staggerChildren: 0.03,
+                            delayChildren: 0.08,
+                          },
+                        },
+                      }}
                       initial="hidden"
                       animate="show"
                       className="mt-3 space-y-1.5"
@@ -398,7 +426,10 @@ export function SpotDetailView({
                       {DAY_KEYS.map((day) => (
                         <motion.li
                           key={day}
-                          variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+                          variants={{
+                            hidden: { opacity: 0, y: 6 },
+                            show: { opacity: 1, y: 0 },
+                          }}
                           transition={{ duration: 0.25, ease: EASE_OUT }}
                           className="flex justify-between gap-4"
                         >
@@ -530,7 +561,10 @@ export function SpotDetailView({
                 <ArticleCard
                   article={article}
                   onClick={() =>
-                    router.push({ pathname: "/articles/[slug]", params: { slug: article.slug } })
+                    router.push({
+                      pathname: "/articles/[slug]",
+                      params: { slug: article.slug },
+                    })
                   }
                 />
               </StaggerItem>
@@ -561,35 +595,40 @@ export function SpotDetailView({
           (when available) and Share are icon-only beside it. Opaque with an
           upward shadow and above the footer (see `.spot-action-bar` in
           globals.css, which pads the footer so it never ends up under it). */}
-      <div className="spot-action-bar safe-bottom fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-border bg-surface p-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:hidden">
-        <Button type="button" size="lg" className="brand-accent min-w-0 flex-1 px-3" onClick={directions}>
-          <Rocket size={18} className="shrink-0" /> <span className="truncate">{tDiscover("getMeThere")}</span>
-        </Button>
-        {whatsappUrl && (
-          <Button
-            type="button"
-            variant="whatsapp"
-            size="lg"
-            className="w-12 shrink-0 px-0"
-            aria-label={t("whatsapp")}
-            onClick={openWhatsApp}
-          >
-            <MessageCircle size={20} />
-          </Button>
+      {mounted &&
+        createPortal(
+          <div className="spot-action-bar safe-bottom fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-border bg-surface p-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:hidden">
+            <Button type="button" size="lg" className="brand-accent min-w-0 flex-1 px-3" onClick={directions}>
+              <Rocket size={18} className="shrink-0" />{" "}
+              <span className="truncate">{tDiscover("getMeThere")}</span>
+            </Button>
+            {whatsappUrl && (
+              <Button
+                type="button"
+                variant="whatsapp"
+                size="lg"
+                className="w-12 shrink-0 px-0"
+                aria-label={t("whatsapp")}
+                onClick={openWhatsApp}
+              >
+                <MessageCircle size={20} />
+              </Button>
+            )}
+            <ShareMenu
+              title={spot.name}
+              text={shareText}
+              url={shareUrl}
+              previewImage={previewImage}
+              direction="up"
+              variant="outline"
+              size="lg"
+              showLabel
+              className="min-w-0 flex-1 [&>button]:px-3"
+              entity={{ type: "spot", id: spot.id, slug: spot.slug }}
+            />
+          </div>,
+          document.body,
         )}
-        <ShareMenu
-          title={spot.name}
-          text={shareText}
-          url={shareUrl}
-          previewImage={previewImage}
-          direction="up"
-          variant="outline"
-          size="lg"
-          showLabel
-          className="min-w-0 flex-1 [&>button]:px-3"
-          entity={{ type: "spot", id: spot.id, slug: spot.slug }}
-        />
-      </div>
     </div>
   );
 }
