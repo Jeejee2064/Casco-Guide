@@ -24,6 +24,12 @@ create index if not exists analytics_events_created_idx
 -- anything. Only the service role (which bypasses RLS) touches this table.
 alter table analytics_events enable row level security;
 
+-- Explicit grants: on some projects tables created from the SQL editor don't
+-- inherit service_role privileges, and the collector/dashboard would get
+-- "permission denied". anon/authenticated deliberately get nothing.
+grant all on table analytics_events to service_role;
+grant usage, select, update on sequence analytics_events_id_seq to service_role;
+
 -- ─── Aggregates used by the admin dashboard ──────────────────────────────
 
 create or replace function analytics_summary(days int)
