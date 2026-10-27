@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { loadPosthog } from "@/lib/analytics/posthog-client";
 
 export default function GlobalError({
   error,
@@ -11,7 +10,7 @@ export default function GlobalError({
   reset: () => void;
 }>) {
   useEffect(() => {
-    void loadPosthog().then((posthog) => posthog?.captureException(error));
+    console.error(error);
   }, [error]);
 
   return (

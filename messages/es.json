@@ -235,7 +235,7 @@
     },
     "login": {
       "title": "Bienvenido de nuevo",
-      "subtitle": "Inicia sesión para gestionar Casco Guide",
+      "subtitle": "Inicia sesión para gestionar Casco Viejo Guide",
       "email": "Correo",
       "password": "Contraseña",
       "submit": "Iniciar sesión",
@@ -254,14 +254,14 @@
     },
     "analytics": {
       "title": "Analítica",
-      "subtitle": "Tráfico del sitio público, con PostHog",
+      "subtitle": "Tráfico del sitio público, propio",
       "windowLabel": "Últimos 30 días",
       "uniqueVisitors": "Visitantes únicos",
       "pageviews": "Vistas de página",
       "searches": "Búsquedas",
       "pwaInstalls": "Instalaciones de la app",
       "empty": "Todavía no hay datos para este período.",
-      "notConfigured": "Configura POSTHOG_PERSONAL_API_KEY en tu entorno para activar esta pestaña.",
+      "notConfigured": "Configura SUPABASE_SERVICE_ROLE_KEY y aplica la migración 0013_analytics.sql para activar esta pestaña.",
       "error": "No se pudo cargar la analítica. Intenta de nuevo en un momento.",
       "trafficTrend": "Tráfico",
       "trafficTrendSubtitle": "Vistas de página por día",
@@ -693,7 +693,7 @@
   },
   "about": {
     "title": "La guía de Casco Viejo, hecha por locales",
-    "intro": "Casco Viejo — también llamado Casco Antiguo o San Felipe — es el centro histórico y colonial restaurado de la Ciudad de Panamá, Patrimonio de la Humanidad por la UNESCO desde 1997. Sus calles de adoquines conectan edificios restaurados de los siglos XVII y XVIII, bares en azoteas con vista al skyline, restaurantes familiares, hoteles boutique y parte de la mejor vida nocturna de Panamá. Casco Guide está hecho y se mantiene actualizado por personas que realmente viven y trabajan en el barrio.",
+    "intro": "Casco Viejo — también llamado Casco Antiguo o San Felipe — es el centro histórico y colonial restaurado de la Ciudad de Panamá, Patrimonio de la Humanidad por la UNESCO desde 1997. Sus calles de adoquines conectan edificios restaurados de los siglos XVII y XVIII, bares en azoteas con vista al skyline, restaurantes familiares, hoteles boutique y parte de la mejor vida nocturna de Panamá. Casco Viejo Guide está hecho y se mantiene actualizado por personas que realmente viven y trabajan en el barrio.",
     "sections": {
       "eat": {
         "title": "Dónde comer y beber en Casco Viejo",

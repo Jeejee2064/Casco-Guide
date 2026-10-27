@@ -14,7 +14,7 @@ const PAD_RIGHT = 8;
 const Y_TICKS = 4;
 
 // Two series, one shared axis (both are plain counts) rather than a
-// dual-y-axis chart — see the note on TrendPoint in posthog-server.ts for
+// dual-y-axis chart — see the note on TrendPoint in analytics-server.ts for
 // why. Fixed-order pair, not generated: pageviews first (the volume
 // metric), visitors second.
 const PAGEVIEWS_COLOR = "var(--color-aqua)";

@@ -562,7 +562,7 @@ export function SpotDetailView({
           upward shadow and above the footer (see `.spot-action-bar` in
           globals.css, which pads the footer so it never ends up under it). */}
       <div className="spot-action-bar safe-bottom fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-border bg-surface p-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:hidden">
-        <Button type="button" size="lg" className="brand-accent min-w-0 flex-1 px-4" onClick={directions}>
+        <Button type="button" size="lg" className="brand-accent min-w-0 flex-1 px-3" onClick={directions}>
           <Rocket size={18} className="shrink-0" /> <span className="truncate">{tDiscover("getMeThere")}</span>
         </Button>
         {whatsappUrl && (
@@ -585,7 +585,8 @@ export function SpotDetailView({
           direction="up"
           variant="outline"
           size="lg"
-          className="w-12 shrink-0 [&>button]:w-full [&>button]:px-0"
+          showLabel
+          className="min-w-0 flex-1 [&>button]:px-3"
           entity={{ type: "spot", id: spot.id, slug: spot.slug }}
         />
       </div>

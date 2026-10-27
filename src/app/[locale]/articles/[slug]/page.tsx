@@ -12,7 +12,8 @@ import { getSpotsByIds } from "@/lib/data/spots";
 // import { getEventsByIds } from "@/lib/data/events";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { articleSchema, breadcrumbSchema } from "@/lib/seo/schema";
-import { shareImageUrl, SHARE_IMAGE_META } from "@/lib/seo/site";
+import { getPathname } from "@/i18n/navigation";
+import { absoluteUrl, shareImageUrl, SHARE_IMAGE_META, SITE_NAME } from "@/lib/seo/site";
 import { socialMetadata, truncate } from "@/lib/seo/metadata";
 import { routing, type Locale } from "@/i18n/routing";
 
@@ -83,14 +84,19 @@ export default async function ArticleDetailPage({
   const url = buildAlternates({ pathname: "/articles/[slug]", params: { slug } }, locale)!
     .canonical as string;
   const articlesUrl = buildAlternates("/articles", locale)!.canonical as string;
+  const homeUrl = buildAlternates("/", locale)!.canonical as string;
+  const citedSpotUrls = citedSpots.map((s) =>
+    absoluteUrl(getPathname({ href: { pathname: "/spots/[slug]", params: { slug: s.slug } }, locale })),
+  );
   const breadcrumbs = breadcrumbSchema([
+    { name: SITE_NAME, url: homeUrl },
     { name: t("title"), url: articlesUrl },
     { name: article.title, url },
   ]);
 
   return (
     <>
-      <JsonLd data={articleSchema(article, url, locale)} />
+      <JsonLd data={articleSchema(article, url, locale, citedSpotUrls)} />
       <JsonLd data={breadcrumbs} />
       <Header />
       <main className="relative isolate flex-1 overflow-clip">

@@ -4,7 +4,11 @@ import { getSpots } from "@/lib/data/spots";
 import type { Locale } from "@/i18n/routing";
 import { AnalyticsStatTile } from "@/components/admin/AnalyticsStatTile";
 import { SpotInteractionsTable, type SpotInteractionRow } from "@/components/admin/SpotInteractionsTable";
-import { getEngagementCounts, getSpotInteractionCounts } from "@/lib/analytics/posthog-server";
+import {
+  getEngagementCounts,
+  getSpotInteractionCounts,
+  isAnalyticsConfigured,
+} from "@/lib/analytics/analytics-server";
 
 function SectionHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
@@ -17,15 +21,13 @@ function SectionHeading({ title, subtitle }: { title: string; subtitle?: string 
 
 /** Split out of the main dashboard — the interactions table especially got
  * long enough (every spot, sortable, filterable) that it was crowding out
- * everything else on the Panel page. Same PostHog-backed data, own tab. */
+ * everything else on the Panel page. Same first-party data, own tab. */
 export default async function AdminEngagementPage() {
   const ta = await getTranslations("admin.analytics");
   const locale = (await getLocale()) as Locale;
   const spots = await getSpots(locale);
 
-  const isConfigured = Boolean(
-    process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_PROJECT_ID,
-  );
+  const isConfigured = isAnalyticsConfigured();
 
   let data: {
     engagement: Awaited<ReturnType<typeof getEngagementCounts>>;
@@ -45,10 +47,10 @@ export default async function AdminEngagementPage() {
     }
   }
 
-  // Every spot, PostHog's per-slug counts merged onto Supabase's spot list
+  // Every spot, The per-slug counts merged onto the spot list
   // (not the other way around) so a spot with zero interactions still gets
   // a row — the whole point of a ranking meant to tell a business
-  // "you're #37", not just list who happened to show up in PostHog.
+  // "you're #37", not just list who happened to show up in the stats.
   const spotInteractionRows: SpotInteractionRow[] = data
     ? spots
         .map((spot) => {

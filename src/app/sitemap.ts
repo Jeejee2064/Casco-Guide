@@ -16,6 +16,7 @@ function localizedEntries(
     changeFrequency: NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
     priority: number;
     lastModified?: string;
+    images?: string[];
   },
 ): MetadataRoute.Sitemap {
   const languages: Record<string, string> = {};
@@ -29,6 +30,7 @@ function localizedEntries(
     lastModified: opts.lastModified,
     changeFrequency: opts.changeFrequency,
     priority: opts.priority,
+    ...(opts.images?.length && { images: opts.images }),
     alternates: { languages },
   }));
 }
@@ -56,13 +58,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...spots.flatMap((spot) =>
       localizedEntries(
         { pathname: "/spots/[slug]", params: { slug: spot.slug } },
-        { changeFrequency: "weekly", priority: 0.7, lastModified: spot.updated_at },
+        {
+          changeFrequency: "weekly",
+          priority: 0.7,
+          lastModified: spot.updated_at,
+          images: [spot.featured_photo, ...spot.photos.map((p) => p.url)]
+            .filter((u): u is string => !!u)
+            .slice(0, 5)
+            .map(absoluteUrl),
+        },
       ),
     ),
     ...articles.flatMap((article) =>
       localizedEntries(
         { pathname: "/articles/[slug]", params: { slug: article.slug } },
-        { changeFrequency: "monthly", priority: 0.6, lastModified: article.updated_at },
+        {
+          changeFrequency: "monthly",
+          priority: 0.6,
+          lastModified: article.updated_at,
+          images: article.cover_photo ? [absoluteUrl(article.cover_photo)] : [],
+        },
       ),
     ),
   ];

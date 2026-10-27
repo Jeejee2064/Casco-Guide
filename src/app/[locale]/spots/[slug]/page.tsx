@@ -11,8 +11,8 @@ import { getSpots, getSpotBySlug, getRelatedSpots, getSpotById, getChildSpots } 
 // import { getNearbyEvents } from "@/lib/data/events";
 import { getArticlesForSpot } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
-import { breadcrumbSchema, spotSchema } from "@/lib/seo/schema";
-import { shareImageUrl, SHARE_IMAGE_META } from "@/lib/seo/site";
+import { breadcrumbSchema, spotSchema, webPageSchema } from "@/lib/seo/schema";
+import { shareImageUrl, SHARE_IMAGE_META, SITE_NAME } from "@/lib/seo/site";
 import { socialMetadata, truncate } from "@/lib/seo/metadata";
 import { routing, type Locale } from "@/i18n/routing";
 
@@ -92,9 +92,11 @@ export default async function SpotDetailPage({
 
   const url = buildAlternates({ pathname: "/spots/[slug]", params: { slug } }, locale)!.canonical as string;
   const spotsUrl = buildAlternates("/spots", locale)!.canonical as string;
+  const homeUrl = buildAlternates("/", locale)!.canonical as string;
   // Breadcrumb items must be real, crawlable pages — the category level has
   // no page of its own, so it is left out rather than pointing at an anchor.
   const breadcrumbs = breadcrumbSchema([
+    { name: SITE_NAME, url: homeUrl },
     { name: t("spots"), url: spotsUrl },
     { name: spot.name, url },
   ]);
@@ -102,6 +104,17 @@ export default async function SpotDetailPage({
   return (
     <>
       <JsonLd data={spotSchema(spot, url)} />
+      <JsonLd
+        data={webPageSchema({
+          url,
+          name: spot.name,
+          description: spot.description ?? undefined,
+          locale,
+          dateModified: spot.updated_at,
+          lastReviewed: spot.last_verified,
+          mainEntityId: `${url}#place`,
+        })}
+      />
       <JsonLd data={breadcrumbs} />
       <Header />
       <main className="relative isolate flex-1 overflow-clip">

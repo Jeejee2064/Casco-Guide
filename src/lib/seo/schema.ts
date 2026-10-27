@@ -91,10 +91,7 @@ export function websiteSchema() {
     "@id": `${SITE_URL}/#website`,
     name: SITE_NAME,
     url: SITE_URL,
-    about: {
-      "@type": "Place",
-      name: "Casco Viejo, Panama City",
-    },
+    about: { "@id": `${SITE_URL}/#destination` },
     inLanguage: ["es", "en"],
     publisher: { "@id": `${SITE_URL}/#organization` },
   };
@@ -146,6 +143,13 @@ export function spotSchema(spot: Spot, url: string) {
       longitude: spot.longitude,
     },
     ...(spot.phone && { telephone: spot.phone }),
+    ...(spot.email && { email: spot.email }),
+    hasMap: `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}`,
+    ...(spot.tags.length > 0 && { keywords: spot.tags.join(", ") }),
+    ...(spot.accepts_cards && { paymentAccepted: "Credit Card, Debit Card, Cash" }),
+    ...(spot.category === "restaurant" || spot.category === "bar" || spot.category === "cafe"
+      ? { acceptsReservations: spot.reservation_required }
+      : {}),
     // Website is stored as entered in the admin form, sometimes without a
     // scheme (e.g. "fondaloquehay.com") — `sameAs` requires a real URL.
     ...(spot.website && {
@@ -160,7 +164,12 @@ export function spotSchema(spot: Spot, url: string) {
 }
 
 /** One guide/story page's structured data. */
-export function articleSchema(article: Article, url: string, locale: string) {
+export function articleSchema(
+  article: Article,
+  url: string,
+  locale: string,
+  mentionedSpotUrls: string[] = [],
+) {
   // Article rich results need an image: fall back to the generated share
   // card when the guide has no cover photo.
   const image = article.cover_photo
@@ -179,7 +188,17 @@ export function articleSchema(article: Article, url: string, locale: string) {
     inLanguage: locale,
     about: { "@id": `${SITE_URL}/#destination` },
     isPartOf: { "@id": `${SITE_URL}/#website` },
-    ...(article.author && { author: { "@type": "Person", name: article.author } }),
+    // No named author on the record → the guide's own editorial identity,
+    // so the Article never ships without an author entity.
+    author: article.author
+      ? { "@type": "Person", name: article.author }
+      : { "@id": `${SITE_URL}/#organization` },
+    ...(article.tags.length > 0 && { keywords: article.tags.join(", ") }),
+    // Links the guide to the exact place entities (`#place` ids emitted by
+    // spotSchema) it recommends, so assistants can connect story and venue.
+    ...(mentionedSpotUrls.length > 0 && {
+      mentions: mentionedSpotUrls.map((u) => ({ "@id": `${u}#place` })),
+    }),
     publisher: { "@id": `${SITE_URL}/#organization` },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
@@ -237,5 +256,33 @@ export function collectionSchema(opts: {
         url: item.url,
       })),
     },
+  };
+}
+
+/** The page itself as a `WebPage` node — carries the freshness signals
+ * (`dateModified`, `lastReviewed`) and the language that Place/Article nodes
+ * don't, and ties the page to the site and destination entities. */
+export function webPageSchema(opts: {
+  url: string;
+  name: string;
+  description?: string;
+  locale: string;
+  dateModified?: string;
+  lastReviewed?: string | null;
+  mainEntityId?: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${opts.url}#webpage`,
+    url: opts.url,
+    name: opts.name,
+    ...(opts.description && { description: opts.description }),
+    inLanguage: opts.locale,
+    isPartOf: { "@id": `${SITE_URL}/#website` },
+    about: { "@id": `${SITE_URL}/#destination` },
+    ...(opts.dateModified && { dateModified: opts.dateModified }),
+    ...(opts.lastReviewed && { lastReviewed: opts.lastReviewed }),
+    ...(opts.mainEntityId && { mainEntity: { "@id": opts.mainEntityId } }),
   };
 }

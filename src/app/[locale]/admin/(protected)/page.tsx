@@ -35,7 +35,8 @@ import {
   getTopCategoryFilters,
   getTopSpots,
   getTopVibeFilters,
-} from "@/lib/analytics/posthog-server";
+  isAnalyticsConfigured,
+} from "@/lib/analytics/analytics-server";
 
 // Fixed-order categorical palette — same four brand accents the dashboard's
 // own stat cards already use as fixed roles, reused here for every
@@ -109,9 +110,7 @@ export default async function AdminDashboardPage() {
   // --- Analytics (below the fold on this same page — see the merge note
   // in the PR that combined the old standalone /admin/analytics route
   // into the dashboard) ---------------------------------------------------
-  const isAnalyticsConfigured = Boolean(
-    process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_PROJECT_ID,
-  );
+  const analyticsConfigured = isAnalyticsConfigured();
 
   let analytics: {
     summary: Awaited<ReturnType<typeof getAnalyticsSummary>>;
@@ -131,7 +130,7 @@ export default async function AdminDashboardPage() {
   } | null = null;
   let analyticsError = false;
 
-  if (isAnalyticsConfigured) {
+  if (analyticsConfigured) {
     try {
       const [
         summary,
@@ -247,14 +246,14 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
 
-        {!isAnalyticsConfigured && (
+        {!analyticsConfigured && (
           <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-5 text-sm text-foreground/70">
             <TriangleAlert size={18} className="mt-0.5 shrink-0 text-coral" />
             <p>{ta("notConfigured")}</p>
           </div>
         )}
 
-        {isAnalyticsConfigured && analyticsError && (
+        {analyticsConfigured && analyticsError && (
           <div className="flex items-start gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-5 text-sm text-foreground/70">
             <TriangleAlert size={18} className="mt-0.5 shrink-0 text-coral" />
             <p>{ta("error")}</p>

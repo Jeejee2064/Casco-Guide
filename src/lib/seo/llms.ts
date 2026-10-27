@@ -5,7 +5,8 @@ import { getPathname } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
 import { getArticles } from "@/lib/data/articles";
 import { getSpots } from "@/lib/data/spots";
-import type { Spot } from "@/lib/types/database";
+import { formatDaySlots } from "@/lib/hours";
+import { DAY_KEYS, type Article, type Spot } from "@/lib/types/database";
 import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
 
 const LOCALE_LABEL: Record<Locale, string> = { en: "English", es: "Español" };
@@ -22,6 +23,43 @@ const pageUrl = (href: "/" | "/spots" | "/map" | "/articles", locale: Locale) =>
   absoluteUrl(getPathname({ href, locale }));
 
 const oneLine = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
+
+const DAY_LABEL: Record<Locale, Record<(typeof DAY_KEYS)[number], string>> = {
+  en: { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun" },
+  es: { monday: "Lun", tuesday: "Mar", wednesday: "Mié", thursday: "Jue", friday: "Vie", saturday: "Sáb", sunday: "Dom" },
+};
+
+/** Editor HTML → plain text, keeping paragraph breaks. */
+function htmlToText(html: string | null | undefined): string {
+  return (html ?? "")
+    .replace(/<\/(p|h[1-6]|li|blockquote)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n\n")
+    .trim();
+}
+
+function hoursLine(spot: Spot, locale: Locale): string | null {
+  const parts = DAY_KEYS.map((day) => {
+    const slots = spot[`hours_${day}` as const];
+    return slots === null ? null : `${DAY_LABEL[locale][day]} ${formatDaySlots(slots, locale)}`;
+  }).filter((p): p is string => p !== null);
+  return parts.length > 0 ? parts.join("; ") : null;
+}
+
+function articleText(article: Article): string {
+  const blocks = article.blocks
+    .map((b) => [b.time, b.title && `**${b.title}**`, htmlToText(b.text)].filter(Boolean).join(" "))
+    .filter(Boolean);
+  return [htmlToText(article.body), ...blocks].filter(Boolean).join("\n\n");
+}
 
 function groupByCategory(spots: Spot[]) {
   const groups = new Map<string, Spot[]>();
@@ -77,17 +115,29 @@ export async function buildLlmsFullTxt(): Promise<string> {
     for (const spot of spots) {
       lines.push(`### ${spot.name}`, "", `URL: ${spotUrl(spot.slug, locale)}`, `Category: ${spot.category}`);
       if (spot.address) lines.push(`Address: ${spot.address}`);
+      if (spot.neighborhood) lines.push(`Neighborhood: ${spot.neighborhood}`);
+      lines.push(`Coordinates: ${spot.latitude}, ${spot.longitude}`);
+      if (spot.phone) lines.push(`Phone: ${spot.phone}`);
+      const hours = hoursLine(spot, locale);
+      if (hours) lines.push(`Hours: ${hours}${spot.hours_note ? ` (${oneLine(spot.hours_note)})` : ""}`);
+      if (spot.tags.length > 0) lines.push(`Tags: ${spot.tags.join(", ")}`);
       if (spot.price_range) lines.push(`Price range: ${spot.price_range}`);
       if (spot.cuisine_type) lines.push(`Cuisine: ${spot.cuisine_type}`);
       if (spot.website) lines.push(`Website: ${spot.website}`);
+      if (spot.last_verified) lines.push(`Last verified: ${spot.last_verified.slice(0, 10)}`);
       if (spot.description) lines.push("", oneLine(spot.description));
+      const details = htmlToText(spot.article);
+      if (details) lines.push("", details);
       lines.push("");
     }
     lines.push(`## ${LOCALE_LABEL[locale]}: guides`, "");
     for (const article of articles) {
       lines.push(`### ${article.title}`, "", `URL: ${articleUrl(article.slug, locale)}`);
       if (article.updated_at) lines.push(`Updated: ${article.updated_at.slice(0, 10)}`);
+      if (article.author) lines.push(`Author: ${article.author}`);
       if (article.excerpt) lines.push("", oneLine(article.excerpt));
+      const text = articleText(article);
+      if (text) lines.push("", text);
       lines.push("");
     }
   }

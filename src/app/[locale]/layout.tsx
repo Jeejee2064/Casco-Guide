@@ -11,6 +11,7 @@ import { NightModeProvider } from "@/components/site/NightModeContext";
 import { NIGHT_MODE_STORAGE_KEY } from "@/lib/nightMode";
 import { InstallPwaPrompt } from "@/components/site/InstallPwaPrompt";
 import { ScrollToTopOnNavigate } from "@/components/site/ScrollToTopOnNavigate";
+import { PageviewTracker } from "@/components/site/PageviewTracker";
 import { JsonLd } from "@/components/site/JsonLd";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { destinationSchema, organizationSchema, websiteSchema } from "@/lib/seo/schema";
@@ -149,6 +150,7 @@ export default async function LocaleLayout({
               <InstallPwaPrompt />
               <Toaster richColors position="top-center" />
               <ScrollToTopOnNavigate />
+              <PageviewTracker />
             </NightModeProvider>
           </MotionProvider>
         </NextIntlClientProvider>

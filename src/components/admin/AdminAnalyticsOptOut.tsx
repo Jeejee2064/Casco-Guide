@@ -1,25 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
-import { loadPosthog } from "@/lib/analytics/posthog-client";
+import { OPT_OUT_KEY } from "@/lib/analytics/track";
 
 /**
- * Keeps our own team's admin usage out of the public site's PostHog
- * numbers — every page under /admin/(protected) opts the browser out for
- * the rest of the session (persisted, not just this mount) the moment it
- * loads. Rendered by the protected admin layout, nothing else.
+ * Keeps our own team's browsing out of the public site's numbers — opening
+ * any page under /admin/(protected) flags this browser (persisted, so it
+ * also covers the public pages visited afterwards) and track() then sends
+ * nothing from it. Rendered by the protected admin layout, nothing else.
  */
 export function AdminAnalyticsOptOut() {
   useEffect(() => {
-    // Waits for the (lazily loaded) SDK so the opt-out lands on an
-    // initialized instance, before it can record anything meaningful.
-    void loadPosthog()
-      .then((posthog) => {
-        if (posthog && !posthog.has_opted_out_capturing()) posthog.opt_out_capturing();
-      })
-      .catch(() => {
-        // Analytics opt-out failing shouldn't block the admin from loading.
-      });
+    try {
+      localStorage.setItem(OPT_OUT_KEY, "1");
+    } catch {
+      // Storage blocked — the collector still ignores /admin paths itself.
+    }
   }, []);
 
   return null;

@@ -235,7 +235,7 @@
     },
     "login": {
       "title": "Welcome back",
-      "subtitle": "Sign in to manage Casco Guide",
+      "subtitle": "Sign in to manage Casco Viejo Guide",
       "email": "Email",
       "password": "Password",
       "submit": "Sign in",
@@ -254,14 +254,14 @@
     },
     "analytics": {
       "title": "Analytics",
-      "subtitle": "Public site traffic, powered by PostHog",
+      "subtitle": "Public site traffic, first-party",
       "windowLabel": "Last 30 days",
       "uniqueVisitors": "Unique visitors",
       "pageviews": "Pageviews",
       "searches": "Searches",
       "pwaInstalls": "App installs",
       "empty": "No data yet for this period.",
-      "notConfigured": "Set POSTHOG_PERSONAL_API_KEY in your environment to enable this tab.",
+      "notConfigured": "Set SUPABASE_SERVICE_ROLE_KEY and apply migration 0013_analytics.sql to enable this tab.",
       "error": "Couldn't load analytics right now. Try again shortly.",
       "trafficTrend": "Traffic",
       "trafficTrendSubtitle": "Pageviews per day",
@@ -693,7 +693,7 @@
   },
   "about": {
     "title": "The Casco Viejo travel guide, made by locals",
-    "intro": "Casco Viejo — also called Casco Antiguo or San Felipe — is Panama City's restored colonial old town, and a UNESCO World Heritage Site since 1997. Cobblestone streets connect restored 17th- and 18th-century buildings, rooftop bars with skyline views, family-run restaurants, boutique hotels and some of the best nightlife in Panama. Casco Guide is built and kept current by people who actually live and work in the neighborhood.",
+    "intro": "Casco Viejo — also called Casco Antiguo or San Felipe — is Panama City's restored colonial old town, and a UNESCO World Heritage Site since 1997. Cobblestone streets connect restored 17th- and 18th-century buildings, rooftop bars with skyline views, family-run restaurants, boutique hotels and some of the best nightlife in Panama. Casco Viejo Guide is built and kept current by people who actually live and work in the neighborhood.",
     "sections": {
       "eat": {
         "title": "Where to eat & drink in Casco Viejo",

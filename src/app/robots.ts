@@ -14,11 +14,14 @@ const AI_SEARCH_BOTS = [
   "Perplexity-User",
   "Claude-SearchBot",
   "Claude-User",
+  "meta-webindexer",
+  "meta-externalfetcher",
 ];
 
-// Admin dashboard and the PostHog proxy have no reason to be crawled.
-// `/*/admin` matches /en/admin, /es/admin and everything under them.
-const DISALLOW = ["/*/admin", "/ingest/"];
+// The admin dashboard and the analytics collector have no reason to be
+// crawled. `/*/admin` matches /en/admin, /es/admin and everything under
+// them. /api/og (share cards) stays open on purpose: crawlers fetch it.
+const DISALLOW = ["/*/admin", "/api/track"];
 
 // Root-level file — deliberately outside `[locale]` since robots.txt/sitemap
 // aren't localized routes. The proxy's matcher already skips any path with a
