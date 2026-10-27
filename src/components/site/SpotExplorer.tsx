@@ -267,7 +267,7 @@ export function SpotExplorer({
                 <StaggerItem
                   key={spot.id}
                   layout="position"
-                  enter={swapped}
+                  enter={swapped || expanded}
                   delay={Math.min(i, 12) * 0.045}
                   exitFast
                 >
