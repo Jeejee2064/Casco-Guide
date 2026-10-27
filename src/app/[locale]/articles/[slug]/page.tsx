@@ -6,7 +6,7 @@ import { FoliageTrail } from "@/components/site/Foliage";
 import { Footer } from "@/components/site/Footer";
 import { JsonLd } from "@/components/site/JsonLd";
 import { ArticleDetailView } from "@/components/site/ArticleDetailView";
-import { getArticleBySlug } from "@/lib/data/articles";
+import { getArticles, getArticleBySlug } from "@/lib/data/articles";
 import { getSpotsByIds } from "@/lib/data/spots";
 // Events temporarily hidden site-wide — see the commented block below.
 // import { getEventsByIds } from "@/lib/data/events";
@@ -14,7 +14,15 @@ import { buildAlternates } from "@/lib/seo/alternates";
 import { articleSchema, breadcrumbSchema } from "@/lib/seo/schema";
 import { shareImageUrl, SHARE_IMAGE_META } from "@/lib/seo/site";
 import { socialMetadata, truncate } from "@/lib/seo/metadata";
-import type { Locale } from "@/i18n/routing";
+import { routing, type Locale } from "@/i18n/routing";
+
+// Prerender every published guide at build time (both locales).
+export async function generateStaticParams() {
+  const articles = await getArticles("es");
+  return routing.locales.flatMap((locale) =>
+    articles.map((article) => ({ locale, slug: article.slug })),
+  );
+}
 
 export async function generateMetadata({
   params,

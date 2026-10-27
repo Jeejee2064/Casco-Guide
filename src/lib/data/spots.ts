@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Locale } from "@/i18n/routing";
 import type { Spot, SpotRecord } from "@/lib/types/database";
 import { localizeSpot } from "@/lib/i18n/content";
@@ -12,7 +12,7 @@ export const isSupabaseConfigured = Boolean(
 export async function getSpots(locale: Locale): Promise<Spot[]> {
   if (!isSupabaseConfigured) return MOCK_SPOTS.map((s) => localizeSpot(s, locale));
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("spots")
     .select("*")
@@ -31,7 +31,7 @@ export async function getSpotBySlug(slug: string, locale: Locale): Promise<Spot 
     return record ? localizeSpot(record, locale) : null;
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("spots")
     .select("*")
@@ -52,7 +52,7 @@ export async function getSpotById(id: string, locale: Locale): Promise<Spot | nu
     return record ? localizeSpot(record, locale) : null;
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("spots")
     .select("*")
@@ -76,7 +76,7 @@ export async function getSpotsByIds(ids: string[], locale: Locale): Promise<Spot
     return MOCK_SPOTS.filter((s) => ids.includes(s.id)).map((s) => localizeSpot(s, locale));
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("spots").select("*").in("id", ids);
 
   if (error) {
@@ -94,7 +94,7 @@ export async function getChildSpots(parentId: string, locale: Locale): Promise<S
     return MOCK_SPOTS.filter((s) => s.parent_id === parentId).map((s) => localizeSpot(s, locale));
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("spots").select("*").eq("parent_id", parentId);
 
   if (error) {

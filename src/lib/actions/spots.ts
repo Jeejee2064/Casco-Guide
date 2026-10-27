@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { CONTENT_TAG } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "@/i18n/navigation";
 import { ensureShareImage } from "@/lib/seo/shareCard";
@@ -83,6 +84,10 @@ export async function upsertSpot(locale: Locale, values: SpotFormValues) {
     return { error: error.message };
   }
 
+  // Expire cached reads first: the share cards below load the spot through
+  // the same cache and must see what was just saved.
+  updateTag(CONTENT_TAG);
+
   // Pre-generate the share cards (both languages) so the first WhatsApp
   // preview never waits on rendering. Best-effort: a failure here must not
   // fail the save — the og:image route generates on demand as a fallback.
@@ -101,6 +106,7 @@ export async function deleteSpot(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("spots").delete().eq("id", id);
   if (error) return { error: error.message };
+  updateTag(CONTENT_TAG);
   revalidatePath("/[locale]/admin/spots", "page");
   return { error: null };
 }
@@ -112,6 +118,7 @@ export async function setSpotParent(childId: string, parentId: string | null) {
   const supabase = await createClient();
   const { error } = await supabase.from("spots").update({ parent_id: parentId }).eq("id", childId);
   if (error) return { error: error.message };
+  updateTag(CONTENT_TAG);
   revalidatePath("/[locale]/admin/spots", "page");
   revalidatePath("/[locale]/admin/spots/[id]", "page");
   revalidatePath("/[locale]", "page");

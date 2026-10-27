@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Building2,
   Map as MapIcon,
+  Rocket,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
@@ -81,6 +82,7 @@ export function SpotDetailView({
 }) {
   const t = useTranslations("spot");
   const tShare = useTranslations("share");
+  const tDiscover = useTranslations("discover");
   const tShareCategory = useTranslations("category");
   const td = useTranslations("spotDetail");
   const th = useTranslations("hours");
@@ -555,12 +557,24 @@ export function SpotDetailView({
         </div>
       )}
 
-      {/* Mobile sticky action bar — same Directions/WhatsApp-first layout
-          as the desktop CTA row above. */}
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-border bg-surface p-3 sm:hidden">
+      {/* Mobile sticky action bar — "Get me there!" takes the room, WhatsApp
+          (when available) and Share are icon-only beside it. Opaque with an
+          upward shadow and above the footer (see `.spot-action-bar` in
+          globals.css, which pads the footer so it never ends up under it). */}
+      <div className="spot-action-bar safe-bottom fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-border bg-surface p-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] sm:hidden">
+        <Button type="button" size="lg" className="brand-accent min-w-0 flex-1 px-4" onClick={directions}>
+          <Rocket size={18} className="shrink-0" /> <span className="truncate">{tDiscover("getMeThere")}</span>
+        </Button>
         {whatsappUrl && (
-          <Button type="button" variant="whatsapp" className="flex-1" onClick={openWhatsApp}>
-            <MessageCircle size={16} /> {t("whatsapp")}
+          <Button
+            type="button"
+            variant="whatsapp"
+            size="lg"
+            className="w-12 shrink-0 px-0"
+            aria-label={t("whatsapp")}
+            onClick={openWhatsApp}
+          >
+            <MessageCircle size={20} />
           </Button>
         )}
         <ShareMenu
@@ -569,10 +583,9 @@ export function SpotDetailView({
           url={shareUrl}
           previewImage={previewImage}
           direction="up"
-          variant="primary"
+          variant="outline"
           size="lg"
-          showLabel
-          className="flex-1"
+          className="w-12 shrink-0 [&>button]:w-full [&>button]:px-0"
           entity={{ type: "spot", id: spot.id, slug: spot.slug }}
         />
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import posthog from "posthog-js";
+import { loadPosthog } from "@/lib/analytics/posthog-client";
 
 /**
  * Keeps our own team's admin usage out of the public site's PostHog
@@ -11,11 +11,15 @@ import posthog from "posthog-js";
  */
 export function AdminAnalyticsOptOut() {
   useEffect(() => {
-    try {
-      if (!posthog.has_opted_out_capturing()) posthog.opt_out_capturing();
-    } catch {
-      // Analytics opt-out failing shouldn't block the admin from loading.
-    }
+    // Waits for the (lazily loaded) SDK so the opt-out lands on an
+    // initialized instance, before it can record anything meaningful.
+    void loadPosthog()
+      .then((posthog) => {
+        if (posthog && !posthog.has_opted_out_capturing()) posthog.opt_out_capturing();
+      })
+      .catch(() => {
+        // Analytics opt-out failing shouldn't block the admin from loading.
+      });
   }, []);
 
   return null;

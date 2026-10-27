@@ -1153,3 +1153,12 @@ html[data-night] input::placeholder {
     color: color-mix(in srgb, var(--foreground) 70%, transparent);
   }
 }
+
+/* The mobile spot action bar is fixed over the bottom of the page, so the
+   footer gets extra bottom padding while it's mounted — otherwise its last
+   lines would sit permanently underneath the bar. */
+@media (max-width: 639px) {
+  body:has(.spot-action-bar) footer {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}

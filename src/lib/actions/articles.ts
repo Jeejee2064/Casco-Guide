@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { CONTENT_TAG } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -106,6 +107,7 @@ export async function upsertArticle(locale: Locale, values: ArticleFormValues) {
     return { error: error.message };
   }
 
+  updateTag(CONTENT_TAG);
   revalidatePath("/[locale]/admin/articles", "page");
   revalidatePath("/[locale]/articles", "page");
   redirect({ href: "/admin/articles", locale });
@@ -116,6 +118,7 @@ export async function deleteArticle(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("articles").delete().eq("id", id);
   if (error) return { error: error.message };
+  updateTag(CONTENT_TAG);
   revalidatePath("/[locale]/admin/articles", "page");
   return { error: null };
 }

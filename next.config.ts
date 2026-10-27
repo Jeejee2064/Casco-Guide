@@ -45,6 +45,17 @@ const nextConfig: NextConfig = {
       permanent: true,
     }));
   },
+  // Heavy static assets that only change when the repo does: let browsers and
+  // the CDN keep them for a week (and serve stale while revalidating) instead
+  // of Next's default must-revalidate on every visit.
+  async headers() {
+    const cache = [
+      { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" },
+    ];
+    return ["/map/:path*", "/foliage/:path*", "/favicon_io/:path*", "/hero.webp", "/hero-tower.svg", "/logo-tower.svg", "/logoletters.png", "/cascoviejo.png"].map(
+      (source) => ({ source, headers: cache }),
+    );
+  },
   async rewrites() {
     const posthogHost = process.env.POSTHOG_HOST;
     const posthogAssetsHost = process.env.POSTHOG_ASSETS_HOST;

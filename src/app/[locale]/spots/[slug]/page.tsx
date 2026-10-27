@@ -6,7 +6,7 @@ import { FoliageTrail } from "@/components/site/Foliage";
 import { Footer } from "@/components/site/Footer";
 import { JsonLd } from "@/components/site/JsonLd";
 import { SpotDetailView } from "@/components/site/SpotDetailView";
-import { getSpotBySlug, getRelatedSpots, getSpotById, getChildSpots } from "@/lib/data/spots";
+import { getSpots, getSpotBySlug, getRelatedSpots, getSpotById, getChildSpots } from "@/lib/data/spots";
 // Events temporarily hidden site-wide — see the commented block below.
 // import { getNearbyEvents } from "@/lib/data/events";
 import { getArticlesForSpot } from "@/lib/data/articles";
@@ -14,7 +14,14 @@ import { buildAlternates } from "@/lib/seo/alternates";
 import { breadcrumbSchema, spotSchema } from "@/lib/seo/schema";
 import { shareImageUrl, SHARE_IMAGE_META } from "@/lib/seo/site";
 import { socialMetadata, truncate } from "@/lib/seo/metadata";
-import type { Locale } from "@/i18n/routing";
+import { routing, type Locale } from "@/i18n/routing";
+
+// Prerender every spot at build time (both locales); a spot added later is
+// rendered on first request and cached, and saves expire the cache.
+export async function generateStaticParams() {
+  const spots = await getSpots("es");
+  return routing.locales.flatMap((locale) => spots.map((spot) => ({ locale, slug: spot.slug })));
+}
 
 export async function generateMetadata({
   params,

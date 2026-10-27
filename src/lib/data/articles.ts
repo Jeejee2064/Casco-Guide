@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Locale } from "@/i18n/routing";
 import type { Article, ArticleRecord } from "@/lib/types/database";
 import { localizeArticle } from "@/lib/i18n/content";
@@ -11,7 +12,7 @@ export async function getArticles(locale: Locale): Promise<Article[]> {
     return MOCK_ARTICLES.filter((a) => a.is_published).map((a) => localizeArticle(a, locale));
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("articles")
     .select("*")
@@ -50,7 +51,7 @@ export async function getArticleBySlug(slug: string, locale: Locale): Promise<Ar
     return record ? localizeArticle(record, locale) : null;
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("articles")
     .select("*")
@@ -102,7 +103,7 @@ export async function getArticlesForSpot(spotId: string, locale: Locale): Promis
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("articles")
     .select("*")

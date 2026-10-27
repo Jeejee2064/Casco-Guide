@@ -1,6 +1,6 @@
 "use client";
 
-import posthog from "posthog-js";
+import { loadPosthog } from "./posthog-client";
 
 type AnalyticsEvent =
   | { name: "spot_view"; props: { spot_id: string; spot_slug: string; category: string } }
@@ -44,5 +44,5 @@ export function track<E extends AnalyticsEvent["name"]>(
   name: E,
   props: Extract<AnalyticsEvent, { name: E }>["props"],
 ) {
-  posthog.capture(name, props);
+  void loadPosthog().then((posthog) => posthog?.capture(name, props));
 }
