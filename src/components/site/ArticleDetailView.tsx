@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { ChevronLeft, MapPin, CalendarDays, User, Clock, Footprints } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { SpotMap } from "./SpotMap";
 import { ItineraryMap, type ItineraryStop } from "./ItineraryMap";
 import { LoadingImage } from "./LoadingImage";
 import { ShareMenu } from "./ShareMenu";
@@ -105,6 +104,32 @@ export function ArticleDetailView({
     }
     return stops;
   }, [article.layout, article.blocks, citedSpots, citedEvents]);
+
+  // Non-itinerary articles: the cited places as unordered pins, same small
+  // popup, no route.
+  const citedStops: ItineraryStop[] = useMemo(
+    () => [
+      ...citedSpots.map((spot, i) => ({
+        id: spot.id,
+        index: i + 1,
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        name: spot.name,
+        href: { pathname: "/spots/[slug]" as const, params: { slug: spot.slug } },
+        place: { kind: "spot" as const, spot },
+      })),
+      ...citedEvents.map((event, i) => ({
+        id: event.id,
+        index: citedSpots.length + i + 1,
+        latitude: event.latitude,
+        longitude: event.longitude,
+        name: event.title,
+        href: { pathname: "/events/[slug]" as const, params: { slug: event.slug } },
+        place: { kind: "event" as const, event },
+      })),
+    ],
+    [citedSpots, citedEvents],
+  );
 
   // Walking time between one itinerary stop and the next, keyed by the
   // *earlier* block's id — computed from coordinates (haversine distance,
@@ -353,9 +378,9 @@ export function ArticleDetailView({
                 interactive={false}
               />
             ) : (
-              <SpotMap
-                spots={citedSpots}
-                events={citedEvents}
+              <ItineraryMap
+                stops={citedStops}
+                route={false}
                 heightClassName="h-[55vh] min-h-[440px]"
                 interactive={false}
               />

@@ -103,6 +103,7 @@ export function ItineraryMap({
   className,
   heightClassName = "h-[45vh] min-h-[320px]",
   interactive = true,
+  route = true,
 }: {
   stops: ItineraryStop[];
   className?: string;
@@ -113,6 +114,9 @@ export function ItineraryMap({
    * clicks are a separate DOM event, not gated by these handlers). Used by
    * the article "Places mentioned" map so it doesn't trap mobile scroll. */
   interactive?: boolean;
+  /** false drops the street-traced legs and the pin numbers — for a plain
+   * "places mentioned" set with no order (non-itinerary articles). */
+  route?: boolean;
 }) {
   const router = useRouter();
   const tSpot = useTranslations("spot");
@@ -170,7 +174,7 @@ export function ItineraryMap({
     };
     fit([]);
 
-    if (stops.length > 1) {
+    if (route && stops.length > 1) {
       (async () => {
         const results = await Promise.all(
           stops
@@ -196,7 +200,7 @@ export function ItineraryMap({
     return () => {
       cancelled = true;
     };
-  }, [stops, displayWorld]);
+  }, [stops, displayWorld, route]);
 
   const pins: SvgPin[] = useMemo(
     () =>
@@ -209,15 +213,17 @@ export function ItineraryMap({
           <>
             <circle className="itinerary-pin-shadow" cy={3} r={14} />
             <circle className="itinerary-pin-dot" r={14} />
-            <text className="itinerary-pin-num" textAnchor="middle" dy="0.35em">
-              {stop.index}
-            </text>
+            {route && (
+              <text className="itinerary-pin-num" textAnchor="middle" dy="0.35em">
+                {stop.index}
+              </text>
+            )}
           </>
         ),
         // The map stays put — the popup is just an overlay on top of it.
         onSelect: () => setSelected(stop),
       })),
-    [stops, displayWorld],
+    [stops, displayWorld, route],
   );
 
   // Deselect if the stop list itself changes out from under the current
