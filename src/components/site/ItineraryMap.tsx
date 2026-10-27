@@ -1,17 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import Image from "next/image";
-import { CalendarDays } from "lucide-react";
-import { MapDetailPanel, type DetailPanelContent } from "./MapDetailPanel";
+import { useTranslations } from "next-intl";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { TAP_SPRING } from "./motion";
 import { useNightMode } from "./NightModeContext";
 import { SvgMap, type SvgMapHandle, type SvgPin } from "./SvgMap";
 import { useRouter } from "@/i18n/navigation";
-import { CATEGORY_META, showsPriceRange } from "@/lib/categories";
-import { EVENT_CATEGORY_META } from "@/lib/eventCategories";
-import { getSpotImage } from "@/lib/data/categoryImages";
-import { formatTime } from "@/lib/hours";
+import { track } from "@/lib/analytics/track";
+import { setLastKnownUserLocation } from "@/lib/userLocation";
 import { routeBetween } from "@/lib/routing";
 import { latLngsToPath, project, zoomToScale } from "@/lib/svgMap/projection";
 import type { EventRow, Spot } from "@/lib/types/database";
@@ -117,11 +115,9 @@ export function ItineraryMap({
   interactive?: boolean;
 }) {
   const router = useRouter();
-  const locale = useLocale();
   const tSpot = useTranslations("spot");
-  const tCategory = useTranslations("category");
-  const tEventCategory = useTranslations("eventCategory");
   const tEvents = useTranslations("events");
+  const tDiscover = useTranslations("discover");
   const { isNight } = useNightMode();
   const [selected, setSelected] = useState<ItineraryStop | null>(null);
   // One entry per leg (consecutive stop pair), not a single path — a leg the
@@ -137,18 +133,6 @@ export function ItineraryMap({
 
   const mapRef = useRef<SvgMapHandle | null>(null);
 
-  // Tracked in a ref, not state — only read at click-time, mirrors SpotMap.
-  const isDesktopRef = useRef(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const sync = () => {
-      isDesktopRef.current = mq.matches;
-    };
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-
   // Same as Leaflet's old dark check: Night Mode or the OS scheme.
   const [prefersDark, setPrefersDark] = useState(false);
   useEffect(() => {
@@ -157,17 +141,6 @@ export function ItineraryMap({
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
-  }, []);
-
-  // Nudges the map so the selected pin doesn't end up hidden behind the
-  // panel/sheet about to cover it — same idea as SpotMap's revealSelection.
-  const revealSelection = useCallback((x: number, y: number) => {
-    mapRef.current?.panInside(
-      [x, y],
-      isDesktopRef.current
-        ? { top: 24, left: 412, right: 24, bottom: 24 }
-        : { top: 24, left: 24, right: 24, bottom: 320 },
-    );
   }, []);
 
   // Declutter for display only — links/panel content still use each stop's
@@ -241,12 +214,10 @@ export function ItineraryMap({
             </text>
           </>
         ),
-        onSelect: () => {
-          setSelected(stop);
-          revealSelection(displayWorld[i][0], displayWorld[i][1]);
-        },
+        // The map stays put — the popup is just an overlay on top of it.
+        onSelect: () => setSelected(stop),
       })),
-    [stops, displayWorld, revealSelection],
+    [stops, displayWorld],
   );
 
   // Deselect if the stop list itself changes out from under the current
@@ -266,90 +237,52 @@ export function ItineraryMap({
     [router],
   );
 
-  // Same normalization SpotMap does — a Spot or an EventRow into the panel's
-  // domain-agnostic content shape.
-  const panelContent: DetailPanelContent | null = useMemo(() => {
+  // Same hand-off as SpotDetailView's "Get me there!" — walking directions
+  // drawn on our own /map from the visitor's live position.
+  const handleDirections = useCallback(
+    (spot: Spot) => {
+      track("directions_click", {
+        entity: "spot",
+        entity_id: spot.id,
+        entity_slug: spot.slug,
+      });
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) =>
+            setLastKnownUserLocation({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            }),
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000 },
+        );
+      }
+      router.push({ pathname: "/map", query: { directions: spot.slug } });
+    },
+    [router],
+  );
+
+  const popup = useMemo(() => {
     if (!selected) return null;
-
-    if (selected.place.kind === "spot") {
-      const spot = selected.place.spot;
-      const meta = CATEGORY_META[spot.category];
-      const Icon = meta.icon;
-      const metaItems: string[] = [];
-      if (spot.price_range && showsPriceRange(spot.category)) metaItems.push(spot.price_range);
-
+    const place = selected.place;
+    if (place.kind === "spot") {
+      const spot = place.spot;
       return {
-        photoUrl: getSpotImage(spot),
-        photoFallback: <Icon size={30} />,
-        // Featured badge hidden site-wide for now — swap back to
-        // `spot.is_featured ? useTranslations("night")("featuredBadge") : undefined`
-        // once there is real featured content.
-        featuredLabel: undefined,
-        categoryLabel: tCategory(spot.category),
-        categoryIcon: <Icon size={13} />,
         title: spot.name,
-        subtitle: spot.address,
-        metaItems,
-        description: spot.description,
         actions: [
-          {
-            label: tSpot("readMore"),
-            primary: true,
-            onClick: () => handleOpenSpot(spot),
-          },
+          { label: tSpot("readMore"), primary: true, onClick: () => handleOpenSpot(spot) },
+          { label: tDiscover("getMeThere"), primary: false, onClick: () => handleDirections(spot) },
         ],
       };
     }
-
-    const event = selected.place.event;
-    const meta = EVENT_CATEGORY_META[event.category];
-    const dateLabel = new Intl.DateTimeFormat(
-      locale === "es" ? "es-PA" : "en-US",
-      {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      },
-    ).format(new Date(`${event.date}T00:00:00`));
-    const priceLabel =
-      event.price && event.price > 0 ? `$${event.price}` : tEvents("free");
-
-    const actions: DetailPanelContent["actions"] = [
-      {
-        label: tEvents("viewDetails"),
-        primary: true,
-        onClick: () => handleOpenEvent(event),
-      },
-    ];
-    if (event.booking_url) {
-      const bookingUrl = event.booking_url;
-      actions.push({
-        label: tEvents("book"),
-        onClick: () => window.open(bookingUrl, "_blank", "noopener,noreferrer"),
-      });
-    }
-
+    const event = place.event;
     return {
-      photoUrl: event.photo,
-      photoFallback: <CalendarDays size={30} />,
-      categoryLabel: tEventCategory(event.category),
-      categoryIcon: <Image src={meta.icon} alt="" width={13} height={13} />,
       title: event.title,
-      subtitle: `${dateLabel} · ${formatTime(event.time_start, locale)}`,
-      metaItems: [priceLabel],
-      description: event.description,
-      actions,
+      actions: [
+        { label: tEvents("viewDetails"), primary: true, onClick: () => handleOpenEvent(event) },
+      ],
     };
-  }, [
-    selected,
-    locale,
-    tCategory,
-    tEventCategory,
-    tSpot,
-    tEvents,
-    handleOpenSpot,
-    handleOpenEvent,
-  ]);
+  }, [selected, tSpot, tDiscover, tEvents, handleOpenSpot, handleOpenEvent, handleDirections]);
 
   return (
     <div className={cn("relative", className)}>
@@ -384,12 +317,53 @@ export function ItineraryMap({
           </g>
         ))}
       </SvgMap>
-      <MapDetailPanel
-        content={panelContent}
-        closeLabel={tSpot("close")}
-        onClose={() => setSelected(null)}
-        compact
-      />
+      {/* Small overlay anchored inside the map box (not a fixed sheet), so it
+          never slides behind the rest of the page on mobile. */}
+      <AnimatePresence>
+        {popup && (
+          <motion.div
+            key={selected?.id}
+            role="dialog"
+            aria-label={popup.title}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2 }}
+            className="glass absolute inset-x-3 bottom-3 z-[5] mx-auto max-w-sm rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              aria-label={tSpot("close")}
+              className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-foreground/10 hover:bg-foreground/20"
+            >
+              <X size={16} />
+            </button>
+            <h3 className="font-heading pr-10 text-base font-extrabold leading-tight">
+              {popup.title}
+            </h3>
+            <div className="mt-3 flex gap-2">
+              {popup.actions.map((action) => (
+                <motion.button
+                  key={action.label}
+                  type="button"
+                  onClick={action.onClick}
+                  whileTap={{ scale: 0.97 }}
+                  transition={TAP_SPRING}
+                  className={cn(
+                    "flex-1 rounded-[var(--radius-button)] border px-3 py-2.5 text-sm font-bold transition-colors",
+                    action.primary
+                      ? "accent-cta border-transparent text-white"
+                      : "border-border bg-transparent hover:bg-foreground/5",
+                  )}
+                >
+                  {action.label}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
