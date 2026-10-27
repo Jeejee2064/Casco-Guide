@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import useEmblaCarousel from "embla-carousel-react";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Fullscreen photo viewer — click any thumbnail in `PhotoGallery` to open here.
- * Swipe/arrow-key/thumbnail-strip navigation, Escape or backdrop click to close.
+ * Swipe/arrow-key/thumbnail-strip navigation, Escape, close button or click outside the photo to close.
  */
 export function PhotoLightbox({
   photos,
@@ -58,7 +59,9 @@ export function PhotoLightbox({
 
   const current = photos[selectedIndex];
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -78,13 +81,20 @@ export function PhotoLightbox({
           type="button"
           onClick={onClose}
           aria-label={t("close")}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+          className="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-black shadow-lg hover:bg-white/90"
         >
-          <X size={20} />
+          <X size={18} />
+          {t("close")}
         </button>
       </div>
 
-      <div className="relative min-h-0 flex-1" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="relative min-h-0 flex-1"
+        onClick={(e) => {
+          // Only the photo itself and the arrows keep the viewer open.
+          if (!(e.target as HTMLElement).closest("img, button")) onClose();
+        }}
+      >
         <div className="h-full overflow-hidden" ref={emblaRef}>
           <div className="flex h-full">
             {photos.map((photo, i) => (
@@ -158,6 +168,7 @@ export function PhotoLightbox({
           ))}
         </div>
       )}
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
