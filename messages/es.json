@@ -16,7 +16,9 @@
     "events": "Eventos",
     "admin": "Admin",
     "articles": "Guías",
-    "map": "Mapa"
+    "map": "Mapa",
+    "about": "Sobre nosotros",
+    "contact": "Contacto"
   },
   "night": {
     "toggle": "Modo día / noche",
@@ -745,6 +747,33 @@
       "title": "Encuentra tu vibe",
       "subtitle": "Olvídate de las categorías — elige una vibe y te mostramos los lugares que encajan.",
       "cta": "Descubre tu vibe"
+    }
+  },
+  "pages": {
+    "about": {
+      "seoTitle": "Sobre Casco Viejo Guide",
+      "seoDescription": "Casco Viejo Guide está hecho por gente que vive y trabaja en el Casco Viejo. Quiénes somos, cómo elegimos los lugares y cómo mantenemos la guía al día.",
+      "title": "Sobre nosotros",
+      "lead": "Somos unos chicos del Casco que hacemos una guía del barrio para quien visite la Ciudad de Panamá.",
+      "sections": [
+        { "title": "Quiénes somos", "body": "Vivimos y trabajamos en el Casco Viejo. Comemos, tomamos y salimos por estas calles todas las semanas, así que la guía sale de lo que de verdad conocemos del barrio, no de una lista copiada de internet." },
+        { "title": "Cómo elegimos los lugares", "body": "Solo incluimos sitios a los que mandaríamos a un amigo. Cada lugar se agrega a mano, con su dirección real, su horario y lo que puedes esperar, y los organizamos por vibe para que encuentres lo que va con tu día." },
+        { "title": "Siempre al día", "body": "Los lugares abren, cierran y cambian de horario todo el tiempo. Seguimos revisando y actualizando la guía, y cada lugar muestra cuándo se actualizó por última vez." },
+        { "title": "Independientes", "body": "Casco Viejo Guide es independiente y gratis, en español e inglés." }
+      ],
+      "ctaText": "¿Falta algo o hay un error? Cuéntanos."
+    },
+    "contact": {
+      "seoTitle": "Contacto — Casco Viejo Guide",
+      "seoDescription": "Escríbele a Casco Viejo Guide: sugiere un lugar, avisa de un error o simplemente salúdanos. contacto@cascoviejo.guide",
+      "title": "Contacto",
+      "lead": "¿Quieres sugerir un lugar, corregir un error o simplemente saludar? Escríbenos un correo.",
+      "emailLabel": "Correo",
+      "sections": [
+        { "title": "Sugerir un lugar", "body": "¿Conoces un sitio del Casco Viejo que debería estar en la guía? Mándanos su nombre y dónde encontrarlo." },
+        { "title": "Avisar de un error", "body": "¿Horario equivocado, un lugar que cerró, una dirección mala? Avísanos y lo corregimos." },
+        { "title": "Dueños de negocios", "body": "Si eres dueño o administras un lugar en el Casco Viejo y quieres actualizar tu información, escríbenos desde el correo de tu negocio." }
+      ]
     }
   },
   "installPwa": {

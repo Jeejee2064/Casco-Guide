@@ -16,7 +16,9 @@
     "events": "Events",
     "admin": "Admin",
     "articles": "Guides",
-    "map": "Map"
+    "map": "Map",
+    "about": "About",
+    "contact": "Contact"
   },
   "night": {
     "toggle": "Day / Night mode",
@@ -745,6 +747,33 @@
       "title": "Find your vibe",
       "subtitle": "Skip the categories — pick a vibe and we'll match you with spots that fit it.",
       "cta": "Discover your vibe"
+    }
+  },
+  "pages": {
+    "about": {
+      "seoTitle": "About Casco Viejo Guide",
+      "seoDescription": "Casco Viejo Guide is made by locals who live and work in Casco Viejo. Who we are, how we pick places and how we keep the guide up to date.",
+      "title": "About us",
+      "lead": "We're a few guys from Casco Viejo making a guide to the neighborhood for anyone visiting Panama City.",
+      "sections": [
+        { "title": "Who we are", "body": "We live and work in Casco Viejo. We eat, drink and hang out in these streets every week, so the guide comes from what we actually know about the neighborhood, not from a list copied off the internet." },
+        { "title": "How we pick places", "body": "We only list places we'd send a friend to. Every spot is added by hand, with its real address, hours and what to expect, and we organize them by vibe so you can find what fits your day." },
+        { "title": "Keeping it up to date", "body": "Places open, close and change their hours all the time. We keep checking and updating the guide, and each place shows when it was last updated." },
+        { "title": "Independent", "body": "Casco Viejo Guide is independent and free to use, in English and Spanish." }
+      ],
+      "ctaText": "Something missing or wrong? Tell us."
+    },
+    "contact": {
+      "seoTitle": "Contact Casco Viejo Guide",
+      "seoDescription": "Get in touch with Casco Viejo Guide: suggest a place, report a mistake or just say hi. contacto@cascoviejo.guide",
+      "title": "Contact",
+      "lead": "Want to suggest a place, fix a mistake or just say hi? Send us an email.",
+      "emailLabel": "Email",
+      "sections": [
+        { "title": "Suggest a place", "body": "Know a spot in Casco Viejo that should be in the guide? Send us its name and where to find it." },
+        { "title": "Report a mistake", "body": "Wrong hours, a place that closed, a bad address? Let us know and we'll fix it." },
+        { "title": "Business owners", "body": "If you own or run a place in Casco Viejo and want to update your info, write to us from your business email." }
+      ]
     }
   },
   "installPwa": {

@@ -9,6 +9,11 @@ const LINKS = [
   { href: "/map", key: "map" },
 ] as const;
 
+const LEGAL_LINKS = [
+  { href: "/about", key: "about" },
+  { href: "/contact", key: "contact" },
+] as const;
+
 /**
  * Brand footer — the tower tile and wordmark (same assets as the Header; the
  * wordmark ships white, `.header-logotype` inverts it on light themes), the
@@ -39,6 +44,14 @@ export function Footer() {
 
       <nav className="mt-5 flex items-center justify-center gap-5 text-sm font-semibold text-foreground/70">
         {LINKS.map(({ href, key }) => (
+          <Link key={key} href={href} className="transition-colors hover:text-aqua">
+            {tNav(key)}
+          </Link>
+        ))}
+      </nav>
+
+      <nav className="mt-3 flex items-center justify-center gap-5 text-xs font-medium text-foreground/50">
+        {LEGAL_LINKS.map(({ href, key }) => (
           <Link key={key} href={href} className="transition-colors hover:text-aqua">
             {tNav(key)}
           </Link>

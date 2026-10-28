@@ -55,6 +55,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...localizedEntries("/spots", { changeFrequency: "daily", priority: 0.9, lastModified: spotsUpdated }),
     ...localizedEntries("/map", { changeFrequency: "weekly", priority: 0.6, lastModified: spotsUpdated }),
     ...localizedEntries("/articles", { changeFrequency: "daily", priority: 0.8, lastModified: articlesUpdated }),
+    ...localizedEntries("/about", { changeFrequency: "yearly", priority: 0.3 }),
+    ...localizedEntries("/contact", { changeFrequency: "yearly", priority: 0.3 }),
     ...spots.flatMap((spot) =>
       localizedEntries(
         { pathname: "/spots/[slug]", params: { slug: spot.slug } },

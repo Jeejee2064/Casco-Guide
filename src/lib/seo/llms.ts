@@ -7,7 +7,7 @@ import { getArticles } from "@/lib/data/articles";
 import { getSpots } from "@/lib/data/spots";
 import { formatDaySlots } from "@/lib/hours";
 import { DAY_KEYS, type Article, type Spot } from "@/lib/types/database";
-import { SITE_NAME, SITE_URL, absoluteUrl } from "./site";
+import { CONTACT_EMAIL, SITE_NAME, SITE_URL, absoluteUrl } from "./site";
 
 const LOCALE_LABEL: Record<Locale, string> = { en: "English", es: "Español" };
 
@@ -19,7 +19,7 @@ const spotUrl = (slug: string, locale: Locale) =>
   absoluteUrl(getPathname({ href: { pathname: "/spots/[slug]", params: { slug } }, locale }));
 const articleUrl = (slug: string, locale: Locale) =>
   absoluteUrl(getPathname({ href: { pathname: "/articles/[slug]", params: { slug } }, locale }));
-const pageUrl = (href: "/" | "/spots" | "/map" | "/articles", locale: Locale) =>
+const pageUrl = (href: "/" | "/spots" | "/map" | "/articles" | "/about" | "/contact", locale: Locale) =>
   absoluteUrl(getPathname({ href, locale }));
 
 const oneLine = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
@@ -80,6 +80,8 @@ export async function buildLlmsTxt(): Promise<string> {
       `- [All places](${pageUrl("/spots", locale)}): every restaurant, bar, café, museum, shop and hotel`,
       `- [Map](${pageUrl("/map", locale)}): interactive map of every place`,
       `- [Guides](${pageUrl("/articles", locale)}): in-depth guides and recommendations`,
+      `- [About](${pageUrl("/about", locale)}): who makes the guide and how places are picked`,
+      `- [Contact](${pageUrl("/contact", locale)}): ${CONTACT_EMAIL}`,
       "",
     );
     for (const [category, items] of groupByCategory(spots)) {

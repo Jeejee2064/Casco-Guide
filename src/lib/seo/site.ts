@@ -9,6 +9,8 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://cascoviejo
 
 export const SITE_NAME = "Casco Viejo Guide";
 
+export const CONTACT_EMAIL = "contacto@cascoviejo.guide";
+
 // Site-wide fallback Open Graph image (the logo mark on the brand teal) —
 // every spot/article page overrides it with its own photo when it has one.
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;

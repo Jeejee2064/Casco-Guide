@@ -14,6 +14,8 @@ export const routing = defineRouting({
     "/spots": "/spots",
     "/spots/[slug]": "/spots/[slug]",
     "/map": "/map",
+    "/about": { en: "/about", es: "/sobre-nosotros" },
+    "/contact": { en: "/contact", es: "/contacto" },
     "/events/[slug]": "/events/[slug]",
     "/articles": "/articles",
     "/articles/[slug]": "/articles/[slug]",

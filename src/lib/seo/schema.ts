@@ -2,7 +2,7 @@
 // can stay focused on "what data" rather than "how to serialize it".
 import type { Locale } from "@/i18n/routing";
 import { DAY_KEYS, type DayKey, type Spot, type SpotCategory, type Article } from "@/lib/types/database";
-import { SITE_NAME, SITE_URL, absoluteUrl, shareImageUrl } from "./site";
+import { CONTACT_EMAIL, SITE_NAME, SITE_URL, absoluteUrl, shareImageUrl } from "./site";
 
 // schema.org has no single "restaurant/bar/museum/..." vocabulary entry —
 // each spot category maps to the closest concrete type so rich results
@@ -51,6 +51,13 @@ export function organizationSchema() {
     description:
       "Independent, locally curated travel guide to Casco Viejo (Casco Antiguo, San Felipe), the UNESCO-listed old town of Panama City.",
     areaServed: { "@id": `${SITE_URL}/#destination` },
+    email: CONTACT_EMAIL,
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: CONTACT_EMAIL,
+      availableLanguage: ["es", "en"],
+    },
   };
 }
 
@@ -263,6 +270,7 @@ export function collectionSchema(opts: {
  * (`dateModified`, `lastReviewed`) and the language that Place/Article nodes
  * don't, and ties the page to the site and destination entities. */
 export function webPageSchema(opts: {
+  type?: "WebPage" | "AboutPage" | "ContactPage";
   url: string;
   name: string;
   description?: string;
@@ -273,7 +281,7 @@ export function webPageSchema(opts: {
 }) {
   return {
     "@context": "https://schema.org",
-    "@type": "WebPage",
+    "@type": opts.type ?? "WebPage",
     "@id": `${opts.url}#webpage`,
     url: opts.url,
     name: opts.name,
