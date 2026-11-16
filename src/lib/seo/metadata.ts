@@ -10,6 +10,13 @@ export function truncate(text: string, max = 155): string {
   return `${clean.slice(0, max - 1).replace(/\s+\S*$/, "").trimEnd()}…`;
 }
 
+/** Page `title` field: the layout's "%s | Casco Viejo Guide" template, unless
+ * that would run past what Google shows (~65 chars) — then the page title
+ * stands alone rather than getting cut mid-name. */
+export function pageTitle(title: string): Metadata["title"] {
+  return `${title} | ${SITE_NAME}`.length > 65 ? { absolute: title } : title;
+}
+
 /** The `openGraph` + `twitter` blocks for a page. A page-level `openGraph`
  * replaces (never merges with) the root layout's, so every field — url,
  * site name, locale + alternates, image with dimensions/alt — is set here

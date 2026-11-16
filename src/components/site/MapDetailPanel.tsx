@@ -214,6 +214,7 @@ function PanelBody({
   compact: boolean;
 }) {
   return (
+    <div className="flex min-h-0 flex-1 flex-col">
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       {/* Shorter on mobile (h-28 vs h-44) — a full-height photo plus the
           subtitle/meta/description block below it could push the actions
@@ -317,8 +318,9 @@ function PanelBody({
             {content.description}
           </p>
         )}
-
-        <div className={cn("flex gap-2 pt-1", !compact && content.description && "md:pt-3")}>
+      </div>
+    </div>
+        <div className="flex shrink-0 gap-2 px-4 pb-4 pt-2">
           {content.actions.map((action) => (
             <motion.button
               key={action.label}
@@ -342,7 +344,6 @@ function PanelBody({
             </motion.button>
           ))}
         </div>
-      </div>
     </div>
   );
 }

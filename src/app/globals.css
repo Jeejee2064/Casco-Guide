@@ -993,6 +993,28 @@ html[data-night] .header-logotype {
   stroke-width: 2;
 }
 
+/* Selected pin (article maps): grows, turns coral and gets a soft ring, so it
+   is clear which stop the popup belongs to. */
+.itinerary-pin-halo {
+  fill: none;
+  stroke: var(--color-coral);
+  stroke-width: 3;
+  opacity: 0;
+}
+
+.itinerary-pin--selected .itinerary-pin-halo {
+  opacity: 0.45;
+}
+
+.itinerary-pin--selected .itinerary-pin-dot {
+  fill: var(--color-coral);
+  stroke-width: 3;
+}
+
+.itinerary-pin--selected {
+  transform: scale(1.2);
+}
+
 .itinerary-pin-shadow {
   fill: rgb(0 0 0 / 0.25);
 }

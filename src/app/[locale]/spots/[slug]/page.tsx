@@ -13,7 +13,7 @@ import { getArticlesForSpot } from "@/lib/data/articles";
 import { buildAlternates } from "@/lib/seo/alternates";
 import { breadcrumbSchema, spotSchema, webPageSchema } from "@/lib/seo/schema";
 import { shareImageUrl, SHARE_IMAGE_META, SITE_NAME } from "@/lib/seo/site";
-import { socialMetadata, truncate } from "@/lib/seo/metadata";
+import { pageTitle, socialMetadata, truncate } from "@/lib/seo/metadata";
 import { routing, type Locale } from "@/i18n/routing";
 
 // Prerender every spot at build time (both locales); a spot added later is
@@ -44,7 +44,7 @@ export async function generateMetadata({
   const alternates = buildAlternates({ pathname: "/spots/[slug]", params: { slug } }, locale);
 
   return {
-    title,
+    title: pageTitle(title),
     description,
     alternates,
     ...socialMetadata({

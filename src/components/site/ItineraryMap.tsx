@@ -210,7 +210,8 @@ export function ItineraryMap({
         y: displayWorld[i][1],
         label: `${stop.index}. ${stop.name}`,
         node: (
-          <>
+          <g className={stop.id === selected?.id ? "itinerary-pin--selected" : undefined}>
+            <circle className="itinerary-pin-halo" r={24} />
             <circle className="itinerary-pin-shadow" cy={3} r={14} />
             <circle className="itinerary-pin-dot" r={14} />
             {route && (
@@ -218,12 +219,12 @@ export function ItineraryMap({
                 {stop.index}
               </text>
             )}
-          </>
+          </g>
         ),
         // The map stays put — the popup is just an overlay on top of it.
         onSelect: () => setSelected(stop),
       })),
-    [stops, displayWorld, route],
+    [stops, displayWorld, route, selected?.id],
   );
 
   // Deselect if the stop list itself changes out from under the current

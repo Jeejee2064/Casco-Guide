@@ -14,7 +14,7 @@ import { buildAlternates } from "@/lib/seo/alternates";
 import { articleSchema, breadcrumbSchema } from "@/lib/seo/schema";
 import { getPathname } from "@/i18n/navigation";
 import { absoluteUrl, shareImageUrl, SHARE_IMAGE_META, SITE_NAME } from "@/lib/seo/site";
-import { socialMetadata, truncate } from "@/lib/seo/metadata";
+import { pageTitle, socialMetadata, truncate } from "@/lib/seo/metadata";
 import { routing, type Locale } from "@/i18n/routing";
 
 // Prerender every published guide at build time (both locales).
@@ -41,7 +41,7 @@ export async function generateMetadata({
   const alternates = buildAlternates({ pathname: "/articles/[slug]", params: { slug } }, locale);
 
   return {
-    title: article.title,
+    title: pageTitle(article.title),
     description,
     alternates,
     ...socialMetadata({

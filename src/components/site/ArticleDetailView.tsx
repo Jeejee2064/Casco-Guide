@@ -252,8 +252,7 @@ export function ArticleDetailView({
           className="prose prose-sm sm:prose-base mt-8 max-w-none prose-a:text-aqua prose-a:no-underline prose-a:font-semibold prose-img:rounded-[var(--radius-button)]"
           variants={fadeUp}
           initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: "some" }}
+          animate="show"
           dangerouslySetInnerHTML={{ __html: article.body }}
         />
       )}
