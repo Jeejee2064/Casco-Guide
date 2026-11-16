@@ -241,6 +241,12 @@ export function ArticleDetailView({
             </div>
           )}
         </StaggerItem>
+
+        {article.excerpt && (
+          <StaggerItem>
+            <p className="mt-6 text-lg font-medium leading-relaxed text-foreground/75 sm:text-xl">{article.excerpt}</p>
+          </StaggerItem>
+        )}
       </Stagger>
 
       {article.body && (
