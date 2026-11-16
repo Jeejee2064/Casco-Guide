@@ -191,6 +191,7 @@ export function ArticleDetailView({
             className="object-cover"
             preload
             onLoad={() => setCoverLoaded(true)}
+            onError={() => setCoverLoaded(true)}
           />
         </motion.div>
       )}

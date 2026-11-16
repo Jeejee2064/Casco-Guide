@@ -60,7 +60,7 @@ export function ArticleBodyEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: { levels: HEADING_LEVELS } }),
+      StarterKit.configure({ heading: { levels: HEADING_LEVELS }, link: false }),
       TiptapImage.configure({ HTMLAttributes: { class: "rounded-[var(--radius-button)]" } }),
       ReferenceLink.configure({ openOnClick: false, autolink: false }),
     ],
