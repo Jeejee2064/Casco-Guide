@@ -253,7 +253,7 @@ export function ArticleDetailView({
           variants={fadeUp}
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
+          viewport={{ once: true, amount: "some" }}
           dangerouslySetInnerHTML={{ __html: article.body }}
         />
       )}
@@ -264,7 +264,7 @@ export function ArticleDetailView({
           variants={staggerContainer}
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
+          viewport={{ once: true, amount: "some" }}
         >
           {article.blocks.map((block, i) => (
             <motion.li
@@ -330,7 +330,7 @@ export function ArticleDetailView({
           variants={staggerContainer}
           initial="hidden"
           whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
+          viewport={{ once: true, amount: "some" }}
         >
           {article.blocks.map((block) => {
             const walk = walkToNext.get(block.id);
